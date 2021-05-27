@@ -260,20 +260,22 @@ class Collector(Collector):
         self._argstring: Optional[str] = None
         self._exception: Optional[Type] = None
         self.items_to_ignore: List[Union[Type, Callable]] = [self.__class__]
+        self.ignore_items = True
 
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """
         Tracing function.
         Saves the first function and calls collect().
         """
-        for item in self.items_to_ignore:
-            if (isinstance(item, type) and 'self' in frame.f_locals and
-                isinstance(frame.f_locals['self'], item)):
-                # Ignore this class
-                return
-            if item.__name__ == frame.f_code.co_name:
-                # Ignore this function
-                return
+        if self.ignore_items:
+            for item in self.items_to_ignore:
+                if (isinstance(item, type) and 'self' in frame.f_locals and
+                    isinstance(frame.f_locals['self'], item)):
+                    # Ignore this class
+                    return
+                if item.__name__ == frame.f_code.co_name:
+                    # Ignore this function
+                    return
 
         if self._function is None and event == 'call':
             # Save function
@@ -421,7 +423,7 @@ class CoverageCollector(CoverageCollector):
         Return the set of locations covered.
         Each location comes as a pair (`function_name`, `lineno`).
         """
-        return {((func.__name__ if hasattr(func, "__name__") else "<method>"), lineno) for func, lineno in self._coverage}
+        return {((func.__name__ + ", " + inspect.getfile(func) if hasattr(func, "__name__") and isinstance(func, types.FunctionType) else "<method>"), lineno) for func, lineno in self._coverage}
 
 class CoverageCollector(CoverageCollector):
     def covered_functions(self) -> Set[Callable]:

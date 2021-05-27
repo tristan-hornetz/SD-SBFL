@@ -1,15 +1,16 @@
 from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger, Collector
 from types import FrameType
-from typing import Any, Optional
+from typing import Any, Optional, List
 import inspect
 import os
 import math
 
 
 class ExtendedCoverageCollector(CoverageCollector):
+
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         filename = inspect.getfile(frame)
-        to_exclude = ["/test_", "_test.py", "_bugsinpy_"]
+        to_exclude = ["/.pyenv/", "/TestWrapper/", "/test_", "_test.py"]
         if os.path.curdir in filename:
             for s in to_exclude:
                 if s in filename:
@@ -20,6 +21,7 @@ class ExtendedCoverageCollector(CoverageCollector):
 class BetterOchiaiDebugger(OchiaiDebugger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.collectors = {self.FAIL: list(), self.PASS: list()}
         self.collectors_with_result = {self.FAIL: dict(), self.PASS: dict()}
 
     def add_collector(self, outcome: str, collector: Collector) -> Collector:
@@ -31,14 +33,22 @@ class BetterOchiaiDebugger(OchiaiDebugger):
         return super().add_collector(outcome, collector)
 
     def suspiciousness(self, event: Any) -> Optional[float]:
-        failed = len(self.collectors_with_result[self.FAIL][event]) if event in self.collectors_with_result[self.FAIL].keys() else 0
+        failed = len(self.collectors_with_result[self.FAIL][event]) if event in self.collectors_with_result[
+            self.FAIL].keys() else 0
         not_in_failed = len(self.collectors[self.FAIL]) - failed
-        passed = len(self.collectors_with_result[self.PASS][event]) if event in self.collectors_with_result[self.PASS].keys() else 0
+        passed = len(self.collectors_with_result[self.PASS][event]) if event in self.collectors_with_result[
+            self.PASS].keys() else 0
 
         try:
             return failed / math.sqrt((failed + not_in_failed) * (failed + passed))
         except ZeroDivisionError:
             return None
+
+    def rank(self) -> List[Any]:
+        """Return a list of events, sorted by suspiciousness, highest first."""
+        if len(self.collectors[self.FAIL]) > 0:
+            return super().rank()
+        return []
 
 
 class ReportingDebugger(BetterOchiaiDebugger):

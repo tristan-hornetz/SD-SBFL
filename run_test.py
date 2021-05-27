@@ -2,11 +2,13 @@ from TestWrapper.root.Debugger import debugger
 import os
 
 dump_file = os.path.curdir + "/TestWrapper/results.txt"
-test_id = "tests/test_utils.py::test_get_all_executables_pathsep"
+#@@ -2574,8 +2574,8 @@ def _match_one(filter_part, dct):
+test_id = "tornado.test.httpclient_test.HTTPClientCommonTestCase.test_redirect_put_without_body"
+
 
 if __name__ == '__main__':
     binary_dir = "./_BugsInPy/framework/bin"
-    project = "thefuck"
+    project = "tornado"
     bug_id = 2
 
     work_dir = os.path.abspath(binary_dir + "/temp/" + project)
