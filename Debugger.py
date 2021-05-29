@@ -1,12 +1,34 @@
 from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger, Collector
 from types import FrameType
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Set, Tuple
 import inspect
 import os
 import math
+import types
+import gzip
+import pickle
+
+
+class SFL_Results:
+    def __init__(self, debugger):
+        self.results = debugger.rank()
+        with open("./TestWrapper/work_dir.info", "rt") as f:
+            work_dir_base = f.readline().replace("\n", "")
+        work_dir = work_dir_base + "/" + os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
+        with open(work_dir + "/bugsinpy_id.info", "rt") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if "=" in line:
+                    setattr(self, line.split("=", 1)[0].lower(), line.split("=", 1)[1].replace("\n", ""))
 
 
 class ExtendedCoverageCollector(CoverageCollector):
+
+    def __init__(self, *args, **kwargs):
+        super(ExtendedCoverageCollector, self).__init__(*args, **kwargs)
+        self.event_buffer = dict()
 
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         filename = inspect.getfile(frame)
@@ -16,6 +38,10 @@ class ExtendedCoverageCollector(CoverageCollector):
                 if s in filename:
                     return
             super().collect(frame, event, arg)
+
+    def events(self) -> Set[Tuple[str, int]]:
+        return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func, types.FunctionType) else repr(func)),
+                 lineno) for func, lineno in self._coverage}
 
 
 class BetterOchiaiDebugger(OchiaiDebugger):
@@ -53,16 +79,16 @@ class BetterOchiaiDebugger(OchiaiDebugger):
 
 class ReportingDebugger(BetterOchiaiDebugger):
     def teardown(self):
-        ranking = self.rank()
+        if len(self.collectors[self.FAIL]) == 0:
+            return
         if not hasattr(self, "dump_file"):
-            dump_file = os.path.curdir + "/TestWrapper/results.txt"
+            dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
         else:
             dump_file = self.dump_file
         if os.path.isfile(dump_file):
             os.remove(dump_file)
-        f = os.open(dump_file, os.O_WRONLY | os.O_CREAT)
-        os.write(f, str(ranking).encode("utf-8"))
-        os.close(f)
+        with gzip.open(dump_file, "xb") as f:
+            pickle.dump(SFL_Results(self), f)
 
 
 debugger = ReportingDebugger(collector_class=ExtendedCoverageCollector)

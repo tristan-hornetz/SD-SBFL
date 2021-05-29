@@ -1,7 +1,7 @@
 from TestWrapper.root.Debugger import debugger
 import os
 
-dump_file = os.path.curdir + "/TestWrapper/results.txt"
+dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
 #@@ -2574,8 +2574,8 @@ def _match_one(filter_part, dct):
 test_id = "tornado.test.httpclient_test.HTTPClientCommonTestCase.test_redirect_put_without_body"
 
