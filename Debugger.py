@@ -26,21 +26,24 @@ class SFL_Results:
 
 class ExtendedCoverageCollector(CoverageCollector):
 
-    def __init__(self, *args, **kwargs):
-        super(ExtendedCoverageCollector, self).__init__(*args, **kwargs)
-        self.event_buffer = dict()
-
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         filename = inspect.getfile(frame)
-        to_exclude = ["/.pyenv/", "/TestWrapper/", "/test_", "_test.py"]
+        to_exclude = ["/.pyenv/", "/TestWrapper/", "/test_", "_test.py", "WrapClass.py"]
         if os.path.curdir in filename:
             for s in to_exclude:
                 if s in filename:
                     return
             super().collect(frame, event, arg)
 
+
+    def get_filename(self, func):
+        try:
+            return inspect.getfile(func)
+        except TypeError:
+            return "<unknown>"
+
     def events(self) -> Set[Tuple[str, int]]:
-        return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func, types.FunctionType) else repr(func)),
+        return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func, types.FunctionType) else self.get_filename(func) + "[<unknown>]"),
                  lineno) for func, lineno in self._coverage}
 
 
