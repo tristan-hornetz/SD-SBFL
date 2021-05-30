@@ -64,8 +64,8 @@ class SFL_Evaluation:
         return f"Results for {self.result_container.project_name}, Bug {self.result_container.bug_id}\n" + \
                f"Ranked {len(self.result_container.results)} Events\n" + \
                f"Most suspicious:\n{self.result_container.results[0]}\n\n" + \
-               f"Most suspicious occurrence of matchstring module: Rank #{self.matchstring_index}, " + \
-               f"Top {self.matchstring_index * 100.0 / len(self.result_container.results)}%\n" + \
+               f"Most suspicious occurrence of buggy module: Rank #{self.matchstring_index + 1}, " + \
+               f"Top {(self.matchstring_index + 1) * 100.0 / len(self.result_container.results)}%\n" + \
                f"{self.matchstring_item}"
 
 
@@ -77,4 +77,9 @@ if __name__ == "__main__":
                             help="The file conataining test results")
 
     args = arg_parser.parse_args()
-    print(SFL_Evaluation(args.result_file))
+    evaluation = SFL_Evaluation(args.result_file)
+    print(evaluation)
+    print("\n")
+    for r in evaluation.result_container.results[:10]:
+        print(r)
+

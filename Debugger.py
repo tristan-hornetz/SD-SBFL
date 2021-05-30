@@ -1,18 +1,19 @@
-from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger, Collector
-from types import FrameType
-from typing import Any, Optional, List, Set, Tuple
-import inspect
-import os
-import math
-import types
 import gzip
+import inspect
+import math
+import os
 import pickle
+import types
+from types import FrameType, FunctionType
+from typing import Any, Optional, List, Set, Tuple
+
+from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger, Collector
 
 
 class SFL_Results:
     def __init__(self, debugger):
         self.results = debugger.rank()
-        with open("./TestWrapper/work_dir.info", "rt") as f:
+        with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
             work_dir_base = f.readline().replace("\n", "")
         work_dir = work_dir_base + "/" + os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
         with open(work_dir + "/bugsinpy_id.info", "rt") as f:
@@ -26,15 +27,34 @@ class SFL_Results:
 
 class ExtendedCoverageCollector(CoverageCollector):
 
-    def collect(self, frame: FrameType, event: str, arg: Any) -> None:
-        filename = inspect.getfile(frame)
-        to_exclude = ["/.pyenv/", "/TestWrapper/", "/test_", "_test.py", "WrapClass.py"]
-        if os.path.curdir in filename:
-            for s in to_exclude:
-                if s in filename:
-                    return
-            super().collect(frame, event, arg)
+    def __init__(self, *args, **kwargs):
+        super(ExtendedCoverageCollector, self).__init__(*args, **kwargs)
+        with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
+            self.work_dir_base = f.readline().replace("\n", "")
 
+    def collect(self, frame: FrameType, event: str, arg: Any) -> None:
+
+        to_exclude = ["/.pyenv/", "/TestWrapper/", "/test_", "_test.py", "WrapClass.py"]
+        name = frame.f_code.co_name
+        function = self.search_func(name, frame)
+
+        if function is None:
+            function = self.create_function(frame)
+
+        if not isinstance(function, FunctionType):
+            return
+
+        function_filename = inspect.getfile(function)
+
+        if self.work_dir_base not in function_filename:
+            return
+
+        for s in to_exclude:
+            if s in function_filename:
+                return
+
+        location = (function, frame.f_lineno)
+        self._coverage.add(location)
 
     def get_filename(self, func):
         try:
@@ -43,7 +63,9 @@ class ExtendedCoverageCollector(CoverageCollector):
             return "<unknown>"
 
     def events(self) -> Set[Tuple[str, int]]:
-        return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func, types.FunctionType) else self.get_filename(func) + "[<unknown>]"),
+        return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func,
+                                                                            types.FunctionType) else self.get_filename(
+            func) + "[<unknown>]"),
                  lineno) for func, lineno in self._coverage}
 
 
