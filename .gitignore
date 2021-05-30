@@ -3,3 +3,6 @@
 /_BugsInPy
 /__pycache__
 /debuggingbook/__pycache__
+/_root
+.env.sh
+activate
