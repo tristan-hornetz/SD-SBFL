@@ -1,11 +1,9 @@
 from TestWrapper.root.Debugger import debugger
 import os
-import argparse
 import sys
 
 dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
-# @@ -2574,8 +2574,8 @@ def _match_one(filter_part, dct):
-test_id = "tornado.test.httpclient_test.HTTPClientCommonTestCase.test_redirect_put_without_body"
+test_id = ""
 
 
 def run_test(root_dir, project, bug_id):
@@ -20,6 +18,8 @@ def run_test(root_dir, project, bug_id):
 
 
 if __name__ == '__main__':
+    from evaluate import SFL_Evaluation
+    import argparse
 
     arg_parser = argparse.ArgumentParser(description='Run the debugger on a specific bug')
     arg_parser.add_argument("-p", "--project_name", required=True, type=str, default="thefuck",
@@ -33,6 +33,8 @@ if __name__ == '__main__':
     project = args.project_name
     bug_id = args.bug_id
     run_test(root_dir, project, bug_id)
+
+    print(SFL_Evaluation(dump_file))
 
 else:
     debugger.dump_file = dump_file

@@ -1,12 +1,10 @@
 import argparse
-import os
-import sys
 import gzip
+import os
 import pickle
+import sys
 
-MATCH_STRING = "tornado/http1connection.py"
-
-DEFAULT_INFODIR = "."
+from unidiff import PatchSet
 
 
 def get_info_directory(_results):
@@ -16,7 +14,8 @@ def get_info_directory(_results):
 
 class BugInfo:
     def __init__(self, _results):
-        with open(get_info_directory(_results) + "/bug.info", "rt") as f:
+        self.info_dir = get_info_directory(_results)
+        with open(self.info_dir + "/bug.info", "rt") as f:
             self.attrs = list()
             while True:
                 line = f.readline()
@@ -35,37 +34,47 @@ class BugInfo:
         return ret
 
 
-if __name__ == "__main__":
+def getPatchSet(info: BugInfo):
+    with open(info.info_dir + "/bug_patch.txt", "rt") as f:
+        diff_text = f.read()
+    return PatchSet(diff_text)
 
+
+def getMatchString(info: BugInfo):
+    patch_set = getPatchSet(info)
+    file = patch_set.modified_files[0]
+    return file.path + "["
+
+
+class SFL_Evaluation:
+    def __init__(self, result_file):
+        with gzip.open(result_file) as f:
+            self.result_container = pickle.load(f)
+
+        self.match_string = getMatchString(BugInfo(self.result_container))
+        self.matchstring_index = -1
+        self.matchstring_item = ("", 0)
+        for item, lineno in self.result_container.results:
+            self.matchstring_index += 1
+            if self.match_string in item:
+                self.matchstring_item = (item, lineno)
+                break
+
+    def __str__(self):
+        return f"Results for {self.result_container.project_name}, Bug {self.result_container.bug_id}\n" + \
+               f"Ranked {len(self.result_container.results)} Events\n" + \
+               f"Most suspicious:\n{self.result_container.results[0]}\n\n" + \
+               f"Most suspicious occurrence of matchstring module: Rank #{self.matchstring_index}, " + \
+               f"Top {self.matchstring_index * 100.0 / len(self.result_container.results)}%\n" + \
+               f"{self.matchstring_item}"
+
+
+if __name__ == "__main__":
     DEFAULT_INPUT = os.path.dirname(os.path.abspath(sys.argv[0])) + "/TestWrapper/results.pickle.gz"
 
     arg_parser = argparse.ArgumentParser(description='Evaluate fault localization results.')
     arg_parser.add_argument("-r", "--result_file", required=False, type=str, default=DEFAULT_INPUT,
                             help="The file conataining test results")
-    arg_parser.add_argument("-i", "--info_dir", required=False, type=str, default=DEFAULT_INFODIR,
-                            help="The BugsInPy Project Directory containig information about the specific bug")
 
     args = arg_parser.parse_args()
-
-    with gzip.open(args.result_file) as f:
-        result_container = pickle.load(f)
-
-    results = result_container.results
-    bug_id = result_container.bug_id
-    project_name = result_container.project_name
-
-    print(f"Results for {project_name}, Bug {bug_id}")
-    print(f"Ranked {len(results)} Events")
-    print(f"Most suspicious:\n{results[0]}\n")
-
-    matchstring_index = -1
-    matchstring_item = ("", 0)
-    for item, lineno in results:
-        matchstring_index += 1
-        if MATCH_STRING in item:
-            matchstring_item = (item, lineno)
-            break
-
-    print(
-        f"Most suspicious occurrence of matchstring module: Rank #{matchstring_index}, Top {matchstring_index * 100.0 / len(results)}%")
-    print(matchstring_item)
+    print(SFL_Evaluation(args.result_file))
