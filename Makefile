@@ -92,4 +92,5 @@ clean:
 	rm -rf $(REPO_DIR)
 	rm -f $(ENV_SCRIPT)
 	rm -f activate
+	rm -rf .temp
 	pyenv virtualenv-delete -f statistical_debugger
