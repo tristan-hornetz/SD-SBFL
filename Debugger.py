@@ -11,11 +11,18 @@ from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger
 
 
 class SFL_Results:
-    def __init__(self, debugger):
-        self.results = debugger.rank()
-        with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
-            work_dir_base = f.readline().replace("\n", "")
-        work_dir = work_dir_base + "/" + os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
+    def __init__(self, debugger, work_dir=""):
+        if len(debugger.collectors[debugger.FAIL]) > 0 and len(debugger.collectors[debugger.PASS]) > 0:
+            self.results = debugger.rank()
+        else:
+            self.results = []
+        if work_dir == "":
+            split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(self.__init__) else "/_root"
+            work_dir_info_file = inspect.getfile(self.__init__).split(split_dir)[0] + "/TestWrapper/work_dir.info"
+            with open(work_dir_info_file, "rt") as f:
+                work_dir_base = f.readline().replace("\n", "")
+            work_dir = work_dir_base + "/" + \
+                       os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
         with open(work_dir + "/bugsinpy_id.info", "rt") as f:
             while True:
                 line = f.readline()
@@ -30,11 +37,11 @@ class ExtendedCoverageCollector(CoverageCollector):
     def __init__(self, *args, **kwargs):
         super(ExtendedCoverageCollector, self).__init__(*args, **kwargs)
         with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
-            self.work_dir_base = f.readline().replace("\n", "")
+            self.work_dir_base = str(f.readline().replace("\n", ""))
 
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
 
-        to_exclude = ["/.pyenv/", "/TestWrapper/", "/test_", "_test.py", "WrapClass.py"]
+        to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
         name = frame.f_code.co_name
         function = self.search_func(name, frame)
 
@@ -45,6 +52,13 @@ class ExtendedCoverageCollector(CoverageCollector):
             return
 
         function_filename = inspect.getfile(function)
+
+        if self.work_dir_base not in function_filename:
+            while hasattr(function, "__wrapped__"):
+                function = function.__wrapped__
+                function_filename = inspect.getfile(function)
+                if self.work_dir_base in function_filename:
+                    break
 
         if self.work_dir_base not in function_filename:
             return
@@ -105,6 +119,8 @@ class BetterOchiaiDebugger(OchiaiDebugger):
 class ReportingDebugger(BetterOchiaiDebugger):
     def teardown(self):
         if len(self.collectors[self.FAIL]) == 0:
+            os.system(
+                f"echo \"No Failures - {len(self.collectors[self.PASS])}\" > \"" + os.path.curdir + "/TestWrapper/notice.txt\"")
             return
         if not hasattr(self, "dump_file"):
             dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"

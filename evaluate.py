@@ -4,11 +4,17 @@ import inspect
 import os
 import pickle
 import sys
-from git import Repo
 import ast
-from gitdb.exc import BadObject
+import pkg_resources
 
-from unidiff import PatchSet, PatchedFile
+
+installed = {pkg.key for pkg in pkg_resources.working_set}
+if 'gitpython' in installed and 'unidiff' in installed:
+    from git import Repo
+    from unidiff import PatchSet, PatchedFile
+else:
+    Repo = PatchSet = PatchedFile = object
+
 
 
 def get_info_directory(_results):
@@ -67,7 +73,8 @@ def getParentFunctionFromLineNo(source: ast.AST, lineno: int):
     parent_functions = filter(lambda node: isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef),
                               parent_dict[line_nodes[0]])
 
-    return list(reversed(list(parent_functions)))[0].name
+    parents = list(reversed(list(parent_functions)))
+    return parents[0].name if len(parents) > 0 else None
 
 
 def getBuggyMethodsFromFile(_results, project_root: str, file: PatchedFile, is_target_file: bool):
@@ -129,22 +136,26 @@ class SFL_Evaluation:
 
         self.bug_info = BugInfo(self.result_container)
         self.buggy_methods = getBuggyMethods(self.result_container, self.bug_info)
-        print(self.buggy_methods)
-        b_file, b_method = self.buggy_methods[0]
-        self.match_string = f"{b_file}[{b_method}]"
-        self.matchstring_index = -1
+
+        self.matchstring_index = len(self.result_container.results)
         self.matchstring_item = ("", 0)
-        for item, lineno in self.result_container.results:
-            self.matchstring_index += 1
-            if self.match_string in item:
-                self.matchstring_item = (item, lineno)
-                break
+        for b_file, b_method in self.buggy_methods:
+            matchstring_index = -1
+            match_string = f"{b_file}[{b_method}]"
+            for item, lineno in self.result_container.results:
+                matchstring_index += 1
+                if match_string in item and matchstring_index < self.matchstring_index:
+                    self.matchstring_item = (item, lineno)
+                    self.matchstring_index = matchstring_index
+                    break
 
     def __str__(self):
         return f"Results for {self.result_container.project_name}, Bug {self.result_container.bug_id}\n" + \
-               f"Ranked {len(self.result_container.results)} Events\n" + \
-               f"Most suspicious:\n{self.result_container.results[0]}\n\n" + \
-               f"Most suspicious occurrence of buggy module: Rank #{self.matchstring_index + 1}, " + \
+               f"Ranked {len(self.result_container.results)} Events\n\n" + \
+               f"There {'is one buggy function' if len(self.buggy_methods) == 1 else f'are {len(self.buggy_methods)} buggy functions'} in this commit: \n" + \
+               f"{os.linesep.join(list(f'    {filename}: {method}'  for filename, method in self.buggy_methods))}\n\n" + \
+               f"Most suspicious event:\n{self.result_container.results[0]}\n\n" + \
+               f"Most suspicious event in a buggy function: Rank #{self.matchstring_index + 1}, " + \
                f"Top {(self.matchstring_index + 1) * 100.0 / len(self.result_container.results)}%\n" + \
                f"{self.matchstring_item}"
 
@@ -158,7 +169,17 @@ if __name__ == "__main__":
 
     args = arg_parser.parse_args()
     evaluation = SFL_Evaluation(args.result_file)
-    print(evaluation)
-    print("\n")
-    for r in evaluation.result_container.results[:10]:
-        print(r)
+
+    result_dump = os.path.dirname(os.path.abspath(sys.argv[0])) + f"/results_{evaluation.result_container.project_name}_{evaluation.result_container.bug_id}.txt"
+    with open(result_dump, "wt") as f:
+        old_stdout = sys.stdout
+        sys.stdout = f
+        print(evaluation)
+        print("\n\nTop 10 most suspicious events:\n")
+        i = 0
+        for r in evaluation.result_container.results[:10]:
+            i += 1
+            print(f"#{i}: {r}")
+        sys.stdout = old_stdout
+    os.system(f"less \"{result_dump}\"")#
+    print("Results have been written to " + result_dump)
