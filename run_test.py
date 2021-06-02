@@ -9,6 +9,10 @@ test_ids = []
 
 
 def get_test_ids():
+    """
+    Get a list of Test IDs of tests failing because of the bug currently investigated
+    :return: A list of Test IDs of tests failing because of the bug currently investigated
+    """
     _results = SFL_Results(debugger)
     _info = BugInfo(_results)
     ret = []
@@ -24,6 +28,13 @@ def get_test_ids():
 
 
 def run_test(root_dir: str, project: str, bug_id: int):
+    """
+    Start a test run for a specific bug
+    :param root_dir: The StatisticalDebugger Repository's absoltue path
+    :param project: The project name
+    :param bug_id: The numerical Bug ID
+    :return: None
+    """
     binary_dir = root_dir + "/_BugsInPy/framework/bin"
     work_dir = os.path.abspath(binary_dir + "/temp/" + project)
     debugger_module = os.path.abspath(root_dir + "/run_test.py")
