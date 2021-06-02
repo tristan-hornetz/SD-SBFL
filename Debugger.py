@@ -11,7 +11,16 @@ from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger
 
 
 class SFL_Results:
+    """
+    A container class extracting all relevant information about a test-run from a debugger instance.
+    This is required because a debugger object itself cannot be stored with pickle.
+    """
     def __init__(self, debugger, work_dir=""):
+        """
+        Create a SFL_Results object from a debugger instance
+        :param debugger: The debugger instance
+        :param work_dir: The BugsInPy working directory (only required if non-default)
+        """
         if len(debugger.collectors[debugger.FAIL]) > 0 and len(debugger.collectors[debugger.PASS]) > 0:
             self.results = debugger.rank()
         else:
@@ -21,9 +30,9 @@ class SFL_Results:
             work_dir_info_file = inspect.getfile(self.__init__).split(split_dir)[0] + "/TestWrapper/work_dir.info"
             with open(work_dir_info_file, "rt") as f:
                 work_dir_base = f.readline().replace("\n", "")
-            work_dir = work_dir_base + "/" + \
+            self.work_dir = work_dir_base + "/" + \
                        os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
-        with open(work_dir + "/bugsinpy_id.info", "rt") as f:
+        with open(self.work_dir + "/bugsinpy_id.info", "rt") as f:
             while True:
                 line = f.readline()
                 if not line:
@@ -33,6 +42,9 @@ class SFL_Results:
 
 
 class ExtendedCoverageCollector(CoverageCollector):
+    """
+    CoverageCollector with modifications that make it more suitable for larger projects
+    """
 
     def __init__(self, *args, **kwargs):
         super(ExtendedCoverageCollector, self).__init__(*args, **kwargs)
@@ -40,7 +52,11 @@ class ExtendedCoverageCollector(CoverageCollector):
             self.work_dir_base = str(f.readline().replace("\n", ""))
 
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
+        """
+        Same as CoverageCollector::collect, but with a more elaborate method of filtering out unimportant events
+        """
 
+        # Exclude events from file paths with these substrings:
         to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
         name = frame.f_code.co_name
         function = self.search_func(name, frame)
@@ -48,11 +64,13 @@ class ExtendedCoverageCollector(CoverageCollector):
         if function is None:
             function = self.create_function(frame)
 
+        # ONLY collect functions, no other garbage
         if not isinstance(function, FunctionType):
             return
 
         function_filename = inspect.getfile(function)
 
+        # If the function is decorated, also consider wrapped function itself
         if self.work_dir_base not in function_filename:
             while hasattr(function, "__wrapped__"):
                 function = function.__wrapped__
@@ -60,6 +78,7 @@ class ExtendedCoverageCollector(CoverageCollector):
                 if self.work_dir_base in function_filename:
                     break
 
+        # Don't collect function which are defined outside of our project
         if self.work_dir_base not in function_filename:
             return
 
@@ -84,6 +103,9 @@ class ExtendedCoverageCollector(CoverageCollector):
 
 
 class BetterOchiaiDebugger(OchiaiDebugger):
+    """
+    OchiaiDebugger with reduced algorithmic complexity
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.collectors = {self.FAIL: list(), self.PASS: list()}
@@ -118,6 +140,9 @@ class BetterOchiaiDebugger(OchiaiDebugger):
 
 class ReportingDebugger(BetterOchiaiDebugger):
     def teardown(self):
+        """
+        Dump the SFL_Results of debugger to debugger.dump_file using pickle
+        """
         if len(self.collectors[self.FAIL]) == 0:
             os.system(
                 f"echo \"No Failures - {len(self.collectors[self.PASS])}\" > \"" + os.path.curdir + "/TestWrapper/notice.txt\"")
