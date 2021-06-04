@@ -164,13 +164,16 @@ class StackInspector(StackInspector):
             frame = self.caller_frame()
 
         while frame:
-            item = None
-            if name in frame.f_globals:
-                item = frame.f_globals[name]
-            if name in frame.f_locals:
-                item = frame.f_locals[name]
-            if item and callable(item):
-                return frame, item
+            try:
+                item = None
+                if name in frame.f_globals:
+                    item = frame.f_globals[name]
+                if name in frame.f_locals:
+                    item = frame.f_locals[name]
+                if item and callable(item):
+                    return frame, item
+            except Exception:
+                pass
 
             frame = cast(FrameType, frame.f_back)
 

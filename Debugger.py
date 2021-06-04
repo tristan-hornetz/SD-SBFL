@@ -10,6 +10,14 @@ from typing import Any, Optional, List, Set, Tuple
 from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger, Collector
 
 
+def get_file_resistant(o):
+    try:
+        return inspect.getfile(o)
+    except TypeError:
+        return "<unknown>"
+
+
+
 class SFL_Results:
     """
     A container class extracting all relevant information about a test-run from a debugger instance.
@@ -68,13 +76,14 @@ class ExtendedCoverageCollector(CoverageCollector):
         if not isinstance(function, FunctionType):
             return
 
-        function_filename = inspect.getfile(function)
+        function_filename = get_file_resistant(function)
+
 
         # If the function is decorated, also consider wrapped function itself
         if self.work_dir_base not in function_filename:
             while hasattr(function, "__wrapped__"):
                 function = function.__wrapped__
-                function_filename = inspect.getfile(function)
+                function_filename = get_file_resistant(function)
                 if self.work_dir_base in function_filename:
                     break
 
@@ -89,15 +98,9 @@ class ExtendedCoverageCollector(CoverageCollector):
         location = (function, frame.f_lineno)
         self._coverage.add(location)
 
-    def get_filename(self, func):
-        try:
-            return inspect.getfile(func)
-        except TypeError:
-            return "<unknown>"
-
     def events(self) -> Set[Tuple[str, int]]:
         return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func,
-                                                                            types.FunctionType) else self.get_filename(
+                                                                            types.FunctionType) else get_file_resistant(
             func) + "[<unknown>]"),
                  lineno) for func, lineno in self._coverage}
 

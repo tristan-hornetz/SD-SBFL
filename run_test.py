@@ -1,8 +1,10 @@
 import os
 import sys
 
+
 from TestWrapper.root.Debugger import debugger, SFL_Results
 from TestWrapper.root.evaluate import BugInfo
+
 
 dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
 test_ids = []
