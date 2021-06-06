@@ -1,10 +1,11 @@
 import argparse
+import ast
 import gzip
 import inspect
 import os
 import pickle
 import sys
-import ast
+
 import pkg_resources
 
 installed = {pkg.key for pkg in pkg_resources.working_set}
@@ -29,6 +30,7 @@ class BugInfo:
     """
     Container class for contents of bug.info and project.info
     """
+
     def parse_file(self, file_name, attr_prefix=""):
         with open(file_name, "rt") as f:
             while True:
@@ -194,6 +196,7 @@ class SFL_Evaluation:
     """
     Container class for all information that is relevant for a test run
     """
+
     def __init__(self, result_file):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)

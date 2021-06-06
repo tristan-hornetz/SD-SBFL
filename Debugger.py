@@ -3,19 +3,32 @@ import inspect
 import math
 import os
 import pickle
-import types
-from types import FrameType, FunctionType
-from typing import Any, Optional, List, Set, Tuple
+from typing import Any, Optional, List
 
-from .debuggingbook.StatisticalDebugger import CoverageCollector, OchiaiDebugger, Collector
+from .Collector import collector_type
+from .debuggingbook.StatisticalDebugger import OchiaiDebugger, Collector
+from .evaluate import BugInfo
+
+test_ids = []
 
 
-def get_file_resistant(o):
-    try:
-        return inspect.getfile(o)
-    except TypeError:
-        return "<unknown>"
-
+def get_test_ids(_debugger: OchiaiDebugger):
+    """
+    Get a list of Test IDs of tests failing because of the bug currently investigated
+    :return: A list of Test IDs of tests failing because of the bug currently investigated
+    """
+    _results = SFL_Results(_debugger)
+    _info = BugInfo(_results)
+    ret = []
+    with open(_info.info_dir + "/run_test.sh", "rt") as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            run_test_sh = line.strip(" \n")
+            if run_test_sh.startswith("python") or run_test_sh.startswith("pytest ") or run_test_sh.startswith("tox"):
+                ret.append(list(filter(lambda s: not s.startswith("-"), run_test_sh.split(" "))).pop())
+    return ret
 
 
 class SFL_Results:
@@ -47,62 +60,6 @@ class SFL_Results:
                     break
                 if "=" in line:
                     setattr(self, line.split("=", 1)[0].lower(), line.split("=", 1)[1].replace("\n", ""))
-
-
-class ExtendedCoverageCollector(CoverageCollector):
-    """
-    CoverageCollector with modifications that make it more suitable for larger projects
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(ExtendedCoverageCollector, self).__init__(*args, **kwargs)
-        with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
-            self.work_dir_base = str(f.readline().replace("\n", ""))
-
-    def collect(self, frame: FrameType, event: str, arg: Any) -> None:
-        """
-        Same as CoverageCollector::collect, but with a more elaborate method of filtering out unimportant events
-        """
-
-        # Exclude events from file paths with these substrings:
-        to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
-        name = frame.f_code.co_name
-        function = self.search_func(name, frame)
-
-        if function is None:
-            function = self.create_function(frame)
-
-        # ONLY collect functions, no other garbage
-        if not isinstance(function, FunctionType):
-            return
-
-        function_filename = get_file_resistant(function)
-
-
-        # If the function is decorated, also consider wrapped function itself
-        if self.work_dir_base not in function_filename:
-            while hasattr(function, "__wrapped__"):
-                function = function.__wrapped__
-                function_filename = get_file_resistant(function)
-                if self.work_dir_base in function_filename:
-                    break
-
-        # Don't collect function which are defined outside of our project
-        if self.work_dir_base not in function_filename:
-            return
-
-        for s in to_exclude:
-            if s in function_filename:
-                return
-
-        location = (function, frame.f_lineno)
-        self._coverage.add(location)
-
-    def events(self) -> Set[Tuple[str, int]]:
-        return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func,
-                                                                            types.FunctionType) else get_file_resistant(
-            func) + "[<unknown>]"),
-                 lineno) for func, lineno in self._coverage}
 
 
 class BetterOchiaiDebugger(OchiaiDebugger):
@@ -160,4 +117,5 @@ class ReportingDebugger(BetterOchiaiDebugger):
             pickle.dump(SFL_Results(self), f)
 
 
-debugger = ReportingDebugger(collector_class=ExtendedCoverageCollector)
+debugger = ReportingDebugger(collector_class=collector_type)
+test_ids.extend(get_test_ids(debugger))
