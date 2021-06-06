@@ -2,7 +2,7 @@ import inspect
 from types import FrameType, FunctionType
 from typing import Any, Set, Tuple
 
-from .debuggingbook.StatisticalDebugger import CoverageCollector
+from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 
 
 def get_file_resistant(o):

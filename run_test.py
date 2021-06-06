@@ -1,9 +1,30 @@
 import os
 import sys
 
-from TestWrapper.root.Debugger import debugger
+from TestWrapper.root.Debugger import debugger, SFL_Results
+from TestWrapper.root.evaluate import BugInfo
 
 dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
+test_ids = []
+
+
+def get_test_ids():
+    """
+    Get a list of Test IDs of tests failing because of the bug currently investigated
+    :return: A list of Test IDs of tests failing because of the bug currently investigated
+    """
+    _results = SFL_Results(debugger)
+    _info = BugInfo(_results)
+    ret = []
+    with open(_info.info_dir + "/run_test.sh", "rt") as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            run_test_sh = line.strip(" \n")
+            if run_test_sh.startswith("python") or run_test_sh.startswith("pytest ") or run_test_sh.startswith("tox"):
+                ret.append(list(filter(lambda s: not s.startswith("-"), run_test_sh.split(" "))).pop())
+    return ret
 
 
 def run_test(root_dir: str, project: str, bug_id: int):
@@ -46,3 +67,4 @@ if __name__ == '__main__':
 
 else:
     debugger.dump_file = dump_file
+    test_ids.extend(get_test_ids())

@@ -5,30 +5,8 @@ import os
 import pickle
 from typing import Any, Optional, List
 
-from .Collector import collector_type
-from .debuggingbook.StatisticalDebugger import OchiaiDebugger, Collector
-from .evaluate import BugInfo
-
-test_ids = []
-
-
-def get_test_ids(_debugger: OchiaiDebugger):
-    """
-    Get a list of Test IDs of tests failing because of the bug currently investigated
-    :return: A list of Test IDs of tests failing because of the bug currently investigated
-    """
-    _results = SFL_Results(_debugger)
-    _info = BugInfo(_results)
-    ret = []
-    with open(_info.info_dir + "/run_test.sh", "rt") as f:
-        while True:
-            line = f.readline()
-            if not line:
-                break
-            run_test_sh = line.strip(" \n")
-            if run_test_sh.startswith("python") or run_test_sh.startswith("pytest ") or run_test_sh.startswith("tox"):
-                ret.append(list(filter(lambda s: not s.startswith("-"), run_test_sh.split(" "))).pop())
-    return ret
+from TestWrapper.root.Collector import collector_type
+from TestWrapper.root.debuggingbook.StatisticalDebugger import OchiaiDebugger, Collector
 
 
 class SFL_Results:
@@ -118,4 +96,4 @@ class ReportingDebugger(BetterOchiaiDebugger):
 
 
 debugger = ReportingDebugger(collector_class=collector_type)
-test_ids.extend(get_test_ids(debugger))
+
