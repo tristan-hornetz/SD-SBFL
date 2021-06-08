@@ -4,7 +4,7 @@ _Work in Progress..._
 
 Statistical Debugging framework for [BugsInPy](https://github.com/soarsmu/BugsInPy).  
 
-##Setup
+## Setup
 
 This framework will only run on Linux. Windows is not supported.
 
@@ -17,7 +17,7 @@ and set up a Pyenv environment for running the debugger.
 
 _Note: Any actions performed by ```make``` can be reverted with ```make clean```._
 
-##Usage
+## Usage
 
 Before running any of the scripts, activate the Pyenv environment with ```$(cat activate)```.
 
@@ -35,7 +35,7 @@ If you want to reevaluate the results from another test-run, you can use
 python evaluate.py [-r <result_file>] 
 ```
 
-##Acknowledgements
+## Acknowledgements
 
 This repository contains code originally from [The Debugging Book](https://github.com/uds-se/debuggingbook) (see the 
 _/debuggingbook_ folder).
