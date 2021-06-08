@@ -8,6 +8,7 @@ from TestWrapper.root.evaluate import BugInfo
 dump_file = os.path.curdir + '/TestWrapper/results.pickle.gz'
 test_ids = []
 
+
 def get_test_ids():
     """
     Get a list of Test IDs of tests failing because of the bug currently investigated
@@ -26,7 +27,8 @@ def get_test_ids():
                 ret.append(list(filter(lambda s: not s.startswith('-'), run_test_sh.split(' '))).pop())
     return ret
 
-def run_test(root_dir: str, project: str, bug_id: int):
+
+def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file):
     """
     Start a test run for a specific bug
     :param root_dir: The StatisticalDebugger Repository's absoltue path
@@ -40,19 +42,29 @@ def run_test(root_dir: str, project: str, bug_id: int):
     os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0')
     os.system(f'{binary_dir}/bugsinpy-compile -w {work_dir}')
     os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {work_dir}')
+    with open(work_dir + "/output_file.info", "wt") as f:
+        f.write(output_file)
     os.system(f'{binary_dir}/bugsinpy-test -a -w {work_dir}')
+
+
 if __name__ == '__main__':
     from evaluate import SFL_Evaluation
     import argparse
     arg_parser = argparse.ArgumentParser(description='Run the debugger on a specific bug')
     arg_parser.add_argument('-p', '--project_name', required=True, type=str, default='thefuck', help='The name of the target project')
     arg_parser.add_argument('-i', '--bug_id', required=True, type=int, default=2, help='The numerical ID of the target bug')
+    arg_parser.add_argument('-o', '--output_file', required=False, type=str, default=dump_file, help='The file to dump the results to')
+
     args = arg_parser.parse_args()
     root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     project = args.project_name
     bug_id = args.bug_id
-    run_test(root_dir, project, bug_id)
-    print(SFL_Evaluation(dump_file))
+
+    run_test(root_dir, project, bug_id, os.path.abspath(args.output_file))
+    print(SFL_Evaluation(os.path.abspath(args.output_file)))
 else:
+    if os.path.exists("./output_file.info"):
+        with open("./output_file.info", "rt") as f:
+            dump_file = f.read()
     debugger.dump_file = dump_file
     test_ids.extend(get_test_ids())

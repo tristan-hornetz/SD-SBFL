@@ -27,7 +27,7 @@ class ExtendedCoverageCollector(CoverageCollector):
         self.ignore_types = list(filter(lambda e: isinstance(e, type), self.items_to_ignore))
         self.ignore_names = set(e.__name__ for e in filter(lambda e: hasattr(e, '__name__'), self.items_to_ignore))
         # Exclude events from file paths with these substrings:
-        self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
+        self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py", "/.pyenv/"]
 
 
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
@@ -52,11 +52,11 @@ class ExtendedCoverageCollector(CoverageCollector):
 
         self.collect(frame, event, arg)
 
-    def exclude_function(self, function):
+    def check_function(self, function):
         """
-        Should the given function be excluded from collection?
+        Get the function that should be processed for function (might be != function itself, or None)
         :param function: A function encountered by traceit
-        :return: True if the given function should be excluded from collection
+        :return: None if the given function should be excluded from collection
         """
 
         if function in self.exclude_function_dict.keys():
@@ -64,8 +64,8 @@ class ExtendedCoverageCollector(CoverageCollector):
 
         # ONLY collect functions, no other garbage
         if not isinstance(function, FunctionType):
-            self.exclude_function_dict[function] = True
-            return True
+            self.exclude_function_dict[function] = None
+            return None
 
         function_filename = get_file_resistant(function)
 
@@ -79,34 +79,16 @@ class ExtendedCoverageCollector(CoverageCollector):
 
         # Don't collect function which are defined outside of our project
         if self.work_dir_base not in function_filename:
-            self.exclude_function_dict[function] = True
-            return True
+            self.exclude_function_dict[function] = None
+            return None
 
         for s in self.to_exclude:
             if s in function_filename:
-                self.exclude_function_dict[function] = True
-                return True
+                self.exclude_function_dict[function] = None
+                return None
 
-        self.exclude_function_dict[function] = False
-        return False
-
-    def search_func(self, name: str, frame: Optional[FrameType] = None) -> \
-        Optional[Callable]:
-        """Search in callers for a definition of the function `name`"""
-        if frame is None:
-            frame = self.caller_frame()
-
-        try:
-            item = None
-            if name in frame.f_globals:
-                item = frame.f_globals[name]
-            if name in frame.f_locals:
-                item = frame.f_locals[name]
-            if item and callable(item):
-                return item
-        except Exception:
-            pass
-        return None
+        self.exclude_function_dict[function] = function
+        return function
 
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         """
@@ -119,7 +101,9 @@ class ExtendedCoverageCollector(CoverageCollector):
         if function is None:
             function = self.create_function(frame)
 
-        if self.exclude_function(function):
+        function = self.check_function(function)
+
+        if not function:
             return
 
         location = (function, frame.f_lineno)
