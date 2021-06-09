@@ -1,6 +1,6 @@
 import inspect
 from types import FrameType, FunctionType
-from typing import Any, Set, Tuple, Optional, Callable
+from typing import Any, Set, Tuple, Optional, Callable, Iterable, Iterator
 
 from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 
@@ -12,7 +12,52 @@ def get_file_resistant(o):
         return "<unknown>"
 
 
-class ExtendedCoverageCollector(CoverageCollector):
+class SharedCoverage(Iterable):
+    def __init__(self, shared_coverage, collector):
+        self.collector = collector
+        self.shared_coverage = shared_coverage
+        self.length = 0
+
+    def add(self, o):
+        if o in self.shared_coverage.keys():
+            if self.collector not in self.shared_coverage[o]:
+                self.length += 1
+            self.shared_coverage[o].add(self.collector)
+        else:
+            self.shared_coverage[o] = {self.collector}
+            self.length += 1
+
+    def __contains__(self, item):
+        if item in self.shared_coverage.keys():
+            return self.collector in self.shared_coverage[item]
+        return False
+
+    def __len__(self):
+        return self.length
+
+    def __iter__(self) -> Iterator:
+        return filter(lambda k: self.collector in self.shared_coverage[k], self.shared_coverage.keys())
+
+
+class SharedCoverageCollector(CoverageCollector):
+    """
+    CoverageCollector which keeps data structures shared between instances to reduce RAM usage
+    """
+
+    def __init__(self, *args, **kwargs):
+        if 'shared_coverage' in kwargs.keys():
+            self.shared_coverage = kwargs.pop('shared_coverage')
+            self._coverage = SharedCoverage(self.shared_coverage, self)
+        else:
+            self.shared_coverage = dict()
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        return self.__class__(*args, shared_coverage=self.shared_coverage, **kwargs)
+
+
+
+class ExtendedCoverageCollector(SharedCoverageCollector):
     """
     CoverageCollector with modifications that make it more suitable for larger projects
     """
@@ -56,16 +101,11 @@ class ExtendedCoverageCollector(CoverageCollector):
         """
         Get the function that should be processed for function (might be != function itself, or None)
         :param function: A function encountered by traceit
-        :return: None if the given function should be excluded from collection
+        :return: The function to be processed, or None if the given function should be excluded from collection
         """
 
         if function in self.exclude_function_dict.keys():
             return self.exclude_function_dict[function]
-
-        # ONLY collect functions, no other garbage
-        if not isinstance(function, FunctionType):
-            self.exclude_function_dict[function] = None
-            return None
 
         function_filename = get_file_resistant(function)
 
@@ -93,6 +133,7 @@ class ExtendedCoverageCollector(CoverageCollector):
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         """
         Same as CoverageCollector::collect, but with a more elaborate method of filtering out unimportant events
+        Function objects are translated to strings so that the functions themselves don't have to stay in memory
         """
 
         name = frame.f_code.co_name
@@ -101,19 +142,20 @@ class ExtendedCoverageCollector(CoverageCollector):
         if function is None:
             function = self.create_function(frame)
 
+        # ONLY collect functions, no other garbage
+        if not (isinstance(function, FunctionType) and hasattr(function, '__name__')):
+            return
+
         function = self.check_function(function)
 
         if not function:
             return
 
-        location = (function, frame.f_lineno)
+        location = (f"{get_file_resistant(function)}[{function.__name__}]", frame.f_lineno)
         self._coverage.add(location)
 
     def events(self) -> Set[Tuple[str, int]]:
-        return {((f"{inspect.getfile(func)}[{func.__name__}]" if isinstance(func,
-                                                                            FunctionType) else get_file_resistant(
-            func) + "[<unknown>]"),
-                 lineno) for func, lineno in self._coverage}
+        return self._coverage
 
 
-collector_type = ExtendedCoverageCollector
+collector_type = ExtendedCoverageCollector()

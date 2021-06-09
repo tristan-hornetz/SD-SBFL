@@ -48,20 +48,23 @@ class BetterOchiaiDebugger(OchiaiDebugger):
         super().__init__(*args, **kwargs)
         self.collectors = {self.FAIL: list(), self.PASS: list()}
         self.collectors_with_result = {self.FAIL: dict(), self.PASS: dict()}
+        self.processed_collectors = set()
 
     def add_collector(self, outcome: str, collector: Collector) -> Collector:
+        if collector in self.processed_collectors:
+            return super().add_collector(outcome, collector)
         for event in collector.events():
             if event in self.collectors_with_result[outcome].keys():
-                self.collectors_with_result[outcome][event].add(collector)
+                self.collectors_with_result[outcome][event] += 1
             else:
-                self.collectors_with_result[outcome][event] = {collector}
+                self.collectors_with_result[outcome][event] = 1
         return super().add_collector(outcome, collector)
 
     def suspiciousness(self, event: Any) -> Optional[float]:
-        failed = len(self.collectors_with_result[self.FAIL][event]) if event in self.collectors_with_result[
+        failed = self.collectors_with_result[self.FAIL][event] if event in self.collectors_with_result[
             self.FAIL].keys() else 0
         not_in_failed = len(self.collectors[self.FAIL]) - failed
-        passed = len(self.collectors_with_result[self.PASS][event]) if event in self.collectors_with_result[
+        passed = self.collectors_with_result[self.PASS][event] if event in self.collectors_with_result[
             self.PASS].keys() else 0
 
         try:
