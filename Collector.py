@@ -39,32 +39,12 @@ class SharedCoverage(Iterable):
         return filter(lambda k: self.collector in self.shared_coverage[k], self.shared_coverage.keys())
 
 
-class SharedCoverageCollector(CoverageCollector):
-    """
-    CoverageCollector which keeps data structures shared between instances to reduce RAM usage
-    """
-
-    def __init__(self, *args, **kwargs):
-        if 'shared_coverage' in kwargs.keys():
-            self.shared_coverage = kwargs.pop('shared_coverage')
-            self._coverage = SharedCoverage(self.shared_coverage, self)
-        else:
-            self.shared_coverage = dict()
-        super().__init__(*args, **kwargs)
-
-    def __call__(self, *args, **kwargs):
-        return self.__class__(*args, shared_coverage=self.shared_coverage, **kwargs)
-
-
-
-class ExtendedCoverageCollector(SharedCoverageCollector):
+class ExtendedCoverageCollector(CoverageCollector):
     """
     CoverageCollector with modifications that make it more suitable for larger projects
     """
 
     def __init__(self, *args, **kwargs):
-        self.exclude_function_dict = dict()
-
         super(ExtendedCoverageCollector, self).__init__(*args, **kwargs)
         with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
             self.work_dir_base = str(f.readline().replace("\n", ""))
@@ -73,7 +53,6 @@ class ExtendedCoverageCollector(SharedCoverageCollector):
         self.ignore_names = set(e.__name__ for e in filter(lambda e: hasattr(e, '__name__'), self.items_to_ignore))
         # Exclude events from file paths with these substrings:
         self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py", "/.pyenv/"]
-
 
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """
@@ -104,9 +83,6 @@ class ExtendedCoverageCollector(SharedCoverageCollector):
         :return: The function to be processed, or None if the given function should be excluded from collection
         """
 
-        if function in self.exclude_function_dict.keys():
-            return self.exclude_function_dict[function]
-
         function_filename = get_file_resistant(function)
 
         # If the function is decorated, also consider wrapped function itself
@@ -119,15 +95,12 @@ class ExtendedCoverageCollector(SharedCoverageCollector):
 
         # Don't collect function which are defined outside of our project
         if self.work_dir_base not in function_filename:
-            self.exclude_function_dict[function] = None
             return None
 
         for s in self.to_exclude:
             if s in function_filename:
-                self.exclude_function_dict[function] = None
                 return None
 
-        self.exclude_function_dict[function] = function
         return function
 
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
@@ -158,4 +131,21 @@ class ExtendedCoverageCollector(SharedCoverageCollector):
         return self._coverage
 
 
-collector_type = ExtendedCoverageCollector()
+class SharedCoverageCollector(ExtendedCoverageCollector):
+    """
+    CoverageCollector which keeps data structures shared between instances to reduce RAM usage
+    """
+
+    def __init__(self, *args, **kwargs):
+        if 'shared_coverage' in kwargs.keys():
+            self.shared_coverage = kwargs.pop('shared_coverage')
+        else:
+            self.shared_coverage = dict()
+        super().__init__(*args, **kwargs)
+        self._coverage = SharedCoverage(self.shared_coverage, self)
+
+    def __call__(self, *args, **kwargs):
+        return self.__class__(*args, shared_coverage=self.shared_coverage, **kwargs)
+
+
+collector_type = SharedCoverageCollector()
