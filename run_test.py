@@ -38,7 +38,7 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file):
     binary_dir = root_dir + '/_BugsInPy/framework/bin'
     work_dir = os.path.abspath(binary_dir + '/temp/' + project)
     debugger_module = os.path.abspath(root_dir + '/run_test.py')
-    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0 -w {work_dir}')
+    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0')
     os.system(f'{binary_dir}/bugsinpy-compile -w {work_dir}')
     os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {work_dir}')
     with open(work_dir + "/output_file.info", "wt") as f:

@@ -1,4 +1,5 @@
 import inspect
+import os
 from types import FrameType, FunctionType
 from typing import Any, Set, Tuple
 
@@ -16,8 +17,9 @@ class EventCollector(CoverageCollector):
 
     def __init__(self, *args, **kwargs):
         super(EventCollector, self).__init__(*args, **kwargs)
-        with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
-            self.work_dir_base = str(f.readline().replace("\n", ""))
+        if os.path.exists(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info"):
+            with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
+                self.work_dir_base = str(f.readline().replace("\n", ""))
 
         self.ignore_types = list(filter(lambda e: isinstance(e, type), self.items_to_ignore))
         self.ignore_names = set(e.__name__ for e in filter(lambda e: hasattr(e, '__name__'), self.items_to_ignore))

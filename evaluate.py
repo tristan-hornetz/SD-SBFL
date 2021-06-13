@@ -188,7 +188,7 @@ def getValidProjectDir(_results, info, fixed=False, directory="", instrument=Fal
     os.system(f'{binary_dir}/bugsinpy-checkout -p {_results.project_name} -i {_results.bug_id} -v {1 if fixed else 0} -w {directory}')
     if instrument:
         debugger_module = os.path.abspath(root_dir + '/run_test.py')
-        os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {directory}')
+        os.system(f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory + "/" + _results.project_name}')
 
     return directory + "/" + _results.project_name
 
