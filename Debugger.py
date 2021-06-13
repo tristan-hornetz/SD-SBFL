@@ -27,8 +27,11 @@ class SFL_Results:
         if work_dir == "":
             split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(self.__init__) else "/_root"
             work_dir_info_file = inspect.getfile(self.__init__).split(split_dir)[0] + "/TestWrapper/work_dir.info"
-            with open(work_dir_info_file, "rt") as f:
-                work_dir_base = f.readline().replace("\n", "")
+            if os.path.exists(work_dir_info_file):
+                with open(work_dir_info_file, "rt") as f:
+                    work_dir_base = f.readline().replace("\n", "")
+            else:
+                work_dir_base = os.curdir.rsplit("/", 1)[0]
             self.work_dir = work_dir_base + "/" + \
                        os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
         with open(self.work_dir + "/bugsinpy_id.info", "rt") as f:

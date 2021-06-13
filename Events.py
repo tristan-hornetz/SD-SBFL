@@ -137,9 +137,7 @@ class ScalarPairsEvent(DebuggerEvent):
 
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         """
-        Collect a return value
-        If possible, the hash of the returned object is stored to keep the object itself out of memory
-        Otherwise, store 'Unhashable'
+        Collect all possible scalar pairs for this frame
         """
 
         function = self.get_function_from_frame(frame)

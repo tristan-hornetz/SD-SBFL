@@ -71,6 +71,27 @@ class LineNumberExtractor(ast.NodeVisitor):
         return super().visit(node)
 
 
+class DebuggerMethod:
+    """
+    Represents a Method, as extracted from code
+    """
+    def __init__(self, name: str, file: str, linenos=None):
+        if linenos is None:
+            linenos = set()
+        self.name = name
+        self.file = file
+        self.linenos = linenos
+
+    def add_lineno(self, lineno):
+        self.linenos.add(lineno)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __str__(self):
+        return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]"
+
+
 def getPatchSet(info: BugInfo):
     """
     Create a unidiff PatchSet instance from the bug_patch.txt file of a specific Bug
@@ -211,31 +232,87 @@ def getBuggyMethods(_results, info: BugInfo):
     return list(methods)
 
 
+def extractMethodsFromFile(directory, file, methods):
+    if os.path.exists(directory + "/" + file):
+        with open(directory + "/" + file, "rt") as f:
+            node = ast.parse(f.read())
+        function_defs = set(filter(lambda n: isinstance(n, ast.FunctionDef) or isinstance(n, ast.AsyncFunctionDef), ast.walk(node)))
+        lines_per_method = list()
+        for d in filter(lambda n: n.name in methods, function_defs):
+            extractor = LineNumberExtractor()
+            extractor.visit(d)
+            lines_per_method.append((d.name, extractor.linenos))
+        return lines_per_method
+    return list()
+
+
+def extractMethodsFromCode(_results, info, method_strings):
+    methods_per_file = dict()
+    for s in method_strings:
+        m_arr = s.split("[")
+        if len(m_arr) > 1:
+            if m_arr[0] in methods_per_file.keys():
+                methods_per_file[m_arr[0]].add(m_arr[1].split("]")[0])
+            else:
+                methods_per_file[m_arr[0]] = {m_arr[1].split("]")[0]}
+    directory = getValidProjectDir(_results, info, False, instrument=True)
+    method_objects = set()
+    for file in methods_per_file.keys():
+        lines_per_method = extractMethodsFromFile(directory, file, methods_per_file[file])
+        for method, linenos in lines_per_method:
+            method_objects.add(DebuggerMethod(method, file, linenos))
+    return list(method_objects)
+
 class SFL_Evaluation:
     """
     Container class for all information that is relevant for a test run
     """
 
-    def getMethodStringFromEvent(self, event: str):
-        return next(reversed(event.split(" @ ")))
+    def sortResultMethods(self, work_dir):
+        method_dict = dict()
+        ranks = dict()
+        for method in self.result_methods:
+            ranks[method] = len(self.result_container.results)
+            if method.file in method_dict.keys():
+                if method.name in method_dict[method.file].keys():
+                    method_dict[method.file][method.name].append((method.linenos, method))
+                else:
+                    method_dict[method.file][method.name] = [(method.linenos, method)]
+            else:
+                method_dict[method.file] = {method.name: [(method.linenos, method)]}
+        index = -1
+        for event, lineno in self.result_container.results:
+            index += 1
+            method_str = self.getMethodStringFromEvent(event, work_dir)
+            m_arr = method_str.split("[", 1)
+            if m_arr[0] in method_dict.keys():
+                m_name = m_arr[1].split("]")[0]
+                if m_name in method_dict[m_arr[0]].keys():
+                    for linenos, method in method_dict[m_arr[0]][m_name]:
+                        if lineno in linenos:
+                            ranks[method] = min(index, ranks[method])
+        self.result_methods.sort(key=lambda m: ranks[m])
+
+    def getMethodStringFromEvent(self, event: str, work_dir):
+        return next(reversed(event.split(" @ "))).replace(work_dir + "/", "")
 
     def __init__(self, result_file):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)
 
-        self.result_methods = list()
-        self.result_method_lines = dict()
+        self.result_method_strings = set()
 
+        self.result_methods = list()
+
+        work_dir = self.result_container.work_dir + "/" + self.result_container.project_name
         for event, lineno in self.result_container.results:
-            method = self.getMethodStringFromEvent(event)
-            if method in self.result_methods:
-                self.result_method_lines[method].add(lineno)
-            else:
-                self.result_methods.append(method)
-                self.result_method_lines[method] = {lineno}
+            method = self.getMethodStringFromEvent(event, work_dir)
+            self.result_method_strings.add(method)
 
         self.bug_info = BugInfo(self.result_container)
         self.buggy_methods = getBuggyMethods(self.result_container, self.bug_info)
+        self.result_methods = extractMethodsFromCode(self.result_container, self.bug_info, self.result_method_strings)
+        self.sortResultMethods(work_dir)
 
         self.highest_rank = len(self.result_methods)
 
@@ -245,21 +322,21 @@ class SFL_Evaluation:
                 current_index += 1
                 if self.highest_rank <= current_index:
                     break
-                if f"{b_file}[{b_method}]" in method:
-                    if len(set(b_linenos).intersection(self.result_method_lines[method])):
+                if method.file in b_file and method.name == b_method:
+                    if len(set(b_linenos).intersection(method.linenos)) > 0:
                         self.highest_rank = current_index
                         self.best_method = method
                         break
 
     def __str__(self):
         return f"Results for {self.result_container.project_name}, Bug {self.result_container.bug_id}\n" + \
-               f"Ranked {len(self.result_methods)} Methods\n\n" + \
+               f"Ranked {len(self.result_container.results)} Events and {len(self.result_methods)} Methods\n\n" + \
                f"There {'is one buggy function' if len(self.buggy_methods) == 1 else f'are {len(self.buggy_methods)} buggy functions'} in this commit: \n" + \
                f"{os.linesep.join(list(f'    {filename}: {method}, Lines {min(linenos)} -> {max(linenos)}' for filename, method, linenos in self.buggy_methods))}\n\n" + \
-               f"Most suspicious method:\n{self.result_methods[0]}, Lines {min(self.result_method_lines[self.result_methods[0]])} -> {max(self.result_method_lines[self.result_methods[0]])}\n\n" + \
-               f"Most suspicious buggy function: Rank #{self.highest_rank + 1}, " + \
+               f"Most suspicious method:\n    {str(self.result_methods[0])}\n\n" + \
+               f"Most suspicious buggy method: Rank #{self.highest_rank + 1}, " + \
                f"Top {(self.highest_rank + 1) * 100.0 / len(self.result_methods)}%\n" + \
-               f"{self.best_method}, Lines {min(self.result_method_lines[self.best_method])} -> {max(self.result_method_lines[self.best_method])}"
+               f"    {str(self.best_method)}"
 
 
 if __name__ == "__main__":
@@ -278,6 +355,11 @@ if __name__ == "__main__":
         old_stdout = sys.stdout
         sys.stdout = f
         print(evaluation)
+        print("\n\nTop 10 most suspicious methods:\n")
+        i = 0
+        for r in evaluation.result_methods[:10]:
+            i += 1
+            print(f"#{i}: {str(r)}")
         print("\n\nTop 10 most suspicious events:\n")
         i = 0
         for r in evaluation.result_container.results[:10]:
