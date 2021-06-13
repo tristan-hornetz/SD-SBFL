@@ -60,6 +60,17 @@ class BugInfo:
         return ret
 
 
+class LineNumberExtractor(ast.NodeVisitor):
+    def __init__(self, *args, **kwargs):
+        super(LineNumberExtractor, self).__init__(*args, **kwargs)
+        self.linenos = set()
+
+    def visit(self, node: ast.AST):
+        if hasattr(node, 'lineno'):
+            self.linenos.add(node.lineno)
+        return super().visit(node)
+
+
 def getPatchSet(info: BugInfo):
     """
     Create a unidiff PatchSet instance from the bug_patch.txt file of a specific Bug
@@ -96,18 +107,22 @@ def getParentFunctionFromLineNo(source: ast.AST, lineno: int):
     Get the name of the function containing a specific line of code
     :param source: The AST to be processed
     :param lineno: The lineno to get the function of
-    :return: The name of the function, or None if no function could be found
+    :return: The name of the function, or None if no function could be found, linenos of the first parent
     """
     parent_dict, line_nodes = getNodeParents(source, dict(), list(), list(), lineno)
-
     if len(line_nodes) == 0:
         return None
 
-    parent_functions = filter(lambda node: isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef),
+    parent_elements = filter(lambda node: isinstance(node, ast.FunctionDef) or isinstance(node, ast.ClassDef)
+                                          or isinstance(node, ast.AsyncFunctionDef),
                               parent_dict[line_nodes[0]])
 
-    parents = list(reversed(list(parent_functions)))
-    return parents[0].name if len(parents) > 0 else None
+    parents = list(parent_elements)
+    if len(parents) == 0:
+        return None
+    extractor = LineNumberExtractor()
+    extractor.visit(next(reversed(parents)))
+    return "::".join(p.name for p in parents), tuple(sorted(extractor.linenos))
 
 
 def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file: bool):
@@ -152,7 +167,7 @@ def getRepoObj(_results, info: BugInfo, dir_name="", fixed=False):
     return None
 
 
-def getValidProjectDir(_results, info, fixed=False, directory=""):
+def getValidProjectDir(_results, info, fixed=False, directory="", instrument=False):
     """
     Create a valid Git Repo for a specific bug and return the path to it
     :param _results: The SFL_Results of the test run
@@ -163,15 +178,19 @@ def getValidProjectDir(_results, info, fixed=False, directory=""):
     """
     if directory == "":
         directory = os.path.dirname(inspect.getfile(getNodeParents)) + "/.temp"
-    repo = getRepoObj(_results, info, directory, fixed)
-    if repo is not None:
-        return directory
     if os.path.exists(directory):
         os.system(f"rm -rf \"{directory}\"")
     os.mkdir(directory)
-    repo = Repo.clone_from(info.project_github_url, to_path=directory)
-    repo.git.checkout(info.buggy_commit_id if not fixed else info.fixed_commit_id)
-    return directory
+    #repo = Repo.clone_from(info.project_github_url, to_path=directory)
+    #repo.git.checkout(info.buggy_commit_id if not fixed else info.fixed_commit_id)
+    root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    binary_dir = root_dir + '/_BugsInPy/framework/bin'
+    os.system(f'{binary_dir}/bugsinpy-checkout -p {_results.project_name} -i {_results.bug_id} -v {1 if fixed else 0} -w {directory}')
+    if instrument:
+        debugger_module = os.path.abspath(root_dir + '/run_test.py')
+        os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {directory}')
+
+    return directory + "/" + _results.project_name
 
 
 def getBuggyMethods(_results, info: BugInfo):
@@ -183,12 +202,12 @@ def getBuggyMethods(_results, info: BugInfo):
     """
     patch_set = getPatchSet(info)
     methods = set()
-    repo_dir = getValidProjectDir(_results, info, False)
+    repo_dir = getValidProjectDir(_results, info, False, instrument=True)
     for file in patch_set.modified_files:
-        methods.update((file.path, method) for method in getBuggyMethodsFromFile(repo_dir, file, False))
-    repo_dir = getValidProjectDir(_results, info, True)
+        methods.update((file.path, method, linenos) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, False))
+    repo_dir = getValidProjectDir(_results, info, True, instrument=True)
     for file in patch_set.modified_files:
-        methods.update((file.path, method) for method in getBuggyMethodsFromFile(repo_dir, file, True))
+        methods.update((file.path, method, linenos) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, True))
     return list(methods)
 
 
@@ -197,34 +216,50 @@ class SFL_Evaluation:
     Container class for all information that is relevant for a test run
     """
 
+    def getMethodStringFromEvent(self, event: str):
+        return next(reversed(event.split(" @ ")))
+
     def __init__(self, result_file):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)
 
+        self.result_methods = list()
+        self.result_method_lines = dict()
+
+        for event, lineno in self.result_container.results:
+            method = self.getMethodStringFromEvent(event)
+            if method in self.result_methods:
+                self.result_method_lines[method].add(lineno)
+            else:
+                self.result_methods.append(method)
+                self.result_method_lines[method] = {lineno}
+
         self.bug_info = BugInfo(self.result_container)
         self.buggy_methods = getBuggyMethods(self.result_container, self.bug_info)
 
-        self.matchstring_index = len(self.result_container.results)
-        self.matchstring_item = ("", 0)
-        for b_file, b_method in self.buggy_methods:
-            matchstring_index = -1
-            match_string = f"{b_file}[{b_method}]"
-            for item, lineno in self.result_container.results:
-                matchstring_index += 1
-                if match_string in item and matchstring_index < self.matchstring_index:
-                    self.matchstring_item = (item, lineno)
-                    self.matchstring_index = matchstring_index
+        self.highest_rank = len(self.result_methods)
+
+        for b_file, b_method, b_linenos in self.buggy_methods:
+            current_index = -1
+            for method in self.result_methods:
+                current_index += 1
+                if self.highest_rank <= current_index:
                     break
+                if f"{b_file}[{b_method}]" in method:
+                    if len(set(b_linenos).intersection(self.result_method_lines[method])):
+                        self.highest_rank = current_index
+                        self.best_method = method
+                        break
 
     def __str__(self):
         return f"Results for {self.result_container.project_name}, Bug {self.result_container.bug_id}\n" + \
-               f"Ranked {len(self.result_container.results)} Events\n\n" + \
+               f"Ranked {len(self.result_methods)} Methods\n\n" + \
                f"There {'is one buggy function' if len(self.buggy_methods) == 1 else f'are {len(self.buggy_methods)} buggy functions'} in this commit: \n" + \
-               f"{os.linesep.join(list(f'    {filename}: {method}' for filename, method in self.buggy_methods))}\n\n" + \
-               f"Most suspicious event:\n{self.result_container.results[0]}\n\n" + \
-               f"Most suspicious event in a buggy function: Rank #{self.matchstring_index + 1}, " + \
-               f"Top {(self.matchstring_index + 1) * 100.0 / len(self.result_container.results)}%\n" + \
-               f"{self.matchstring_item}"
+               f"{os.linesep.join(list(f'    {filename}: {method}, Lines {min(linenos)} -> {max(linenos)}' for filename, method, linenos in self.buggy_methods))}\n\n" + \
+               f"Most suspicious method:\n{self.result_methods[0]}, Lines {min(self.result_method_lines[self.result_methods[0]])} -> {max(self.result_method_lines[self.result_methods[0]])}\n\n" + \
+               f"Most suspicious buggy function: Rank #{self.highest_rank + 1}, " + \
+               f"Top {(self.highest_rank + 1) * 100.0 / len(self.result_methods)}%\n" + \
+               f"{self.best_method}, Lines {min(self.result_method_lines[self.best_method])} -> {max(self.result_method_lines[self.best_method])}"
 
 
 if __name__ == "__main__":

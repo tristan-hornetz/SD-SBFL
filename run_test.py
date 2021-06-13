@@ -3,7 +3,6 @@ import sys
 if __name__ == '__main__' and (not os.path.islink(os.path.abspath(os.path.dirname(sys.argv[0])) + '/TestWrapper')):
     print('Symlinks not found. Did you run make?')
     exit(-1)
-from TestWrapper.root.Debugger import debugger, SFL_Results
 from TestWrapper.root.evaluate import BugInfo
 dump_file = os.path.curdir + '/TestWrapper/results.pickle.gz'
 test_ids = []
@@ -39,7 +38,7 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file):
     binary_dir = root_dir + '/_BugsInPy/framework/bin'
     work_dir = os.path.abspath(binary_dir + '/temp/' + project)
     debugger_module = os.path.abspath(root_dir + '/run_test.py')
-    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0')
+    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0 -w {work_dir}')
     os.system(f'{binary_dir}/bugsinpy-compile -w {work_dir}')
     os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {work_dir}')
     with open(work_dir + "/output_file.info", "wt") as f:
@@ -63,6 +62,7 @@ if __name__ == '__main__':
     run_test(root_dir, project, bug_id, os.path.abspath(args.output_file))
     print(SFL_Evaluation(os.path.abspath(args.output_file)))
 else:
+    from TestWrapper.root.Debugger import debugger, SFL_Results
     if os.path.exists("./output_file.info"):
         with open("./output_file.info", "rt") as f:
             dump_file = f.read()
