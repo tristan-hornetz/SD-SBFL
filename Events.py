@@ -3,6 +3,7 @@ from abc import abstractmethod
 from types import FrameType, FunctionType
 from typing import Any, Iterable, Iterator, Hashable
 
+
 def get_file_resistant(o):
     try:
         return inspect.getfile(o)
@@ -88,8 +89,8 @@ class DebuggerEvent:
         name = frame.f_code.co_name
         function = self.collector.search_func(name, frame)
 
-        if function is None:
-            function = self.collector.create_function(frame)
+        #if function is None:
+        #    function = self.collector.create_function(frame)
 
         # ONLY collect functions, no other garbage
         if not (isinstance(function, FunctionType) and hasattr(function, '__name__')):
@@ -188,7 +189,7 @@ class ScalarPairsEvent(DebuggerEvent):
             comp_str.extend(self.get_pair_strings(v, localvars))
 
         for s in comp_str:
-            event_string = (f"Pair [{s}] @ {get_file_resistant(function)}[{function.__name__}]", frame.f_lineno)
+            event_string = (f"Pair ({s}) @ {get_file_resistant(function)}[{function.__name__}]", frame.f_lineno)
             self.container.add(event_string)
 
         self.scalars = localvars
