@@ -315,6 +315,7 @@ class SFL_Evaluation:
         self.sortResultMethods(work_dir)
 
         self.highest_rank = len(self.result_methods)
+        self.best_method = None
 
         for b_file, b_method, b_linenos in self.buggy_methods:
             current_index = -1

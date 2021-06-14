@@ -260,7 +260,6 @@ class Collector(Collector):
         self._argstring: Optional[str] = None
         self._exception: Optional[Type] = None
         self.items_to_ignore: List[Union[Type, Callable]] = [self.__class__]
-        self.ignore_items = True
 
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """

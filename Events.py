@@ -3,7 +3,6 @@ from abc import abstractmethod
 from types import FrameType, FunctionType
 from typing import Any, Iterable, Iterator, Hashable
 
-
 def get_file_resistant(o):
     try:
         return inspect.getfile(o)
@@ -44,6 +43,7 @@ class DebuggerEvent:
         self.collector = collector
         # Exclude events from file paths with these substrings:
         self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py", "/.pyenv/"]
+        self.buffered_functions = [(("", "", 0), None)] * 20
 
     @abstractmethod
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
@@ -77,6 +77,14 @@ class DebuggerEvent:
         return function
 
     def get_function_from_frame(self, frame: FrameType):
+        index = 0
+        for info, func in self.buffered_functions:
+            if info == (frame.f_code.co_name, frame.f_code.co_filename, frame.f_code.co_firstlineno):
+                if index != 0:
+                    self.buffered_functions.insert(0, self.buffered_functions.pop(index))
+                return func
+            index += 1
+
         name = frame.f_code.co_name
         function = self.collector.search_func(name, frame)
 
@@ -85,9 +93,13 @@ class DebuggerEvent:
 
         # ONLY collect functions, no other garbage
         if not (isinstance(function, FunctionType) and hasattr(function, '__name__')):
-            return None
+            ret = None
+        else:
+            ret = self.check_function(function)
 
-        return self.check_function(function)
+        self.buffered_functions.pop()
+        self.buffered_functions.insert(0, ((frame.f_code.co_name, frame.f_code.co_filename, frame.f_code.co_firstlineno), ret))
+        return ret
 
 
 class LineCoveredEvent(DebuggerEvent):
@@ -134,10 +146,23 @@ class ReturnValueEvent(DebuggerEvent):
 class ScalarPairsEvent(DebuggerEvent):
     def __init__(self, *args, **kwargs):
         super(ScalarPairsEvent, self).__init__(*args, **kwargs)
+        self.scalars = dict()
+
+    def get_pair_strings(self, var: str, vars: dict):
+        comp_str = []
+        for ref in vars.keys():
+            if ref == var:
+                continue
+            try:
+                comp_str.append(f"{var} < {ref}: {vars[var] < vars[ref]}")
+                comp_str.append(f"{var} == {ref}: {vars[var] == vars[ref]}")
+            except:
+                pass
+        return comp_str
 
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         """
-        Collect all possible scalar pairs for this frame
+        Collect scalar pairs for variables altered in this frame
         """
 
         function = self.get_function_from_frame(frame)
@@ -147,23 +172,23 @@ class ScalarPairsEvent(DebuggerEvent):
 
         localvars = frame.f_locals.copy()
         localvars.update(frame.f_globals)
-        lvar_tuples = list((name, val) for name, val in localvars.items())
-        lvar_tuples.sort(key=lambda n: n[0])
 
         comp_str = []
 
-        while len(lvar_tuples) > 0:
-            a = lvar_tuples.pop()
-            for b in lvar_tuples:
-                try:
-                    comp_str.append(f"{a[0]} < {b[0]}: {a[1] < b[1]}")
-                except:
-                    pass
-                try:
-                    comp_str.append(f"{a[0]} == {b[0]}: {a[1] == b[1]}")
-                except:
-                    pass
+        matching_vars = set(localvars.keys()).intersection(self.scalars.keys())
+        for v in matching_vars:
+            try:
+                if localvars[v] != self.scalars[v]:
+                    comp_str.extend(self.get_pair_strings(v, localvars))
+            except:
+                pass
+
+        non_matching_vars = set(localvars.keys()).difference(self.scalars.keys())
+        for v in non_matching_vars:
+            comp_str.extend(self.get_pair_strings(v, localvars))
 
         for s in comp_str:
             event_string = (f"Pair [{s}] @ {get_file_resistant(function)}[{function.__name__}]", frame.f_lineno)
             self.container.add(event_string)
+
+        self.scalars = localvars

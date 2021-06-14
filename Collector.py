@@ -6,7 +6,7 @@ from typing import Any, Set, Tuple
 from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent
 
-EVENT_TYPES = [ScalarPairsEvent]#[LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent]
+EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent]#, ScalarPairsEvent]
 
 
 class EventCollector(CoverageCollector):
@@ -24,6 +24,7 @@ class EventCollector(CoverageCollector):
         self.ignore_types = list(filter(lambda e: isinstance(e, type), self.items_to_ignore))
         self.ignore_names = set(e.__name__ for e in filter(lambda e: hasattr(e, '__name__'), self.items_to_ignore))
         self.event_types = []
+        self.ignore_items = False
 
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """
