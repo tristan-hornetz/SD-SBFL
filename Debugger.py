@@ -9,40 +9,6 @@ from TestWrapper.root.Collector import collector_type
 from TestWrapper.root.debuggingbook.StatisticalDebugger import OchiaiDebugger, Collector
 
 
-class SFL_Results:
-    """
-    A container class extracting all relevant information about a test-run from a debugger instance.
-    This is required because a debugger object itself cannot be stored with pickle.
-    """
-    def __init__(self, debugger, work_dir=""):
-        """
-        Create a SFL_Results object from a debugger instance
-        :param debugger: The debugger instance
-        :param work_dir: The BugsInPy working directory (only required if non-default)
-        """
-        if len(debugger.collectors[debugger.FAIL]) > 0 and len(debugger.collectors[debugger.PASS]) > 0:
-            self.results = debugger.rank()
-        else:
-            self.results = []
-        if work_dir == "":
-            split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(self.__init__) else "/_root"
-            work_dir_info_file = inspect.getfile(self.__init__).split(split_dir)[0] + "/TestWrapper/work_dir.info"
-            if os.path.exists(work_dir_info_file):
-                with open(work_dir_info_file, "rt") as f:
-                    work_dir_base = f.readline().replace("\n", "")
-            else:
-                work_dir_base = os.curdir.rsplit("/", 1)[0]
-            self.work_dir = work_dir_base + "/" + \
-                       os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
-        with open(self.work_dir + "/bugsinpy_id.info", "rt") as f:
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                if "=" in line:
-                    setattr(self, line.split("=", 1)[0].lower(), line.split("=", 1)[1].replace("\n", ""))
-
-
 class BetterOchiaiDebugger(OchiaiDebugger):
     """
     OchiaiDebugger with reduced algorithmic complexity
@@ -82,6 +48,44 @@ class BetterOchiaiDebugger(OchiaiDebugger):
         return []
 
 
+class SFL_Results:
+    """
+    A container class extracting all relevant information about a test-run from a debugger instance.
+    This is required because a debugger object itself cannot be stored with pickle.
+    """
+    def __init__(self, debugger:BetterOchiaiDebugger, work_dir=""):
+        """
+        Create a SFL_Results object from a debugger instance
+        :param debugger: The debugger instance
+        :param work_dir: The BugsInPy working directory (only required if non-default)
+        """
+        if len(debugger.collectors[debugger.FAIL]) > 0 and len(debugger.collectors[debugger.PASS]) > 0:
+            self.results = debugger.rank()
+        else:
+            self.results = []
+        self.collectors = {debugger.PASS: list(list(iter(c.events())) for c in debugger.collectors[debugger.PASS]),
+                           debugger.FAIL: list(list(iter(c.events())) for c in debugger.collectors[debugger.FAIL])}
+        self.collectors_with_result = debugger.collectors_with_result
+
+        if work_dir == "":
+            split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(self.__init__) else "/_root"
+            work_dir_info_file = inspect.getfile(self.__init__).split(split_dir)[0] + "/TestWrapper/work_dir.info"
+            if os.path.exists(work_dir_info_file):
+                with open(work_dir_info_file, "rt") as f:
+                    work_dir_base = f.readline().replace("\n", "")
+            else:
+                work_dir_base = os.curdir.rsplit("/", 1)[0]
+            self.work_dir = work_dir_base + "/" + \
+                       os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
+        with open(self.work_dir + "/bugsinpy_id.info", "rt") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                if "=" in line:
+                    setattr(self, line.split("=", 1)[0].lower(), line.split("=", 1)[1].replace("\n", ""))
+
+
 class ReportingDebugger(BetterOchiaiDebugger):
     def teardown(self):
         """
@@ -99,7 +103,6 @@ class ReportingDebugger(BetterOchiaiDebugger):
             os.remove(dump_file)
         with gzip.open(dump_file, "xb") as f:
             pickle.dump(SFL_Results(self), f)
-
 
 debugger = ReportingDebugger(collector_class=collector_type)
 

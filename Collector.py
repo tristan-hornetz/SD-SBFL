@@ -1,10 +1,11 @@
 import inspect
 import os
-from types import FrameType, FunctionType
+from types import FrameType, FunctionType, MethodType
 from typing import Any, Set, Tuple
 
 from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
-from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent
+from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent, \
+                                    SharedFunctionBuffer
 
 EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent]#, ScalarPairsEvent]
 
@@ -65,7 +66,8 @@ class SharedCoverageCollector(EventCollector):
             self.shared_coverage = dict()
         super().__init__(*args, **kwargs)
         self._coverage = SharedEventContainer(self.shared_coverage, self)
-        self.event_types = list(t(self._coverage, self) for t in EVENT_TYPES)
+        f_buffer = SharedFunctionBuffer()
+        self.event_types = list(t(self._coverage, self, f_buffer) for t in EVENT_TYPES)
 
     def __call__(self, *args, **kwargs):
         return self.__class__(*args, shared_coverage=self.shared_coverage, **kwargs)

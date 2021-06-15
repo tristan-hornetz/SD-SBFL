@@ -38,13 +38,32 @@ class SharedEventContainer(Iterable):
         return filter(lambda k: self.collector in self.shared_coverage[k], self.shared_coverage.keys())
 
 
+class SharedFunctionBuffer:
+    def __init__(self):
+        self.buffered_functions = [(("", "", 0), None)] * 20
+
+    def put(self, info, func):
+        self.buffered_functions.pop()
+        self.buffered_functions.insert(0, (info, func))
+
+    def get(self, info):
+        index = 0
+        for _info, func in self.buffered_functions:
+            if info == _info:
+                if index != 0:
+                    self.buffered_functions.insert(0, self.buffered_functions.pop(index))
+                return func, True
+            index += 1
+        return None, False
+
+
 class DebuggerEvent:
-    def __init__(self, container: SharedEventContainer, collector):
+    def __init__(self, container: SharedEventContainer, collector, function_buffer: SharedFunctionBuffer):
         self.container = container
         self.collector = collector
         # Exclude events from file paths with these substrings:
         self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py", "/.pyenv/"]
-        self.buffered_functions = [(("", "", 0), None)] * 20
+        self.function_buffer = function_buffer
 
     @abstractmethod
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
@@ -78,28 +97,19 @@ class DebuggerEvent:
         return function
 
     def get_function_from_frame(self, frame: FrameType):
-        index = 0
-        for info, func in self.buffered_functions:
-            if info == (frame.f_code.co_name, frame.f_code.co_filename, frame.f_code.co_firstlineno):
-                if index != 0:
-                    self.buffered_functions.insert(0, self.buffered_functions.pop(index))
-                return func
-            index += 1
 
-        name = frame.f_code.co_name
-        function = self.collector.search_func(name, frame)
+        ret, found = self.function_buffer.get((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno))
 
-        #if function is None:
-        #    function = self.collector.create_function(frame)
+        if not found:
+            name = frame.f_code.co_name
+            function = self.collector.search_func(name, frame)
 
-        # ONLY collect functions, no other garbage
-        if not (isinstance(function, FunctionType) and hasattr(function, '__name__')):
-            ret = None
-        else:
-            ret = self.check_function(function)
+            # ONLY collect functions, no other garbage
+            if isinstance(function, FunctionType) and hasattr(function, '__name__'):
+                ret = self.check_function(function)
 
-        self.buffered_functions.pop()
-        self.buffered_functions.insert(0, ((frame.f_code.co_name, frame.f_code.co_filename, frame.f_code.co_firstlineno), ret))
+            self.function_buffer.put((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno), ret)
+
         return ret
 
 
