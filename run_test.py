@@ -3,7 +3,7 @@ import sys
 if __name__ == '__main__' and (not os.path.islink(os.path.abspath(os.path.dirname(sys.argv[0])) + '/TestWrapper')):
     print('Symlinks not found. Did you run make?')
     exit(-1)
-from TestWrapper.root.evaluate import BugInfo
+from TestWrapper.root.CodeInspection import BugInfo
 dump_file = os.path.curdir + '/TestWrapper/results.pickle.gz'
 test_ids = []
 
