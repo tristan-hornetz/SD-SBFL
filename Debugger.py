@@ -66,6 +66,8 @@ class SFL_Results:
         self.collectors = {debugger.PASS: list(list(iter(c.events())) for c in debugger.collectors[debugger.PASS]),
                            debugger.FAIL: list(list(iter(c.events())) for c in debugger.collectors[debugger.FAIL])}
         self.collectors_with_result = debugger.collectors_with_result
+        self.FAIL = debugger.FAIL
+        self.PASS = debugger.PASS
 
         if work_dir == "":
             split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(self.__init__) else "/_root"

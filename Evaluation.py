@@ -1,8 +1,9 @@
 import gzip
+import math
 import os
 import pickle
 from abc import abstractmethod
-from typing import List, Tuple
+from typing import List, Tuple, Any, Optional, Iterable
 
 from TestWrapper.root.CodeInspection import extractMethodsFromCode, getBuggyMethods, BugInfo
 
@@ -13,24 +14,37 @@ class Ranker:
         self.info = info
 
     @abstractmethod
-    def rank(self) -> List[Tuple[Tuple[str, int], int]]:
+    def suspiciousness(self, event: Any) -> Optional[float]:
         pass
 
-    @abstractmethod
+    def rank(self) -> Iterable[Tuple[Tuple[str, int], float]]:
+        return list(((event, self.suspiciousness(event)) for event in self.results.results))
+
     def __iter__(self):
-        pass
+        return iter(self.rank())
+
+
+class OchiaiRanker(Ranker):
+    def suspiciousness(self, event: Any) -> Optional[float]:
+        failed = self.results.collectors_with_result[self.results.FAIL][event] if event in self.results.collectors_with_result[
+            self.results.FAIL].keys() else 0
+        not_in_failed = len(self.results.collectors[self.results.FAIL]) - failed
+        passed = self.results.collectors_with_result[self.results.PASS][event] if event in self.results.collectors_with_result[
+            self.results.PASS].keys() else 0
+
+        try:
+            return failed / math.sqrt((failed + not_in_failed) * (failed + passed))
+        except ZeroDivisionError:
+            return None
 
 
 class SFL_Evaluation:
     """
     Container class for all information that is relevant for a test run
     """
-
-    def sortResultMethods(self, work_dir):
+    def sortResultMethods(self, work_dir, ranker_type):
         method_dict = dict()
-        ranks = dict()
         for method in self.result_methods:
-            ranks[method] = len(self.result_container.results)
             if method.file in method_dict.keys():
                 if method.name in method_dict[method.file].keys():
                     method_dict[method.file][method.name].append((method.linenos, method))
@@ -39,7 +53,8 @@ class SFL_Evaluation:
             else:
                 method_dict[method.file] = {method.name: [(method.linenos, method)]}
         index = -1
-        for event, lineno in self.result_container.results:
+        for event_tuple, suspiciousness in ranker_type(self.result_container, self.bug_info).rank():
+            event, lineno = event_tuple
             index += 1
             method_str = self.getMethodStringFromEvent(event, work_dir)
             m_arr = method_str.split("[", 1)
@@ -48,22 +63,23 @@ class SFL_Evaluation:
                 if m_name in method_dict[m_arr[0]].keys():
                     for linenos, method in method_dict[m_arr[0]][m_name]:
                         if lineno in linenos:
-                            ranks[method] = min(index, ranks[method])
-        self.result_methods.sort(key=lambda m: ranks[m])
+                            setattr(method, 'suspiciousness', max(getattr(method, 'suspiciousness') if hasattr(method, 'suspiciousness') else -1, suspiciousness))
+        self.result_methods.sort(key=lambda m: m.suspiciousness if hasattr(method, 'suspiciousness') else -1, reverse=True)
 
     def getMethodStringFromEvent(self, event: str, work_dir):
         return next(reversed(event.split(" @ "))).replace(work_dir + "/", "")
 
-    def __init__(self, result_file):
+    def __init__(self, result_file, ranker_type=OchiaiRanker):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)
+        self.ranker_type = ranker_type
 
         self.result_methods = list()
 
         self.bug_info = BugInfo(self.result_container)
         self.buggy_methods = getBuggyMethods(self.result_container, self.bug_info)
         self.result_methods = extractMethodsFromCode(self.result_container, self.bug_info)
-        self.sortResultMethods(self.bug_info.work_dir)
+        self.sortResultMethods(self.bug_info.work_dir, ranker_type)
 
         self.highest_rank = len(self.result_methods)
         self.best_method = None
@@ -74,7 +90,8 @@ class SFL_Evaluation:
                 current_index += 1
                 if self.highest_rank <= current_index:
                     break
-                if b_method == e_method:
+                if b_method.file == e_method.file and b_method.name == e_method.name \
+                        and len(b_method.linenos.intersection(e_method.linenos)) > 0:
                     self.highest_rank = current_index
                     self.best_method = e_method
                     break

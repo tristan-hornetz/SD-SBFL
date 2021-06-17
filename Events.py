@@ -1,7 +1,7 @@
 import inspect
 from abc import abstractmethod
 from types import FrameType, FunctionType
-from typing import Any, Iterable, Iterator, Hashable
+from typing import Any, Iterable, Iterator, Hashable, Callable
 
 
 def get_file_resistant(o):
@@ -62,14 +62,14 @@ class DebuggerEvent:
         self.container = container
         self.collector = collector
         # Exclude events from file paths with these substrings:
-        self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py", "/.pyenv/"]
+        self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
         self.function_buffer = function_buffer
 
     @abstractmethod
     def collect(self, frame: FrameType, event: str, arg: Any) -> None:
         pass
 
-    def check_function(self, function: FunctionType):
+    def check_function(self, function: Callable):
         """
         Get the function that should be processed for function (might be != function itself, or None)
         :param function: A function encountered by traceit
@@ -104,8 +104,7 @@ class DebuggerEvent:
             name = frame.f_code.co_name
             function = self.collector.search_func(name, frame)
 
-            # ONLY collect functions, no other garbage
-            if isinstance(function, FunctionType) and hasattr(function, '__name__'):
+            if isinstance(function, Callable) and hasattr(function, '__name__'):
                 ret = self.check_function(function)
 
             self.function_buffer.put((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno), ret)

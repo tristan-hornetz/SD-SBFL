@@ -91,10 +91,11 @@ class DebuggerMethod:
         self.linenos.add(lineno)
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.file + "\\" + self.name + "\\" + ';'.join(str(n) for n in sorted(self.linenos)))
 
     def __str__(self):
-        return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]"
+        return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]" + \
+               (f" - Suspiciousness: {self.suspiciousness}" if hasattr(self, 'suspiciousness') else "")
 
     def __eq__(self, other):
         if not isinstance(other, DebuggerMethod):
