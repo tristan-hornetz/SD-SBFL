@@ -1,13 +1,33 @@
 import inspect
 import os
-from types import FrameType, FunctionType, MethodType
-from typing import Any, Set, Tuple
+import sys
+from types import FrameType, FunctionType, MethodType, TracebackType
+from typing import Any, Set, Tuple, Type, Optional, Callable
 
 from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent, \
-                                    SharedFunctionBuffer
+                                    get_file_resistant
 
 EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent]
+
+
+class SharedFunctionBuffer:
+    def __init__(self):
+        self.buffered_functions = [(("", "", 0), None)] * 20
+
+    def put(self, info, func):
+        self.buffered_functions.pop()
+        self.buffered_functions.insert(0, (info, func))
+
+    def get(self, info):
+        index = 0
+        for _info, func in self.buffered_functions:
+            if info == _info:
+                if index != 0:
+                    self.buffered_functions.insert(0, self.buffered_functions.pop(index))
+                return func, True
+            index += 1
+        return None, False
 
 
 class EventCollector(CoverageCollector):
@@ -22,36 +42,79 @@ class EventCollector(CoverageCollector):
             with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
                 self.work_dir_base = str(f.readline().replace("\n", ""))
 
-        self.ignore_types = list(filter(lambda e: isinstance(e, type), self.items_to_ignore))
-        self.ignore_names = set(e.__name__ for e in filter(lambda e: hasattr(e, '__name__'), self.items_to_ignore))
         self.event_types = []
-        self.ignore_items = False
+        self.function_buffer = SharedFunctionBuffer()
+        self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
+
+    def check_function(self, function: Callable):
+        """
+        Get the function that should be processed for function (might be != function itself, or None)
+        :param function: A function encountered by traceit
+        :return: The function to be processed, or None if the given function should be excluded from collection
+        """
+
+        function_filename = get_file_resistant(function)
+
+        # Don't collect function which are defined outside of our project
+        # If the function is decorated, also consider wrapped function itself
+        if self.work_dir_base not in function_filename:
+            while hasattr(function, "__wrapped__"):
+                function = function.__wrapped__
+                function_filename = get_file_resistant(function)
+                if self.work_dir_base in function_filename:
+                    break
+            if self.work_dir_base not in function_filename:
+                return None
+
+        for s in self.to_exclude:
+            if s in function_filename:
+                return None
+
+        return function
+
+    def get_function_from_frame(self, frame: FrameType):
+
+        ret, found = self.function_buffer.get((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno))
+
+        if not found:
+            function = self.search_func(frame.f_code.co_name, frame)
+
+            if isinstance(function, Callable) and hasattr(function, '__name__'):
+                ret = self.check_function(function)
+            else:
+                ret = None
+
+            self.function_buffer.put((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno), ret)
+
+        return ret
 
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """
         Tracing function.
         Saves the first function and calls collect().
         """
-        if self.ignore_items:
-            if frame.f_code.co_name in self.ignore_names:
-                return
-            if 'self' in frame.f_locals:
-                for t in self.ignore_types:
-                    if isinstance(frame.f_locals['self'], t):
-                        return
+        function = self.get_function_from_frame(frame)
 
-        if self._function is None and event == 'call':
-            # Save function
-            self._function = self.create_function(frame)
-            self._args = frame.f_locals.copy()
-            self._argstring = ", ".join([f"{var}={repr(self._args[var])}"
-                                         for var in self._args])
+        if not function:
+            return
 
         for t in self.event_types:
-            t.collect(frame, event, arg)
+            t.collect(frame, event, arg, function)
+
+    def __exit__(self, exc_tp: Type, exc_value: BaseException,
+                 exc_traceback: TracebackType) -> Optional[bool]:
+        """Exit the `with` block."""
+        sys.settrace(self.original_trace_function)
+
+        if self.is_internal_error(exc_tp, exc_value, exc_traceback):
+            return False  # internal error
+        else:
+            return None  # all ok
 
     def events(self) -> Set[Tuple[str, int]]:
         return self._coverage
+
+
 
 
 class SharedCoverageCollector(EventCollector):
@@ -66,8 +129,7 @@ class SharedCoverageCollector(EventCollector):
             self.shared_coverage = dict()
         super().__init__(*args, **kwargs)
         self._coverage = SharedEventContainer(self.shared_coverage, self)
-        f_buffer = SharedFunctionBuffer()
-        self.event_types = list(t(self._coverage, self, f_buffer) for t in EVENT_TYPES)
+        self.event_types = list(t(self._coverage, self) for t in EVENT_TYPES)
 
     def __call__(self, *args, **kwargs):
         return self.__class__(*args, shared_coverage=self.shared_coverage, **kwargs)

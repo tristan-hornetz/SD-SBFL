@@ -28,9 +28,10 @@ if __name__ == "__main__":
             print(f"#{i}: {str(r)}")
         print("\n\nTop 10 most suspicious events:\n")
         i = 0
-        for r in evaluation.result_container.results[:10]:
+        ranker = evaluation.ranker_type(evaluation.result_container, evaluation.bug_info)
+        for r, s in ranker.rank()[:10]:
             i += 1
-            print(f"#{i}: {r} - Suspiciousness {evaluation.ranker_type(evaluation.result_container, evaluation.bug_info).suspiciousness(r)}")
+            print(f"#{i}: {r} - Suspiciousness {s}")
         sys.stdout = old_stdout
     os.system(f"less \"{result_dump}\"")  #
     print("Results have been written to " + result_dump)

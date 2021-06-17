@@ -18,7 +18,7 @@ class Ranker:
         pass
 
     def rank(self) -> Iterable[Tuple[Tuple[str, int], float]]:
-        return list(((event, self.suspiciousness(event)) for event in self.results.results))
+        return sorted(((event, self.suspiciousness(event)) for event in self.results.results), key=lambda t: t[1], reverse=True)
 
     def __iter__(self):
         return iter(self.rank())
@@ -28,7 +28,7 @@ class OchiaiRanker(Ranker):
     def suspiciousness(self, event: Any) -> Optional[float]:
         failed = self.results.collectors_with_result[self.results.FAIL][event] if event in self.results.collectors_with_result[
             self.results.FAIL].keys() else 0
-        not_in_failed = len(self.results.collectors[self.results.FAIL]) - failed
+        not_in_failed = self.results.collectors[self.results.FAIL] - failed
         passed = self.results.collectors_with_result[self.results.PASS][event] if event in self.results.collectors_with_result[
             self.results.PASS].keys() else 0
 
@@ -72,6 +72,7 @@ class SFL_Evaluation:
     def __init__(self, result_file, ranker_type=OchiaiRanker):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)
+
         self.ranker_type = ranker_type
 
         self.result_methods = list()

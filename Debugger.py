@@ -5,7 +5,7 @@ import os
 import pickle
 from typing import Any, Optional, List
 
-from TestWrapper.root.Collector import collector_type
+from TestWrapper.root.Collector import collector_type, SharedCoverageCollector
 from TestWrapper.root.debuggingbook.StatisticalDebugger import OchiaiDebugger, Collector
 
 
@@ -18,16 +18,29 @@ class BetterOchiaiDebugger(OchiaiDebugger):
         self.collectors = {self.FAIL: list(), self.PASS: list()}
         self.collectors_with_result = {self.FAIL: dict(), self.PASS: dict()}
         self.processed_collectors = set()
+        self.shared_coverage = isinstance(collector_type, SharedCoverageCollector)
 
     def add_collector(self, outcome: str, collector: Collector) -> Collector:
-        if collector in self.processed_collectors:
-            return super().add_collector(outcome, collector)
-        for event in collector.events():
-            if event in self.collectors_with_result[outcome].keys():
-                self.collectors_with_result[outcome][event] += 1
-            else:
-                self.collectors_with_result[outcome][event] = 1
-        return super().add_collector(outcome, collector)
+        if not self.shared_coverage:
+            if collector in self.processed_collectors:
+                self.collectors[outcome].append(collector)
+                return collector
+            for event in collector.events():
+                if event in self.collectors_with_result[outcome].keys():
+                    self.collectors_with_result[outcome][event] += 1
+                else:
+                    self.collectors_with_result[outcome][event] = 1
+        self.collectors[outcome].append(collector)
+        return collector
+
+    def teardown(self):
+        if self.shared_coverage:
+            failed = set(self.collectors[self.FAIL])
+            for event in collector_type.shared_coverage.keys():
+                num_c = len(collector_type.shared_coverage[event])
+                num_fail = len(list(filter(lambda c: c in failed, collector_type.shared_coverage[event])))
+                self.collectors_with_result[self.FAIL][event] = num_fail
+                self.collectors_with_result[self.PASS][event] = num_c - num_fail
 
     def suspiciousness(self, event: Any) -> Optional[float]:
         failed = self.collectors_with_result[self.FAIL][event] if event in self.collectors_with_result[
@@ -44,6 +57,8 @@ class BetterOchiaiDebugger(OchiaiDebugger):
     def rank(self) -> List[Any]:
         """Return a list of events, sorted by suspiciousness, highest first."""
         if len(self.collectors[self.FAIL]) > 0:
+            if self.shared_coverage:
+                return list(collector_type.shared_coverage.keys())
             return super().rank()
         return []
 
@@ -63,8 +78,8 @@ class SFL_Results:
             self.results = debugger.rank()
         else:
             self.results = []
-        self.collectors = {debugger.PASS: list(list(iter(c.events())) for c in debugger.collectors[debugger.PASS]),
-                           debugger.FAIL: list(list(iter(c.events())) for c in debugger.collectors[debugger.FAIL])}
+        self.collectors = {debugger.PASS: len(debugger.collectors[debugger.PASS]),
+                           debugger.FAIL: len(debugger.collectors[debugger.FAIL])}
         self.collectors_with_result = debugger.collectors_with_result
         self.FAIL = debugger.FAIL
         self.PASS = debugger.PASS
@@ -93,6 +108,7 @@ class ReportingDebugger(BetterOchiaiDebugger):
         """
         Dump the SFL_Results of debugger to debugger.dump_file using pickle
         """
+        super().teardown()
         if len(self.collectors[self.FAIL]) == 0:
             os.system(
                 f"echo \"No Failures - {len(self.collectors[self.PASS])}\" > \"" + os.path.curdir + "/TestWrapper/notice.txt\"")
