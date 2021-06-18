@@ -1,5 +1,6 @@
 import inspect
 import os
+import random
 import sys
 from types import FrameType, FunctionType, MethodType, TracebackType
 from typing import Any, Set, Tuple, Type, Optional, Callable
@@ -9,7 +10,6 @@ from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, Retu
                                     get_file_resistant
 
 EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent]
-
 
 class SharedFunctionBuffer:
     def __init__(self):
@@ -45,6 +45,9 @@ class EventCollector(CoverageCollector):
         self.event_types = []
         self.function_buffer = SharedFunctionBuffer()
         self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
+
+    def __int__(self):
+        return hash(str(self))
 
     def check_function(self, function: Callable):
         """
@@ -112,9 +115,8 @@ class EventCollector(CoverageCollector):
             return None  # all ok
 
     def events(self) -> Set[Tuple[str, int]]:
+        self.function_buffer = SharedFunctionBuffer()
         return self._coverage
-
-
 
 
 class SharedCoverageCollector(EventCollector):
@@ -122,17 +124,25 @@ class SharedCoverageCollector(EventCollector):
     CoverageCollector which keeps data structures shared between instances to reduce RAM usage
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, id=0, **kwargs):
         if 'shared_coverage' in kwargs.keys():
             self.shared_coverage = kwargs.pop('shared_coverage')
         else:
             self.shared_coverage = dict()
+
+        self.id = id
+        if self.id == 0:
+            self.id = random.randint(-2 ** 63, 2 ** 63)
         super().__init__(*args, **kwargs)
         self._coverage = SharedEventContainer(self.shared_coverage, self)
         self.event_types = list(t(self._coverage, self) for t in EVENT_TYPES)
 
+    def __int__(self):
+        return self.id
+
     def __call__(self, *args, **kwargs):
-        return self.__class__(*args, shared_coverage=self.shared_coverage, **kwargs)
+        self.id += 1
+        return self.__class__(*args, id=self.id, shared_coverage=self.shared_coverage, **kwargs)
 
 
 collector_type = SharedCoverageCollector()

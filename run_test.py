@@ -60,7 +60,7 @@ if __name__ == '__main__':
     bug_id = args.bug_id
 
     run_test(root_dir, project, bug_id, os.path.abspath(args.output_file))
-    print(SFL_Evaluation(os.path.abspath(args.output_file)))
+    #print(SFL_Evaluation(os.path.abspath(args.output_file)))
 else:
     from TestWrapper.root.Debugger import debugger, SFL_Results
     if os.path.exists("./output_file.info"):

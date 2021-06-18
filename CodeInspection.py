@@ -95,16 +95,14 @@ class DebuggerMethod:
 
     def __str__(self):
         return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]" + \
-               (f" - Suspiciousness: {self.suspiciousness}" if hasattr(self, 'suspiciousness') else "")
+               (f"\n             -> Suspiciousness: (Max: "
+                f"{max(*self.suspiciousness)}, Avg:{sum(self.suspiciousness)/len(self.suspiciousness)})"
+                if hasattr(self, 'suspiciousness') else "")
 
     def __eq__(self, other):
         if not isinstance(other, DebuggerMethod):
             return False
         return str(self) == str(other)
-
-
-def getMethodStringFromEvent(event: str, work_dir):
-    return next(reversed(event.split(" @ "))).replace(work_dir + "/", "")
 
 
 def getPatchSet(info: BugInfo):
@@ -164,7 +162,6 @@ def getParentFunctionFromLineNo(source: ast.AST, lineno: int):
 def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int]]) -> List[Tuple[str, Set[int]]]:
     """
     Extract the lines of methods from a specified file
-    :param directory: The directory in which the file is located
     :param file: The name of the file
     :param methods: The names of the methods to extract, mapped to the lines encountered during testing
     :return: A list of tuples, representing the extracted methods
@@ -268,25 +265,17 @@ def extractMethodsFromCode(_results, info: BugInfo) -> List[DebuggerMethod]:
     :return: A list of DebuggerMethod instances representing the methods as extracted from code
     """
     methods_per_file = dict()  # Dict[str, Dict[str, Set[int]]]
-    lines_encountered_per_method_str = dict()
-    for event, lineno in _results.results:
-        method_str = getMethodStringFromEvent(event, info.work_dir)
-        if method_str in lines_encountered_per_method_str.keys():
-            lines_encountered_per_method_str[method_str].add(lineno)
-        else:
-            lines_encountered_per_method_str[method_str] = {lineno}
-
-    for s in lines_encountered_per_method_str.keys():
-        m_arr = s.split("[")
-        if len(m_arr) > 1:
-            if m_arr[0] in methods_per_file.keys():
-                if m_arr[1].split("]")[0] in methods_per_file[m_arr[0]].keys():
-                    methods_per_file[m_arr[0]][m_arr[1].split("]")[0]].update(lines_encountered_per_method_str[s])
-                else:
-                    methods_per_file[m_arr[0]][m_arr[1].split("]")[0]] = lines_encountered_per_method_str[s]
-            else:
-                methods_per_file[m_arr[0]] = {m_arr[1].split("]")[0]: lines_encountered_per_method_str[s]}
     directory = getValidProjectDir(_results, False, instrument=True)
+    for event in _results.results:
+        _filename, method_name, lineno, *other = event
+        filename = _filename.replace(info.work_dir + "/", "")
+        if filename in methods_per_file.keys():
+            if method_name in methods_per_file[filename].keys():
+                methods_per_file[filename][method_name].add(lineno)
+            else:
+                methods_per_file[filename][method_name] = {lineno}
+        else:
+            methods_per_file[filename] = {method_name: {lineno}}
     method_objects = set()
     for file in methods_per_file.keys():
         lines_per_method = extractMethodsFromFile(directory, file, methods_per_file[file])

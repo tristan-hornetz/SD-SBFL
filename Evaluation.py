@@ -14,8 +14,19 @@ class Ranker:
         self.info = info
 
     @abstractmethod
-    def suspiciousness(self, event: Any) -> Optional[float]:
+    def risk_function(self, passed, failed, total_passed, total_failed) -> float:
         pass
+
+    def suspiciousness(self, event: Any) -> Optional[float]:
+        failed = len(self.results.collectors_with_result[self.results.FAIL][event]) if event in \
+                                                                                  self.results.collectors_with_result[
+                                                                                      self.results.FAIL].keys() else 0
+        passed = len(self.results.collectors_with_result[self.results.PASS][event]) if event in \
+                                                                                  self.results.collectors_with_result[
+                                                                                      self.results.PASS].keys() else 0
+        total_passed = len(self.results.collectors[self.results.PASS])
+        total_failed = len(self.results.collectors[self.results.FAIL])
+        return self.risk_function(passed, failed, total_passed, total_failed)
 
     def rank(self) -> Iterable[Tuple[Tuple[str, int], float]]:
         return sorted(((event, self.suspiciousness(event)) for event in self.results.results), key=lambda t: t[1], reverse=True)
@@ -25,23 +36,84 @@ class Ranker:
 
 
 class OchiaiRanker(Ranker):
-    def suspiciousness(self, event: Any) -> Optional[float]:
-        failed = self.results.collectors_with_result[self.results.FAIL][event] if event in self.results.collectors_with_result[
-            self.results.FAIL].keys() else 0
-        not_in_failed = self.results.collectors[self.results.FAIL] - failed
-        passed = self.results.collectors_with_result[self.results.PASS][event] if event in self.results.collectors_with_result[
-            self.results.PASS].keys() else 0
+    """
+    Simply rank all observed events with the Ochiai Metric
+    """
+
+    def risk_function(self, passed, failed, total_passed, total_failed) -> float:
+        not_in_failed = total_failed - failed
 
         try:
             return failed / math.sqrt((failed + not_in_failed) * (failed + passed))
         except ZeroDivisionError:
-            return None
+            return -1.0
+
+
+class PredicateOchiaiRanker(OchiaiRanker):
+    def __init__(self, *args, risk_function=None, predicates=None, **kwargs):
+        super(PredicateOchiaiRanker, self).__init__(*args, **kwargs)
+        if predicates is None:
+            predicates = [lambda x: True]
+        self.event_by_line = dict()
+        self._risk_function = risk_function
+        for event_tuple in self.results.results:
+            filename, method_name, lineno, event_type, *other = event_tuple
+            if len(self.results.collectors_with_result[self.results.FAIL][event_tuple]) > 0:
+                include = False
+                for p in predicates:
+                    include = include or p(event_tuple)
+                if not include:
+                    continue
+                line = (filename, method_name, lineno)
+                passed = len(self.results.collectors_with_result[self.results.PASS][event_tuple])
+                failed = len(self.results.collectors_with_result[self.results.FAIL][event_tuple])
+                if line in self.event_by_line.keys():
+                    self.event_by_line[line][event_tuple] = (passed, failed)
+                else:
+                    self.event_by_line[line] = {event_tuple: (passed, failed)}
+
+    def risk_function(self, passed, failed, total_passed, total_failed) -> float:
+        if self._risk_function:
+            return self._risk_function(passed, failed, total_passed, total_failed)
+        return super().risk_function(passed, failed, total_passed, total_failed)
+
+    def suspiciousness(self, event: Any) -> Optional[float]:
+        filename, method_name, lineno, *other = event
+        line = (filename, method_name, lineno)
+        if line not in self.event_by_line.keys():
+            return -1.0
+        events = self.event_by_line[line]
+        if event not in events.keys():
+            return -1.0
+        passed, failed = self.event_by_line[line][event]
+        total_passed = len(self.results.collectors[self.results.PASS])
+        total_failed = len(self.results.collectors[self.results.FAIL])
+        return self.risk_function(passed, failed, total_passed, total_failed)
 
 
 class SFL_Evaluation:
     """
     Container class for all information that is relevant for a test run
     """
+
+    class MaxAvgComparator(Iterable):
+        def __init__(self, e: list):
+            assert(len(e) > 0)
+            self.e = e
+            self.max = max(*e)
+            self.avg = sum(e) / len(e)
+
+        def __lt__(self, other: Iterable):
+            o = list(other)
+            assert(len(o) > 0)
+            max_o = max(*o)
+            if self.max == max_o:
+                return self.avg < sum(o) / len(o)
+            return self.max < max_o
+
+        def __iter__(self):
+            return iter(self.e)
+
     def sortResultMethods(self, work_dir, ranker_type):
         method_dict = dict()
         for method in self.result_methods:
@@ -54,22 +126,20 @@ class SFL_Evaluation:
                 method_dict[method.file] = {method.name: [(method.linenos, method)]}
         index = -1
         for event_tuple, suspiciousness in ranker_type(self.result_container, self.bug_info).rank():
-            event, lineno = event_tuple
+            _filename, method_name, lineno, event_type, *other = event_tuple
+            filename = _filename.replace(work_dir + "/", "")
             index += 1
-            method_str = self.getMethodStringFromEvent(event, work_dir)
-            m_arr = method_str.split("[", 1)
-            if m_arr[0] in method_dict.keys():
-                m_name = m_arr[1].split("]")[0]
-                if m_name in method_dict[m_arr[0]].keys():
-                    for linenos, method in method_dict[m_arr[0]][m_name]:
+            if filename in method_dict.keys():
+                if method_name in method_dict[filename].keys():
+                    for linenos, method in method_dict[filename][method_name]:
                         if lineno in linenos:
-                            setattr(method, 'suspiciousness', max(getattr(method, 'suspiciousness') if hasattr(method, 'suspiciousness') else -1, suspiciousness))
-        self.result_methods.sort(key=lambda m: m.suspiciousness if hasattr(method, 'suspiciousness') else -1, reverse=True)
+                            if hasattr(method, 'suspiciousness'):
+                                method.suspiciousness.append(suspiciousness)
+                            else:
+                                setattr(method, 'suspiciousness', [suspiciousness])
+        self.result_methods.sort(key=lambda m: self.MaxAvgComparator(m.suspiciousness) if hasattr(method, 'suspiciousness') else [-1], reverse=True)
 
-    def getMethodStringFromEvent(self, event: str, work_dir):
-        return next(reversed(event.split(" @ "))).replace(work_dir + "/", "")
-
-    def __init__(self, result_file, ranker_type=OchiaiRanker):
+    def __init__(self, result_file, ranker_type=PredicateOchiaiRanker):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)
 

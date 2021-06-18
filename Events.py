@@ -23,11 +23,12 @@ class SharedEventContainer(Iterable):
 
     def add(self, o):
         if o in self.shared_coverage.keys():
-            if self.collector not in self.shared_coverage[o]:
+            id = int(self.collector)
+            if id not in self.shared_coverage[o]:
                 self.length += 1
-                self.shared_coverage[o].add(self.collector)
+                self.shared_coverage[o].add(id)
         else:
-            self.shared_coverage[o] = {self.collector}
+            self.shared_coverage[o] = {int(self.collector)}
             self.length += 1
 
     def __contains__(self, item):
@@ -61,8 +62,8 @@ class LineCoveredEvent(DebuggerEvent):
         Function objects are translated to strings so that the functions themselves don't have to stay in memory
         """
 
-        location = (f"Covered line @ {get_file_resistant(function)}[{function.__name__}]", frame.f_lineno)
-        self.container.add(location)
+        event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Covered")
+        self.container.add(event_tuple)
 
 
 class ReturnValueEvent(DebuggerEvent):
@@ -78,12 +79,11 @@ class ReturnValueEvent(DebuggerEvent):
 
         try:
             h = hash(arg)
-            obj_representation = f"<{h}> - {type(arg)}"
         except:
-            obj_representation = f"Unhashable {type(arg)}"
+            h = 0
 
-        event_string = (f"Returned '{obj_representation}' @ {get_file_resistant(function)}[{function.__name__}]", frame.f_lineno)
-        self.container.add(event_string)
+        event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Return", h, str(type(arg)))
+        self.container.add(event_tuple)
 
 
 class ScalarPairsEvent(DebuggerEvent):
@@ -128,7 +128,7 @@ class ScalarPairsEvent(DebuggerEvent):
             comp_str.extend(self.get_pair_strings(v, localvars))
 
         for s in comp_str:
-            event_string = (f"Pair ({s}) @ {get_file_resistant(function)}[{function.__name__}]", frame.f_lineno)
-            self.container.add(event_string)
+            event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Pair", s)
+            self.container.add(event_tuple)
 
         self.scalars = localvars

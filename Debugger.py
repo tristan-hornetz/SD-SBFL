@@ -27,26 +27,26 @@ class BetterOchiaiDebugger(OchiaiDebugger):
                 return collector
             for event in collector.events():
                 if event in self.collectors_with_result[outcome].keys():
-                    self.collectors_with_result[outcome][event] += 1
+                    self.collectors_with_result[outcome][event].add(int(collector))
                 else:
-                    self.collectors_with_result[outcome][event] = 1
-        self.collectors[outcome].append(collector)
+                    self.collectors_with_result[outcome][event] = {int(collector)}
+        self.collectors[outcome].append(int(collector))
         return collector
 
     def teardown(self):
         if self.shared_coverage:
             failed = set(self.collectors[self.FAIL])
             for event in collector_type.shared_coverage.keys():
-                num_c = len(collector_type.shared_coverage[event])
-                num_fail = len(list(filter(lambda c: c in failed, collector_type.shared_coverage[event])))
-                self.collectors_with_result[self.FAIL][event] = num_fail
-                self.collectors_with_result[self.PASS][event] = num_c - num_fail
+                collectors_with_event = collector_type.shared_coverage[event]
+                failed_collectors = set(filter(lambda c: c in failed, collectors_with_event))
+                self.collectors_with_result[self.FAIL][event] = failed_collectors
+                self.collectors_with_result[self.PASS][event] = collectors_with_event.difference(failed_collectors)
 
     def suspiciousness(self, event: Any) -> Optional[float]:
-        failed = self.collectors_with_result[self.FAIL][event] if event in self.collectors_with_result[
+        failed = len(self.collectors_with_result[self.FAIL][event]) if event in self.collectors_with_result[
             self.FAIL].keys() else 0
         not_in_failed = len(self.collectors[self.FAIL]) - failed
-        passed = self.collectors_with_result[self.PASS][event] if event in self.collectors_with_result[
+        passed = len(self.collectors_with_result[self.PASS][event]) if event in self.collectors_with_result[
             self.PASS].keys() else 0
 
         try:
@@ -78,8 +78,8 @@ class SFL_Results:
             self.results = debugger.rank()
         else:
             self.results = []
-        self.collectors = {debugger.PASS: len(debugger.collectors[debugger.PASS]),
-                           debugger.FAIL: len(debugger.collectors[debugger.FAIL])}
+        self.collectors = {debugger.PASS: debugger.collectors[debugger.PASS],
+                           debugger.FAIL: debugger.collectors[debugger.FAIL]}
         self.collectors_with_result = debugger.collectors_with_result
         self.FAIL = debugger.FAIL
         self.PASS = debugger.PASS
