@@ -24,7 +24,7 @@ class SharedEventContainer(Iterable):
     def add(self, o):
         if o in self.shared_coverage.keys():
             id = int(self.collector)
-            if id not in self.shared_coverage[o]:
+            if id not in self.shared_coverage[o].keys():
                 self.length += 1
                 self.shared_coverage[o][id] = 1
             else:

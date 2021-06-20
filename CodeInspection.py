@@ -2,14 +2,15 @@ import ast
 import inspect
 import os
 import sys
-
 import pkg_resources
 
 from typing import List, Tuple, Set, Dict
+from shutil import copy
 
 installed = {pkg.key for pkg in pkg_resources.working_set}
-if 'unidiff' in installed:
+if 'unidiff' in installed and 'gitpython' in installed:
     from unidiff import PatchSet, PatchedFile
+    from git import Repo
 else:
     PatchSet = PatchedFile = object
 
@@ -210,46 +211,72 @@ def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file
     return extractMethodsFromFile(project_root, file.path, extracted_methods)
 
 
-def getValidProjectDir(_results, fixed=False, directory="", instrument=False):
+def mkdirRecursive(directory: str):
+    if os.path.exists(directory):
+        return
+    parent = directory.rsplit("/", 1)[0]
+    mkdirRecursive(parent)
+    os.mkdir(directory)
+
+
+def getCleanRepo(_results, info: BugInfo, directory):
+    if not os.path.exists(directory):
+        mkdirRecursive(directory)
+    try:
+        repo = Repo(directory)
+        repo.git.add(u=True)
+        repo.git.stash()
+        repo.git.checkout(info.buggy_commit_id)
+    except:
+        os.system(f"rm -rf \"{directory}\"")
+        repo = Repo.clone_from(info.project_github_url, directory)
+        repo.git.checkout(info.buggy_commit_id)
+    return repo
+
+
+def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instrument=False):
     """
     Create a valid Git Repo for a specific bug and return the path to it
     :param _results: The SFL_Results of the test run
-    :param info: The BugInfo for _result
+    :param info: The BugInfo for _resultd
     :param fixed: Checkout the fixed commit?
     :param directory: The directory to create the repo in
     :return: The path to a valid git repo for the bug in info
     """
     if directory == "":
-        directory = os.path.dirname(inspect.getfile(getNodeParents)) + "/.temp"
-    if os.path.exists(directory):
-        os.system(f"rm -rf \"{directory}\"")
-    os.mkdir(directory)
+        directory = os.path.dirname(inspect.getfile(getNodeParents)) + "/.temp/" + _results.project_name
+
+    repo = getCleanRepo(_results, info, directory)
+    if fixed:
+        repo.git.checkout(info.fixed_commit_id)
+
     root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     binary_dir = root_dir + '/_BugsInPy/framework/bin'
-    os.system(
-        f'{binary_dir}/bugsinpy-checkout -p {_results.project_name} -i {_results.bug_id} -v {1 if fixed else 0} -w {directory}')
     if instrument:
+        for file in os.scandir(info.info_dir):
+            if os.path.isfile(str(file)):
+                copy(str(file), directory)
         debugger_module = os.path.abspath(root_dir + '/run_test.py')
         os.system(
-            f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory + "/" + _results.project_name}')
+            f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory}')
 
-    return directory + "/" + _results.project_name
+    return directory
 
 
 def getBuggyMethods(_results, info: BugInfo):
     """
     Get a list of all methods that are were modified to fix a specific bug
     :param _results: The SFL_Results of the test run
-    :param info: The BugInfo for _result
+    :param info: The BugInfo for _results
     :return: A list of all methods that are were modified to fix a specific bug
     """
     patch_set = getPatchSet(info)
     methods = set()
-    repo_dir = getValidProjectDir(_results, False, instrument=True)
+    repo_dir = getValidProjectDir(_results, info, False, instrument=True)
     for file in patch_set.modified_files:
         methods.update(
             (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, False))
-    repo_dir = getValidProjectDir(_results, True, instrument=True)
+    repo_dir = getValidProjectDir(_results, info, True, instrument=True)
     for file in patch_set.modified_files:
         methods.update(
             (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, True))
@@ -265,7 +292,7 @@ def extractMethodsFromCode(_results, info: BugInfo) -> List[DebuggerMethod]:
     :return: A list of DebuggerMethod instances representing the methods as extracted from code
     """
     methods_per_file = dict()  # Dict[str, Dict[str, Set[int]]]
-    directory = getValidProjectDir(_results, False, instrument=True)
+    directory = getValidProjectDir(_results, info, False, instrument=True)
     for event in _results.results:
         _filename, method_name, lineno, *other = event
         filename = _filename.replace(info.work_dir + "/", "")
