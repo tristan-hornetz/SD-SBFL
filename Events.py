@@ -109,8 +109,11 @@ class ScalarPairsEvent(DebuggerEvent):
         Collect scalar pairs for variables altered in this frame
         """
 
+        if event == 'call' or event == 'return':
+            return
+
         localvars = frame.f_locals.copy()
-        localvars.update(frame.f_globals)
+        # localvars.update(frame.f_globals)
 
         comp_str = []
 

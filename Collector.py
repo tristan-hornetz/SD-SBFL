@@ -2,14 +2,14 @@ import inspect
 import os
 import random
 import sys
-from types import FrameType, FunctionType, MethodType, TracebackType
+from types import FrameType, TracebackType, FunctionType
 from typing import Any, Set, Tuple, Type, Optional, Callable
 
 from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent, \
                                     get_file_resistant
 
-EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent]
+EVENT_TYPES = [LineCoveredEvent]#, ReturnValueEvent, ScalarPairsEvent]
 
 class SharedFunctionBuffer:
     def __init__(self):
@@ -35,6 +35,14 @@ class EventCollector(CoverageCollector):
     Collector with modifications that make it more suitable for larger projects
     Does not only collect coverage info, but also other types of events
     """
+
+    class NonFunction:
+        def __init__(self, name: str, file: str):
+            class NonCode:
+                pass
+            self.__name__ = name
+            self.__code__ = NonCode()
+            setattr(self.__code__, "co_filename", file)
 
     def __init__(self, *args, **kwargs):
         super(EventCollector, self).__init__(*args, **kwargs)
@@ -64,8 +72,6 @@ class EventCollector(CoverageCollector):
             while hasattr(function, "__wrapped__"):
                 function = function.__wrapped__
                 function_filename = get_file_resistant(function)
-                if self.work_dir_base in function_filename:
-                    break
             if self.work_dir_base not in function_filename:
                 return None
 
@@ -85,7 +91,8 @@ class EventCollector(CoverageCollector):
             if isinstance(function, Callable) and hasattr(function, '__name__'):
                 ret = self.check_function(function)
             else:
-                ret = None
+                function = self.NonFunction(frame.f_code.co_name, frame.f_code.co_filename)
+                ret = self.check_function(function)
 
             self.function_buffer.put((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno), ret)
 

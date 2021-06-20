@@ -3,7 +3,7 @@ import math
 import os
 import pickle
 from abc import abstractmethod
-from typing import List, Tuple, Any, Optional, Iterable
+from typing import Tuple, Any, Optional, Iterable
 
 from TestWrapper.root.CodeInspection import extractMethodsFromCode, getBuggyMethods, BugInfo
 

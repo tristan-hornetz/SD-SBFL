@@ -22,7 +22,7 @@ def get_info_directory(_results):
     :return: The absolute path of the BugsInPy directory containing information on the bug tested in _results
     """
     base = _results.work_dir.split("_BugsInPy")[0]
-    return f"{base}_BugsInPy/projects/{_results.project_name}/bugs/{_results.bug_id}"
+    return os.path.abspath(f"{base}_BugsInPy/projects/{_results.project_name}/bugs/{_results.bug_id}")
 
 
 class BugInfo:
@@ -224,7 +224,7 @@ def getCleanRepo(_results, info: BugInfo, directory):
         mkdirRecursive(directory)
     try:
         repo = Repo(directory)
-        repo.git.add(u=True)
+        repo.git.add('--all')
         repo.git.stash()
         repo.git.checkout(info.buggy_commit_id)
     except:
@@ -254,8 +254,8 @@ def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instr
     binary_dir = root_dir + '/_BugsInPy/framework/bin'
     if instrument:
         for file in os.scandir(info.info_dir):
-            if os.path.isfile(str(file)):
-                copy(str(file), directory)
+            if os.path.isfile(str(file.path)):
+                copy(str(file.path), directory + "/bugsinpy_" + str(file.path).replace(info.info_dir + "/", ""))
         debugger_module = os.path.abspath(root_dir + '/run_test.py')
         os.system(
             f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory}')

@@ -32,6 +32,8 @@ if __name__ == "__main__":
         for r, s in ranker.rank()[:10]:
             i += 1
             print(f"#{i}: {r} - Suspiciousness {s}")
+        for r, s in ranker.rank():
+            print(r)
         sys.stdout = old_stdout
     os.system(f"less \"{result_dump}\"")  #
     print("Results have been written to " + result_dump)
