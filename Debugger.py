@@ -9,6 +9,13 @@ from TestWrapper.root.Collector import collector_type, SharedCoverageCollector
 from TestWrapper.root.debuggingbook.StatisticalDebugger import OchiaiDebugger, Collector
 
 
+class NoFailuresError(Exception):
+    """
+    Raised when all tests that were supposed to fail actually passed
+    """
+    pass
+
+
 class BetterOchiaiDebugger(OchiaiDebugger):
     """
     OchiaiDebugger with reduced algorithmic complexity
@@ -36,11 +43,13 @@ class BetterOchiaiDebugger(OchiaiDebugger):
     def teardown(self):
         if self.shared_coverage:
             failed = set(self.collectors[self.FAIL])
+            passed = set(self.collectors[self.PASS])
             for event in collector_type.shared_coverage.keys():
                 collectors_with_event = collector_type.shared_coverage[event]
-                failed_collectors = set(filter(lambda c: c in failed, collectors_with_event))
+                failed_collectors = set(filter(lambda c: c[0] in failed, collectors_with_event.items()))
+                passed_collectors = set(filter(lambda c: c[0] in passed, collectors_with_event.items()))
                 self.collectors_with_result[self.FAIL][event] = failed_collectors
-                self.collectors_with_result[self.PASS][event] = collectors_with_event.difference(failed_collectors)
+                self.collectors_with_result[self.PASS][event] = passed_collectors
 
     def suspiciousness(self, event: Any) -> Optional[float]:
         failed = len(self.collectors_with_result[self.FAIL][event]) if event in self.collectors_with_result[
@@ -63,12 +72,30 @@ class BetterOchiaiDebugger(OchiaiDebugger):
         return []
 
 
+class ReportingDebugger(BetterOchiaiDebugger):
+    def teardown(self):
+        """
+        Dump the SFL_Results of debugger to debugger.dump_file using pickle
+        """
+        super().teardown()
+        if len(self.collectors[self.FAIL]) == 0:
+            raise NoFailuresError()
+        if not hasattr(self, "dump_file"):
+            dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
+        else:
+            dump_file = self.dump_file
+        if os.path.isfile(dump_file):
+            os.remove(dump_file)
+        with gzip.open(dump_file, "xb") as f:
+            pickle.dump(SFL_Results(self), f)
+
+
 class SFL_Results:
     """
     A container class extracting all relevant information about a test-run from a debugger instance.
     This is required because a debugger object itself cannot be stored with pickle.
     """
-    def __init__(self, debugger:BetterOchiaiDebugger, work_dir=""):
+    def __init__(self, debugger:ReportingDebugger, work_dir=""):
         """
         Create a SFL_Results object from a debugger instance
         :param debugger: The debugger instance
@@ -80,9 +107,14 @@ class SFL_Results:
             self.results = []
         self.collectors = {debugger.PASS: debugger.collectors[debugger.PASS],
                            debugger.FAIL: debugger.collectors[debugger.FAIL]}
-        self.collectors_with_result = debugger.collectors_with_result
+        self.collectors_with_event = debugger.collectors_with_result
+        self.collectors_with_result = dict()
         self.FAIL = debugger.FAIL
         self.PASS = debugger.PASS
+        for o in self.collectors_with_event.keys():
+            self.collectors_with_result[o] = dict()
+            for k in self.collectors_with_event[o].keys():
+                self.collectors_with_result[o][k] = set(e[0] for e in self.collectors_with_event[o][k])
 
         if work_dir == "":
             split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(self.__init__) else "/_root"
@@ -102,25 +134,6 @@ class SFL_Results:
                 if "=" in line:
                     setattr(self, line.split("=", 1)[0].lower(), line.split("=", 1)[1].replace("\n", ""))
 
-
-class ReportingDebugger(BetterOchiaiDebugger):
-    def teardown(self):
-        """
-        Dump the SFL_Results of debugger to debugger.dump_file using pickle
-        """
-        super().teardown()
-        if len(self.collectors[self.FAIL]) == 0:
-            os.system(
-                f"echo \"No Failures - {len(self.collectors[self.PASS])}\" > \"" + os.path.curdir + "/TestWrapper/notice.txt\"")
-            return
-        if not hasattr(self, "dump_file"):
-            dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
-        else:
-            dump_file = self.dump_file
-        if os.path.isfile(dump_file):
-            os.remove(dump_file)
-        with gzip.open(dump_file, "xb") as f:
-            pickle.dump(SFL_Results(self), f)
 
 debugger = ReportingDebugger(collector_class=collector_type)
 

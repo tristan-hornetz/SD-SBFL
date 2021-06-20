@@ -1,7 +1,7 @@
 import inspect
 from abc import abstractmethod
-from types import FrameType, FunctionType
-from typing import Any, Iterable, Iterator, Hashable, Callable
+from types import FrameType
+from typing import Any, Iterable, Iterator, Callable
 
 
 def get_file_resistant(o):
@@ -26,21 +26,23 @@ class SharedEventContainer(Iterable):
             id = int(self.collector)
             if id not in self.shared_coverage[o]:
                 self.length += 1
-                self.shared_coverage[o].add(id)
+                self.shared_coverage[o][id] = 1
+            else:
+                self.shared_coverage[o][id] += 1
         else:
-            self.shared_coverage[o] = {int(self.collector)}
+            self.shared_coverage[o] = {int(self.collector): 1}
             self.length += 1
 
     def __contains__(self, item):
         if item in self.shared_coverage.keys():
-            return self.collector in self.shared_coverage[item]
+            return int(self.collector) in self.shared_coverage[item].keys()
         return False
 
     def __len__(self):
         return self.length
 
     def __iter__(self) -> Iterator:
-        return filter(lambda k: self.collector in self.shared_coverage[k], self.shared_coverage.keys())
+        return filter(lambda k: int(self.collector) in self.shared_coverage[k].keys(), self.shared_coverage.keys())
 
 
 class DebuggerEvent:
@@ -52,7 +54,6 @@ class DebuggerEvent:
     @abstractmethod
     def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
         pass
-
 
 
 class LineCoveredEvent(DebuggerEvent):
