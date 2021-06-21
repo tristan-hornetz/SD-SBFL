@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from typing import Tuple, Set, Dict
 
 
 class Predicate:
@@ -9,6 +8,11 @@ class Predicate:
 
     def __init__(self, _results):
         self.results = _results
+        self.predicate_instances = dict()
+        self.total_passed = len(self.results.collectors[self.results.PASS])
+        self.total_failed = len(self.results.collectors[self.results.FAIL])
+        for event in self.results.results:
+            self.transform(event)
 
     def description(self) -> str:
         """
@@ -17,16 +21,10 @@ class Predicate:
         return self.__doc__
 
     @abstractmethod
-    def check(self, event: Tuple[str, int], passed_ids: Set[int], failed_ids: Set[int],
-              new_passed: Dict[str, Dict[int, bool]], new_failed: Dict[str, Dict[int, bool]]) -> None:
+    def transform(self, event) -> None:
         """
-        Check if the event is relevant to the predicate and adjust results accordingly
-        :param event: An event recorded during a test run
-        :param passed_ids: The ids of all passing tests where the event occurred
-        :param failed_ids: The ids of all failing tests where the event occurred
-        :param new_passed: Predicate @ Location -> (Collector ID -> Predicate Result) where the test passed
-        :param new_failed: Predicate @ Location -> (Collector ID -> Predicate Result) where the test failed
-        :return: None
+        Extract all info related to our predicate from a recorded event and adjust own data structures accordingly
+        :param event: The event to be transformed
         """
         pass
 
@@ -36,22 +34,23 @@ class NoPredicate(Predicate):
     Just rank events as they are recorded
     p(*) = True
     """
-
-    def check(self, event: Tuple[str, int], passed_ids: Set[int], failed_ids: Set[int],
-              new_passed: Dict[str, Dict[int, bool]], new_failed: Dict[str, Dict[int, bool]]) -> None:
-
-        e, lineno = event
-        new_passed[f"{e}:{lineno}"] = {i: True for i in passed_ids}
-        new_failed[f"{e}:{lineno}"] = {i: True for i in failed_ids}
+    def transform(self, event) -> None:
+        passed_collectors = self.results.collectors_with_event[self.results.PASS][event]
+        failed_collectors = self.results.collectors_with_event[self.results.FAIL][event]
+        self.predicate_instances[event] = {k: {True, n} for k, n in passed_collectors}, \
+                                          {k: {True, n} for k, n in failed_collectors}
 
 
-class LineCoveredPredicate(NoPredicate):
+class LineCoveredPredicate(Predicate):
     """
     p(*) = Line covered?
     """
 
-    def check(self, event: Tuple[str, int], passed_ids: Set[int], failed_ids: Set[int],
-              new_passed: Dict[str, Dict[int, bool]], new_failed: Dict[str, Dict[int, bool]]) -> None:
-        if event[0].startswith("Covered "):
-            super().check(event, passed_ids, failed_ids, new_passed, new_failed)
+    def transform(self, event) -> None:
+        filename, method_name, lineno, event_type, *other = event
+        if event_type == "Covered":
+            passed_collectors = self.results.collectors_with_event[self.results.PASS][event]
+            failed_collectors = self.results.collectors_with_event[self.results.FAIL][event]
+            self.predicate_instances[(filename, method_name, lineno, "LineCoveredPredicate", *other)] = {k: {True, n} for k, n in passed_collectors}, \
+                                              {k: {True, n} for k, n in failed_collectors}
 

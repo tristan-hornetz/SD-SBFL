@@ -2,10 +2,12 @@ import gzip
 import math
 import os
 import pickle
+import sys
 from abc import abstractmethod
-from typing import Tuple, Any, Optional, Iterable
+from typing import Tuple, Any, Optional, Iterable, Dict
 
 from TestWrapper.root.CodeInspection import extractMethodsFromCode, getBuggyMethods, BugInfo
+from TestWrapper.root.Predicates import LineCoveredPredicate, Predicate, NoPredicate
 
 
 class Ranker:
@@ -19,17 +21,18 @@ class Ranker:
 
     def suspiciousness(self, event: Any) -> Optional[float]:
         failed = len(self.results.collectors_with_result[self.results.FAIL][event]) if event in \
-                                                                                  self.results.collectors_with_result[
-                                                                                      self.results.FAIL].keys() else 0
+                                                                                       self.results.collectors_with_result[
+                                                                                           self.results.FAIL].keys() else 0
         passed = len(self.results.collectors_with_result[self.results.PASS][event]) if event in \
-                                                                                  self.results.collectors_with_result[
-                                                                                      self.results.PASS].keys() else 0
+                                                                                       self.results.collectors_with_result[
+                                                                                           self.results.PASS].keys() else 0
         total_passed = len(self.results.collectors[self.results.PASS])
         total_failed = len(self.results.collectors[self.results.FAIL])
         return self.risk_function(passed, failed, total_passed, total_failed)
 
     def rank(self) -> Iterable[Tuple[Tuple[str, int], float]]:
-        return sorted(((event, self.suspiciousness(event)) for event in self.results.results), key=lambda t: t[1], reverse=True)
+        return sorted(((event, self.suspiciousness(event)) for event in self.results.results), key=lambda t: t[1],
+                      reverse=True)
 
     def __iter__(self):
         return iter(self.rank())
@@ -50,34 +53,36 @@ class OchiaiRanker(Ranker):
 
 
 class PredicateOchiaiRanker(OchiaiRanker):
-    def __init__(self, *args, risk_function=None, predicates=None, **kwargs):
+    def __init__(self, *args, predicates: Iterable[Predicate], risk_function=None, **kwargs):
         super(PredicateOchiaiRanker, self).__init__(*args, **kwargs)
-        if predicates is None:
-            predicates = [lambda x: True]
+        self.predicates = predicates
         self.event_by_line = dict()
         self._risk_function = risk_function
-        for event_tuple in self.results.results:
-            filename, method_name, lineno, event_type, *other = event_tuple
-            if len(self.results.collectors_with_result[self.results.FAIL][event_tuple]) > 0:
-                include = False
-                for p in predicates:
-                    include = include or p(event_tuple)
-                if not include:
-                    continue
-                line = (filename, method_name, lineno)
-                passed = len(self.results.collectors_with_result[self.results.PASS][event_tuple])
-                failed = len(self.results.collectors_with_result[self.results.FAIL][event_tuple])
-                if line in self.event_by_line.keys():
-                    self.event_by_line[line][event_tuple] = (passed, failed)
-                else:
-                    self.event_by_line[line] = {event_tuple: (passed, failed)}
+        self.predicate_instances = dict()
+        for p in predicates:
+            for k, v in p.predicate_instances.items():
+                self.predicate_instances[k] = v
+        for predicate_tuple, results in self.predicate_instances.items():
+            passed, failed = results
+            filename, method_name, lineno, *other = predicate_tuple
+            line = (filename, method_name, lineno)
+            if line in self.event_by_line.keys():
+                self.event_by_line[line][predicate_tuple] = (passed, failed)
+            else:
+                self.event_by_line[line] = {predicate_tuple: (passed, failed)}
 
-    def risk_function(self, passed, failed, total_passed, total_failed) -> float:
+    def risk_function(self, passed: Tuple[Dict[Tuple, Tuple[bool, int]], Dict[Tuple, Tuple[bool, int]]],
+                      failed: Tuple[Dict[Tuple, Tuple[bool, int]], Dict[Tuple, Tuple[bool, int]]],
+                      total_passed: int, total_failed: int) -> float:
         if self._risk_function:
             return self._risk_function(passed, failed, total_passed, total_failed)
-        return super().risk_function(passed, failed, total_passed, total_failed)
+        return super().risk_function(len(passed), len(failed), total_passed, total_failed)
 
-    def suspiciousness(self, event: Any) -> Optional[float]:
+    def rank(self) -> Iterable[Tuple[Any, float]]:
+        return sorted(((event, self.suspiciousness(event)) for event, results in self.predicate_instances.items()), key=lambda t: t[1],
+                      reverse=True)
+
+    def suspiciousness(self, event: Any) -> float:
         filename, method_name, lineno, *other = event
         line = (filename, method_name, lineno)
         if line not in self.event_by_line.keys():
@@ -97,26 +102,33 @@ class SFL_Evaluation:
     """
 
     class MaxAvgComparator(Iterable):
-        def __init__(self, e: list):
-            assert(len(e) > 0)
+        def __init__(self, e: list, prefer_max=True):
             self.e = e
+            if len(e) == 0:
+                self.e = [-1]
             self.max = max(*e)
             self.avg = sum(e) / len(e)
+            self.prefer_max = prefer_max
 
         def __lt__(self, other: Iterable):
             o = list(other)
-            assert(len(o) > 0)
+            assert (len(o) > 0)
             max_o = max(*o)
-            if self.max == max_o:
-                return self.avg < sum(o) / len(o)
-            return self.max < max_o
+            if self.prefer_max:
+                if self.max == max_o:
+                    return self.avg < sum(o) / len(o)
+                return self.max < max_o
+            if self.avg == sum(o) / len(o):
+                return self.max < max_o
+            return self.avg < sum(o) / len(o)
 
         def __iter__(self):
             return iter(self.e)
 
-    def sortResultMethods(self, work_dir, ranker_type):
+    def sortResultMethods(self, work_dir, ranker, rank_by_max=True):
         method_dict = dict()
         for method in self.result_methods:
+            setattr(method, 'suspiciousness', [])
             if method.file in method_dict.keys():
                 if method.name in method_dict[method.file].keys():
                     method_dict[method.file][method.name].append((method.linenos, method))
@@ -125,7 +137,7 @@ class SFL_Evaluation:
             else:
                 method_dict[method.file] = {method.name: [(method.linenos, method)]}
         index = -1
-        for event_tuple, suspiciousness in ranker_type(self.result_container, self.bug_info).rank():
+        for event_tuple, suspiciousness in ranker.rank():
             _filename, method_name, lineno, event_type, *other = event_tuple
             filename = _filename.replace(work_dir + "/", "")
             index += 1
@@ -137,20 +149,28 @@ class SFL_Evaluation:
                                 method.suspiciousness.append(suspiciousness)
                             else:
                                 setattr(method, 'suspiciousness', [suspiciousness])
-        self.result_methods.sort(key=lambda m: self.MaxAvgComparator(m.suspiciousness) if hasattr(method, 'suspiciousness') else [-1], reverse=True)
+        self.result_methods.sort(
+            key=lambda m: self.MaxAvgComparator(m.suspiciousness, prefer_max=rank_by_max) if hasattr(method,
+                                                                                                     'suspiciousness') else [
+                -1], reverse=True)
 
-    def __init__(self, result_file, ranker_type=PredicateOchiaiRanker):
+    def __init__(self, result_file, predicates=None, ranker_type=PredicateOchiaiRanker, rank_by_max=True):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)
 
+        if predicates is None:
+            predicates = [LineCoveredPredicate(self.result_container)]
+
         self.ranker_type = ranker_type
-
         self.result_methods = list()
-
+        self.rank_by_max = rank_by_max
         self.bug_info = BugInfo(self.result_container)
+
+        print("Verifying recorded methods...")
+
         self.buggy_methods = getBuggyMethods(self.result_container, self.bug_info)
         self.result_methods = extractMethodsFromCode(self.result_container, self.bug_info)
-        self.sortResultMethods(self.bug_info.work_dir, ranker_type)
+        self.sortResultMethods(self.bug_info.work_dir, ranker_type(self.result_container, self.bug_info, predicates=predicates), rank_by_max=rank_by_max)
 
         self.highest_rank = len(self.result_methods)
         self.best_method = None
@@ -169,7 +189,7 @@ class SFL_Evaluation:
 
     def __str__(self):
         return f"Results for {self.result_container.project_name}, Bug {self.result_container.bug_id}\n" + \
-               f"Ranked {len(self.result_container.results)} Events and {len(self.result_methods)} Methods\n\n" + \
+               f"Ranked {len(self.result_container.results)} Predicate Instances and {len(self.result_methods)} Methods by {'Maximum' if self.rank_by_max else 'Average'} Suspiciousness\n\n" + \
                f"There {'is one buggy function' if len(self.buggy_methods) == 1 else f'are {len(self.buggy_methods)} buggy functions'} in this commit: \n" + \
                f"{os.linesep.join(list(f'    {method}' for method in self.buggy_methods))}\n\n" + \
                f"Most suspicious method:\n    {str(self.result_methods[0])}\n\n" + \

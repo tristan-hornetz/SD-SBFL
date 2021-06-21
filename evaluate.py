@@ -3,7 +3,7 @@ import argparse
 import sys
 
 from TestWrapper.root.Evaluation import SFL_Evaluation
-
+from TestWrapper.root.Predicates import NoPredicate
 
 if __name__ == "__main__":
     DEFAULT_INPUT = os.path.dirname(os.path.abspath(sys.argv[0])) + "/TestWrapper/results.pickle.gz"
@@ -26,14 +26,13 @@ if __name__ == "__main__":
         for r in evaluation.result_methods[:10]:
             i += 1
             print(f"#{i}: {str(r)}")
-        print("\n\nTop 10 most suspicious events:\n")
+        print("\n\nTop 10 most suspicious raw events:\n")
         i = 0
-        ranker = evaluation.ranker_type(evaluation.result_container, evaluation.bug_info)
+        ranker = evaluation.ranker_type(evaluation.result_container, evaluation.bug_info, predicates=[NoPredicate(evaluation.result_container)])
         for r, s in ranker.rank()[:10]:
             i += 1
             print(f"#{i}: {r} - Suspiciousness {s}")
-        for r, s in ranker.rank():
-            print(r)
+
         sys.stdout = old_stdout
     os.system(f"less \"{result_dump}\"")  #
     print("Results have been written to " + result_dump)

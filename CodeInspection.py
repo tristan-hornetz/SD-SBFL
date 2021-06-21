@@ -258,7 +258,7 @@ def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instr
                 copy(str(file.path), directory + "/bugsinpy_" + str(file.path).replace(info.info_dir + "/", ""))
         debugger_module = os.path.abspath(root_dir + '/run_test.py')
         os.system(
-            f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory}')
+            f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory} > /dev/null 2>&1')
 
     return directory
 
@@ -271,16 +271,24 @@ def getBuggyMethods(_results, info: BugInfo):
     :return: A list of all methods that are were modified to fix a specific bug
     """
     patch_set = getPatchSet(info)
-    methods = set()
-    repo_dir = getValidProjectDir(_results, info, False, instrument=True)
-    for file in patch_set.modified_files:
-        methods.update(
-            (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, False))
+    fixed_state_methods = set()
+
     repo_dir = getValidProjectDir(_results, info, True, instrument=True)
     for file in patch_set.modified_files:
-        methods.update(
+        fixed_state_methods.update(
             (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, True))
-    return list(DebuggerMethod(name, path, set(linenos)) for path, name, linenos in methods)
+
+    repo_dir = getValidProjectDir(_results, info, False, instrument=True)
+    fixed_state_files = {m[0]for m in fixed_state_methods}
+    buggy_state_methods = set()
+    for f in fixed_state_files:
+        methods = filter(lambda m: m[0] == f, fixed_state_methods)
+        buggy_state_methods.update((f, method, tuple(linenos)) for method, linenos in extractMethodsFromFile(repo_dir, f, {m[1]: set(m[2]) for m in methods}))
+
+    for file in patch_set.modified_files:
+        buggy_state_methods.update(
+            (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, False))
+    return list(DebuggerMethod(name, path, set(linenos)) for path, name, linenos in buggy_state_methods)
 
 
 def extractMethodsFromCode(_results, info: BugInfo) -> List[DebuggerMethod]:
