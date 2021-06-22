@@ -157,7 +157,7 @@ class SFL_Evaluation:
             self.result_container = pickle.load(f)
 
         if predicates is None:
-            predicates = [RecordedScalarPairPredicate(self.result_container)]
+            predicates = [LineCoveredPredicate(self.result_container)]
 
         self.predicates = predicates
         self.ranker_type = ranker_type
