@@ -9,7 +9,8 @@ from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent, \
                                     get_file_resistant
 
-EVENT_TYPES = [LineCoveredEvent]#, ReturnValueEvent, ScalarPairsEvent]
+EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent]#, ScalarPairsEvent]
+
 
 class SharedFunctionBuffer:
     def __init__(self):

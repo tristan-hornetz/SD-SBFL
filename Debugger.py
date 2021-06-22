@@ -78,8 +78,8 @@ class ReportingDebugger(BetterOchiaiDebugger):
         Dump the SFL_Results of debugger to debugger.dump_file using pickle
         """
         super().teardown()
-        if len(self.collectors[self.FAIL]) == 0:
-            raise NoFailuresError()
+        #if len(self.collectors[self.FAIL]) == 0:
+        #    raise NoFailuresError()
         if not hasattr(self, "dump_file"):
             dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
         else:

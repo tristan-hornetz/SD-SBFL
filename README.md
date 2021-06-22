@@ -25,14 +25,18 @@ To start a test-run for a specific bug, run
 ```shell
 python run_test.py -p <project_name> -i <bug_id> [-o <output_file>] 
 ```
-This may take anywhere from a few minutes to several hours, depending on the project you choose.
-Once the test-run is complete, a small evaluation will be printed. The results are pickled and dumped 
-to ```/TestWrapper/results.pickle.gz``` (unless another destination was specified with ```-o```). 
+The selected project is then cloned to a temporary folder and a pyenv
+environment is set up to replicate the environment in which the bug occurs.
+The test-run itself may take anywhere from a few minutes to several hours, depending on the project you choose.
+The recorded events are pickled and then dumped to ```/TestWrapper/results.pickle.gz``` (unless another destination was specified with ```-o```). 
 
-If you want to reevaluate the results from another test-run, you can use
+Some projects that require a special setup for testing cannot (yet) be directly 
+tested like this without manual intervention.
+
+If you want to evaluate the results test-run, you can use
 
 ```shell
-python evaluate.py [-r <result_file>] 
+python evaluate.py [-r <output_file>] 
 ```
 
 ## Acknowledgements

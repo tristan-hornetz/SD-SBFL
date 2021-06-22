@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import Tuple, Any, Optional, Iterable, Dict
 
 from TestWrapper.root.CodeInspection import extractMethodsFromCode, getBuggyMethods, BugInfo
-from TestWrapper.root.Predicates import LineCoveredPredicate, Predicate, NoPredicate
+from TestWrapper.root.Predicates import LineCoveredPredicate, Predicate, NoPredicate, RecordedScalarPairPredicate
 
 
 class Ranker:
@@ -106,14 +106,14 @@ class SFL_Evaluation:
             self.e = e
             if len(e) == 0:
                 self.e = [-1]
-            self.max = max(*e)
-            self.avg = sum(e) / len(e)
+            self.max = max(self.e)
+            self.avg = sum(self.e) / len(self.e)
             self.prefer_max = prefer_max
 
         def __lt__(self, other: Iterable):
             o = list(other)
             assert (len(o) > 0)
-            max_o = max(*o)
+            max_o = max(o)
             if self.prefer_max:
                 if self.max == max_o:
                     return self.avg < sum(o) / len(o)
@@ -150,17 +150,16 @@ class SFL_Evaluation:
                             else:
                                 setattr(method, 'suspiciousness', [suspiciousness])
         self.result_methods.sort(
-            key=lambda m: self.MaxAvgComparator(m.suspiciousness, prefer_max=rank_by_max) if hasattr(method,
-                                                                                                     'suspiciousness') else [
-                -1], reverse=True)
+            key=lambda m: self.MaxAvgComparator(m.suspiciousness, prefer_max=rank_by_max), reverse=True)
 
     def __init__(self, result_file, predicates=None, ranker_type=PredicateOchiaiRanker, rank_by_max=True):
         with gzip.open(result_file) as f:
             self.result_container = pickle.load(f)
 
         if predicates is None:
-            predicates = [LineCoveredPredicate(self.result_container)]
+            predicates = [RecordedScalarPairPredicate(self.result_container)]
 
+        self.predicates = predicates
         self.ranker_type = ranker_type
         self.result_methods = list()
         self.rank_by_max = rank_by_max
@@ -170,7 +169,8 @@ class SFL_Evaluation:
 
         self.buggy_methods = getBuggyMethods(self.result_container, self.bug_info)
         self.result_methods = extractMethodsFromCode(self.result_container, self.bug_info)
-        self.sortResultMethods(self.bug_info.work_dir, ranker_type(self.result_container, self.bug_info, predicates=predicates), rank_by_max=rank_by_max)
+        self.ranker = ranker_type(self.result_container, self.bug_info, predicates=predicates)
+        self.sortResultMethods(self.bug_info.work_dir, self.ranker, rank_by_max=rank_by_max)
 
         self.highest_rank = len(self.result_methods)
         self.best_method = None
@@ -189,7 +189,9 @@ class SFL_Evaluation:
 
     def __str__(self):
         return f"Results for {self.result_container.project_name}, Bug {self.result_container.bug_id}\n" + \
-               f"Ranked {len(self.result_container.results)} Predicate Instances and {len(self.result_methods)} Methods by {'Maximum' if self.rank_by_max else 'Average'} Suspiciousness\n\n" + \
+               f"{len(self.result_container.results)} Events were recorded\n" + \
+               f"Predicate Types:\n\n{os.linesep.join(p.__class__.__name__ + p.description() for p in self.predicates)}\n" + \
+               f"Ranked {len(self.ranker.predicate_instances)} Predicate Instances and {len(self.result_methods)} Methods by {'Maximum' if self.rank_by_max else 'Average'} Suspiciousness\n\n" + \
                f"There {'is one buggy function' if len(self.buggy_methods) == 1 else f'are {len(self.buggy_methods)} buggy functions'} in this commit: \n" + \
                f"{os.linesep.join(list(f'    {method}' for method in self.buggy_methods))}\n\n" + \
                f"Most suspicious method:\n    {str(self.result_methods[0])}\n\n" + \

@@ -1,8 +1,8 @@
+import builtins
 import inspect
 from abc import abstractmethod
 from types import FrameType
 from typing import Any, Iterable, Iterator, Callable
-
 
 def get_file_resistant(o):
     if hasattr(o, '__code__'):
@@ -91,6 +91,8 @@ class ScalarPairsEvent(DebuggerEvent):
     def __init__(self, *args, **kwargs):
         super(ScalarPairsEvent, self).__init__(*args, **kwargs)
         self.scalars = dict()
+        self.types = {int, str, float, bool}
+
 
     def get_pair_strings(self, var: str, vars: dict):
         comp_str = []
@@ -109,16 +111,13 @@ class ScalarPairsEvent(DebuggerEvent):
         Collect scalar pairs for variables altered in this frame
         """
 
-        if event == 'call' or event == 'return':
-            return
-
         localvars = frame.f_locals.copy()
         # localvars.update(frame.f_globals)
-
         comp_str = []
 
         local_keys = set(localvars.keys())
         matching_vars = local_keys.intersection(self.scalars.keys())
+
         for v in matching_vars:
             try:
                 if localvars[v] == self.scalars[v]:
@@ -136,3 +135,4 @@ class ScalarPairsEvent(DebuggerEvent):
             self.container.add(event_tuple)
 
         self.scalars = localvars
+
