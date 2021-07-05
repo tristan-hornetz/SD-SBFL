@@ -20,6 +20,7 @@ class BetterOchiaiDebugger(OchiaiDebugger):
     """
     OchiaiDebugger with reduced algorithmic complexity
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.collectors = {self.FAIL: list(), self.PASS: list()}
@@ -78,7 +79,7 @@ class ReportingDebugger(BetterOchiaiDebugger):
         Dump the SFL_Results of debugger to debugger.dump_file using pickle
         """
         super().teardown()
-        #if len(self.collectors[self.FAIL]) == 0:
+        # if len(self.collectors[self.FAIL]) == 0:
         #    raise NoFailuresError()
         if not hasattr(self, "dump_file"):
             dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
@@ -95,7 +96,8 @@ class SFL_Results:
     A container class extracting all relevant information about a test-run from a debugger instance.
     This is required because a debugger object itself cannot be stored with pickle.
     """
-    def __init__(self, debugger:ReportingDebugger, work_dir=""):
+
+    def __init__(self, debugger: ReportingDebugger, work_dir=""):
         """
         Create a SFL_Results object from a debugger instance
         :param debugger: The debugger instance
@@ -125,7 +127,7 @@ class SFL_Results:
             else:
                 work_dir_base = os.curdir.rsplit("/", 1)[0]
             self.work_dir = work_dir_base + "/" + \
-                       os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
+                            os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
         with open(self.work_dir + "/bugsinpy_id.info", "rt") as f:
             while True:
                 line = f.readline()
@@ -136,4 +138,3 @@ class SFL_Results:
 
 
 debugger = ReportingDebugger(collector_class=collector_type)
-

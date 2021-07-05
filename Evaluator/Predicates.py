@@ -33,6 +33,7 @@ class NoPredicate(Predicate):
     """
     Just rank events as they are recorded
     """
+
     def transform(self, event) -> None:
         passed_collectors = self.results.collectors_with_event[self.results.PASS][event]
         failed_collectors = self.results.collectors_with_event[self.results.FAIL][event]
@@ -51,8 +52,12 @@ class MatchEventPredicate(Predicate):
         if event_type == self.match_event:
             passed_collectors = self.results.collectors_with_event[self.results.PASS][event]
             failed_collectors = self.results.collectors_with_event[self.results.FAIL][event]
-            self.predicate_instances[(filename, method_name, lineno, self.__class__.__name__, *other)] = {k: {True, n} for k, n in passed_collectors}, \
-                                              {k: {True, n} for k, n in failed_collectors}
+            self.predicate_instances[(filename, method_name, lineno, self.__class__.__name__, *other)] = {k: {True, n}
+                                                                                                          for k, n in
+                                                                                                          passed_collectors}, \
+                                                                                                         {k: {True, n}
+                                                                                                          for k, n in
+                                                                                                          failed_collectors}
 
 
 class LineCoveredPredicate(MatchEventPredicate):
@@ -60,6 +65,7 @@ class LineCoveredPredicate(MatchEventPredicate):
     Evaluates to True for each line that was covered in a failed test.
     Directly maps to the raw events.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__("Covered", *args, **kwargs)
 
@@ -69,6 +75,7 @@ class ReturnedValuePredicate(MatchEventPredicate):
     Evaluates to a value that was returned in a failed test.
     Directly maps to the raw events.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__("Return", *args, **kwargs)
 
@@ -78,8 +85,6 @@ class RecordedScalarPairPredicate(MatchEventPredicate):
     Evaluates to True if a certain scalar pair was recorded in a failed test.
     Directly maps to the raw events.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__("Pair", *args, **kwargs)
-
-
-

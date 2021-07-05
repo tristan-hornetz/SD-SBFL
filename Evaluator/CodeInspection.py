@@ -2,10 +2,10 @@ import ast
 import inspect
 import os
 import sys
-import pkg_resources
-
-from typing import List, Tuple, Set, Dict
 from shutil import copy
+from typing import List, Tuple, Set, Dict
+
+import pkg_resources
 
 installed = {pkg.key for pkg in pkg_resources.working_set}
 if 'unidiff' in installed and 'gitpython' in installed:
@@ -60,7 +60,6 @@ class BugInfo:
         return ret
 
 
-
 class LineNumberExtractor(ast.NodeVisitor):
     """
     NodeVisitor that stores the line numbers of nodes it visits
@@ -100,7 +99,7 @@ class DebuggerMethod:
             self.suspiciousness = [-1]
         return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]" + \
                (f"\n             -> Suspiciousness: (Max: "
-                f"{max(self.suspiciousness)}, Avg:{sum(self.suspiciousness)/len(self.suspiciousness)})"
+                f"{max(self.suspiciousness)}, Avg:{sum(self.suspiciousness) / len(self.suspiciousness)})"
                 if hasattr(self, 'suspiciousness') else "")
 
     def __eq__(self, other):
@@ -282,11 +281,12 @@ def getBuggyMethods(_results, info: BugInfo):
             (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, True))
 
     repo_dir = getValidProjectDir(_results, info, False, instrument=True)
-    fixed_state_files = {m[0]for m in fixed_state_methods}
+    fixed_state_files = {m[0] for m in fixed_state_methods}
     buggy_state_methods = set()
     for f in fixed_state_files:
         methods = filter(lambda m: m[0] == f, fixed_state_methods)
-        buggy_state_methods.update((f, method, tuple(linenos)) for method, linenos in extractMethodsFromFile(repo_dir, f, {m[1]: set(m[2]) for m in methods}))
+        buggy_state_methods.update((f, method, tuple(linenos)) for method, linenos in
+                                   extractMethodsFromFile(repo_dir, f, {m[1]: set(m[2]) for m in methods}))
 
     for file in patch_set.modified_files:
         buggy_state_methods.update(

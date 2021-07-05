@@ -2,12 +2,12 @@ import inspect
 import os
 import random
 import sys
-from types import FrameType, TracebackType, FunctionType
+from types import FrameType, TracebackType
 from typing import Any, Set, Tuple, Type, Optional, Callable
 
-from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarEvent, \
-                                    get_file_resistant
+    get_file_resistant
+from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 
 EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarEvent]
 
@@ -41,6 +41,7 @@ class EventCollector(CoverageCollector):
         def __init__(self, name: str, file: str):
             class NonCode:
                 pass
+
             self.__name__ = name
             self.__code__ = NonCode()
             setattr(self.__code__, "co_filename", file)
@@ -48,7 +49,8 @@ class EventCollector(CoverageCollector):
     def __init__(self, *args, **kwargs):
         super(EventCollector, self).__init__(*args, **kwargs)
         if os.path.exists(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info"):
-            with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info", "rt") as f:
+            with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info",
+                      "rt") as f:
                 self.work_dir_base = str(f.readline().replace("\n", ""))
 
         self.event_types = []
@@ -84,7 +86,8 @@ class EventCollector(CoverageCollector):
 
     def get_function_from_frame(self, frame: FrameType):
 
-        ret, found = self.function_buffer.get((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno))
+        ret, found = self.function_buffer.get(
+            (frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno))
 
         if not found:
             function = self.search_func(frame.f_code.co_name, frame)

@@ -1,11 +1,21 @@
 import os
 import sys
+
 if __name__ == '__main__' and (not os.path.islink(os.path.abspath(os.path.dirname(sys.argv[0])) + '/TestWrapper')):
     print('Symlinks not found. Did you run make?')
     exit(-1)
-from TestWrapper.root.CodeInspection import BugInfo
 dump_file = os.path.curdir + '/TestWrapper/results.pickle.gz'
 test_ids = []
+
+
+def get_info_directory(_results):
+    """
+    Get the absolute path of the BugsInPy directory containing information on the bug tested in _results
+    :param _results: The SFL_Results of a test run
+    :return: The absolute path of the BugsInPy directory containing information on the bug tested in _results
+    """
+    base = _results.work_dir.split("_BugsInPy")[0]
+    return os.path.abspath(f"{base}_BugsInPy/projects/{_results.project_name}/bugs/{_results.bug_id}")
 
 
 def get_test_ids():
@@ -14,9 +24,9 @@ def get_test_ids():
     :return: A list of Test IDs of tests failing because of the bug currently investigated
     """
     _results = SFL_Results(debugger)
-    _info = BugInfo(_results)
+    info_dir = get_info_directory(_results)
     ret = []
-    with open(_info.info_dir + '/run_test.sh', 'rt') as f:
+    with open(info_dir + '/run_test.sh', 'rt') as f:
         while True:
             line = f.readline()
             if not line:
@@ -47,7 +57,6 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file):
 
 
 if __name__ == '__main__':
-    from evaluate import SFL_Evaluation
     import argparse
     arg_parser = argparse.ArgumentParser(description='Run the debugger on a specific bug')
     arg_parser.add_argument('-p', '--project_name', required=True, type=str, default='thefuck', help='The name of the target project')
@@ -60,11 +69,10 @@ if __name__ == '__main__':
     bug_id = args.bug_id
 
     run_test(root_dir, project, bug_id, os.path.abspath(args.output_file))
-    #print(SFL_Evaluation(os.path.abspath(args.output_file)))
 else:
-    from TestWrapper.root.Debugger import debugger, SFL_Results
     if os.path.exists("./output_file.info"):
         with open("./output_file.info", "rt") as f:
             dump_file = f.read()
+    from TestWrapper.root.Debugger import debugger, SFL_Results
     debugger.dump_file = dump_file
     test_ids.extend(get_test_ids())

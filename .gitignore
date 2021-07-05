@@ -3,6 +3,9 @@
 /_BugsInPy
 /__pycache__
 /debuggingbook/__pycache__
+/Recorder/__pycache__
+/Evaluator/__pycache__
+/Evaluator/.temp
 /_root
 .env.sh
 activate

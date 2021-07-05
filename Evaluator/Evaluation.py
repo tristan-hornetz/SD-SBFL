@@ -2,12 +2,11 @@ import gzip
 import math
 import os
 import pickle
-import sys
 from abc import abstractmethod
 from typing import Tuple, Any, Optional, Iterable, Dict
 
-from TestWrapper.root.CodeInspection import extractMethodsFromCode, getBuggyMethods, BugInfo
-from TestWrapper.root.Predicates import LineCoveredPredicate, Predicate, NoPredicate, RecordedScalarPairPredicate, ReturnedValuePredicate
+from .CodeInspection import extractMethodsFromCode, getBuggyMethods, BugInfo
+from .Predicates import LineCoveredPredicate, Predicate
 
 
 class Ranker:
@@ -79,7 +78,8 @@ class PredicateOchiaiRanker(OchiaiRanker):
         return super().risk_function(len(passed), len(failed), total_passed, total_failed)
 
     def rank(self) -> Iterable[Tuple[Any, float]]:
-        return sorted(((event, self.suspiciousness(event)) for event, results in self.predicate_instances.items()), key=lambda t: t[1],
+        return sorted(((event, self.suspiciousness(event)) for event, results in self.predicate_instances.items()),
+                      key=lambda t: t[1],
                       reverse=True)
 
     def suspiciousness(self, event: Any) -> float:

@@ -1,8 +1,8 @@
-import builtins
 import inspect
 from abc import abstractmethod
 from types import FrameType
 from typing import Any, Iterable, Iterator, Callable
+
 
 def get_file_resistant(o):
     if hasattr(o, '__code__'):
@@ -71,6 +71,7 @@ class ReturnValueEvent(DebuggerEvent):
         super(ReturnValueEvent, self).__init__(*args, **kwargs)
         self.previous_items = set()
         self.types = {int, str, float, bool}
+
     def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
         """
         Collect a return value
@@ -117,4 +118,3 @@ class ScalarEvent(DebuggerEvent):
                 self.container.add((file, function.__name__, frame.f_lineno, "Pair", k, o_k, v == o_v, "="))
 
         self.previous_items = localvars
-

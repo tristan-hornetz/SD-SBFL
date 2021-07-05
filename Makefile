@@ -2,7 +2,7 @@ REPO_DIR := $(shell pwd)/_BugsInPy
 REPO_URI="https://github.com/tristan-hornetz/BugsInPy"
 DEBUGGER_SYMDIR=_root
 ENV_SCRIPT=.env.sh
-PY_FILES := $(wildcard *.py)
+PY_FILES := $(wildcard ./Recorder/*.py)
 
 sh_start=10
 sh_end=59
@@ -69,7 +69,7 @@ symdir:
 	mkdir "$(DEBUGGER_SYMDIR)"
 
 %.py: symdir
-	ln -s "$(shell pwd)/$@" "$(DEBUGGER_SYMDIR)/$@"
+	ln -s "$(shell pwd)/$@" "$(DEBUGGER_SYMDIR)/$(shell basename $@)"
 
 environment:
 
@@ -78,6 +78,7 @@ symlinks: $(PY_FILES)
 	ln -s "$(REPO_DIR)/framework/py/TestWrapper" "$(shell pwd)/TestWrapper"
 	ln -s "$(shell pwd)/debuggingbook" "$(shell pwd)/$(DEBUGGER_SYMDIR)/debuggingbook"
 	ln -s "$(shell pwd)/$(DEBUGGER_SYMDIR)" "$(REPO_DIR)/framework/py/TestWrapper/root"
+	ln -s "$(shell pwd)/run_test.py" "$(shell pwd)/$(DEBUGGER_SYMDIR)/run_test.py"
 
 
 environment:
@@ -93,4 +94,5 @@ clean:
 	rm -f $(ENV_SCRIPT)
 	rm -f activate
 	rm -rf .temp
+	rm -rf ./Evaluator/.temp
 	pyenv virtualenv-delete -f statistical_debugger
