@@ -59,15 +59,18 @@ class DebuggerEvent:
 class LineCoveredEvent(DebuggerEvent):
     def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
         """
-        Same as CoverageCollector::collect, but with a more elaborate method of filtering out unimportant events
-        Function objects are translated to strings so that the functions themselves don't have to stay in memory
+        Collect information about the line that is currently being covered.
         """
 
-        event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Covered")
+        event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Covered", event)
         self.container.add(event_tuple)
 
 
 class ReturnValueEvent(DebuggerEvent):
+    def __init__(self, *args, **kwargs):
+        super(ReturnValueEvent, self).__init__(*args, **kwargs)
+        self.previous_items = set()
+        self.types = {int, str, float, bool}
     def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
         """
         Collect a return value
@@ -87,52 +90,31 @@ class ReturnValueEvent(DebuggerEvent):
         self.container.add(event_tuple)
 
 
-class ScalarPairsEvent(DebuggerEvent):
+class ScalarEvent(DebuggerEvent):
     def __init__(self, *args, **kwargs):
-        super(ScalarPairsEvent, self).__init__(*args, **kwargs)
-        self.scalars = dict()
-        self.types = {int, str, float, bool}
-
-
-    def get_pair_strings(self, var: str, vars: dict):
-        comp_str = []
-        for ref in vars.keys():
-            if ref == var:
-                continue
-            try:
-                comp_str.append(f"{var} < {ref}: {vars[var] < vars[ref]}")
-                comp_str.append(f"{var} == {ref}: {vars[var] == vars[ref]}")
-            except:
-                continue
-        return comp_str
+        super(ScalarEvent, self).__init__(*args, **kwargs)
+        self.previous_items = set()
+        self.types = {int, float, bool}
 
     def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
         """
-        Collect scalar pairs for variables altered in this frame
+        Collect scalars that were altered in this frame
         """
 
-        localvars = frame.f_locals.copy()
+        localvars = set(filter(lambda i: type(i[1]) in self.types, frame.f_locals.items()))
         # localvars.update(frame.f_globals)
-        comp_str = []
 
-        local_keys = set(localvars.keys())
-        matching_vars = local_keys.intersection(self.scalars.keys())
+        changed_values = localvars.difference(self.previous_items)
 
-        for v in matching_vars:
-            try:
-                if localvars[v] == self.scalars[v]:
-                    continue
-            except:
-                continue
-            comp_str.extend(self.get_pair_strings(v, localvars))
-
-        non_matching_vars = local_keys.difference(matching_vars)
-        for v in non_matching_vars:
-            comp_str.extend(self.get_pair_strings(v, localvars))
-
-        for s in comp_str:
-            event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Pair", s)
+        for k, v in changed_values:
+            file = get_file_resistant(function)
+            event_tuple = (file, function.__name__, frame.f_lineno, "Scalar", (k, v))
             self.container.add(event_tuple)
+            for o_k, o_v in localvars:
+                if o_k == k:
+                    continue
+                self.container.add((file, function.__name__, frame.f_lineno, "Pair", k, o_k, v < o_v, "<"))
+                self.container.add((file, function.__name__, frame.f_lineno, "Pair", k, o_k, v == o_v, "="))
 
-        self.scalars = localvars
+        self.previous_items = localvars
 

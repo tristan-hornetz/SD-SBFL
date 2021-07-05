@@ -6,10 +6,10 @@ from types import FrameType, TracebackType, FunctionType
 from typing import Any, Set, Tuple, Type, Optional, Callable
 
 from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
-from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarPairsEvent, \
+from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarEvent, \
                                     get_file_resistant
 
-EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent]#, ScalarPairsEvent]
+EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarEvent]
 
 
 class SharedFunctionBuffer:

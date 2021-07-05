@@ -87,6 +87,7 @@ class DebuggerMethod:
         self.name = name
         self.file = file
         self.linenos = linenos
+        self.suspiciousness = []
 
     def add_lineno(self, lineno):
         self.linenos.add(lineno)
@@ -95,6 +96,8 @@ class DebuggerMethod:
         return hash(self.file + "\\" + self.name + "\\" + ';'.join(str(n) for n in sorted(self.linenos)))
 
     def __str__(self):
+        if len(self.suspiciousness) == 0:
+            self.suspiciousness = [-1]
         return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]" + \
                (f"\n             -> Suspiciousness: (Max: "
                 f"{max(self.suspiciousness)}, Avg:{sum(self.suspiciousness)/len(self.suspiciousness)})"
