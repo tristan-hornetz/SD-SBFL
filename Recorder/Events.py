@@ -1,18 +1,7 @@
 import inspect
 from abc import abstractmethod
 from types import FrameType
-from typing import Any, Iterable, Iterator, Callable
-
-
-def get_file_resistant(o):
-    if hasattr(o, '__code__'):
-        return o.__code__.co_filename
-    if hasattr(o, '__func__'):
-        return o.__func__.__code__.co_filename
-    try:
-        return inspect.getfile(o)
-    except TypeError:
-        return "<unknown>"
+from typing import Any, Iterable, Iterator
 
 
 class SharedEventContainer(Iterable):
@@ -52,17 +41,17 @@ class DebuggerEvent:
         # Exclude events from file paths with these substrings:
 
     @abstractmethod
-    def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
+    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
         pass
 
 
 class LineCoveredEvent(DebuggerEvent):
-    def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
+    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
         """
         Collect information about the line that is currently being covered.
         """
 
-        event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Covered", event)
+        event_tuple = (filename, func_name, frame.f_lineno, "Covered", event)
         self.container.add(event_tuple)
 
 
@@ -72,22 +61,25 @@ class ReturnValueEvent(DebuggerEvent):
         self.previous_items = set()
         self.types = {int, str, float, bool}
 
-    def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
+    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
         """
         Collect a return value
         If possible, the hash of the returned object is stored to keep the object itself out of memory
-        Otherwise, store 'Unhashable'
+        Otherwise, store None
         """
 
         if event != 'return':
             return
 
         try:
-            h = hash(arg)
+            if type(arg) not in self.types:
+                h = hash(arg)
+            else:
+                h = arg
         except:
-            h = 0
+            h = None
 
-        event_tuple = (get_file_resistant(function), function.__name__, frame.f_lineno, "Return", h, str(type(arg)))
+        event_tuple = (filename, func_name, frame.f_lineno, "Return", h, str(type(arg)))
         self.container.add(event_tuple)
 
 
@@ -97,7 +89,7 @@ class ScalarEvent(DebuggerEvent):
         self.previous_items = set()
         self.types = {int, float, bool}
 
-    def collect(self, frame: FrameType, event: str, arg: Any, function: Callable) -> None:
+    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
         """
         Collect scalars that were altered in this frame
         """
@@ -108,13 +100,11 @@ class ScalarEvent(DebuggerEvent):
         changed_values = localvars.difference(self.previous_items)
 
         for k, v in changed_values:
-            file = get_file_resistant(function)
-            event_tuple = (file, function.__name__, frame.f_lineno, "Scalar", (k, v))
+            event_tuple = (filename, func_name, frame.f_lineno, "Scalar", (k, v))
             self.container.add(event_tuple)
             for o_k, o_v in localvars:
                 if o_k == k:
                     continue
-                self.container.add((file, function.__name__, frame.f_lineno, "Pair", k, o_k, v < o_v, "<"))
-                self.container.add((file, function.__name__, frame.f_lineno, "Pair", k, o_k, v == o_v, "="))
+                self.container.add((filename, func_name, frame.f_lineno, "Pair", (k, o_k), (v == o_v, v < o_v)))
 
         self.previous_items = localvars

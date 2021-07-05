@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import Tuple, Any, Optional, Iterable, Dict
 
 from .CodeInspection import extractMethodsFromCode, getBuggyMethods, BugInfo
-from .Predicates import LineCoveredPredicate, Predicate
+from .Predicates import LineCoveredPredicate, Predicate, NoPredicate
 
 
 class Ranker:
@@ -154,7 +154,7 @@ class SFL_Evaluation:
             self.result_container = pickle.load(f)
 
         if predicates is None:
-            predicates = [LineCoveredPredicate(self.result_container)]
+            predicates = [NoPredicate(self.result_container)]
 
         self.predicates = predicates
         self.ranker_type = ranker_type

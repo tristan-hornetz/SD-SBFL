@@ -4,15 +4,8 @@ import os
 import sys
 from shutil import copy
 from typing import List, Tuple, Set, Dict
-
-import pkg_resources
-
-installed = {pkg.key for pkg in pkg_resources.working_set}
-if 'unidiff' in installed and 'gitpython' in installed:
-    from unidiff import PatchSet, PatchedFile
-    from git import Repo
-else:
-    PatchSet = PatchedFile = object
+from unidiff import PatchSet, PatchedFile
+from git import Repo
 
 
 def get_info_directory(_results):

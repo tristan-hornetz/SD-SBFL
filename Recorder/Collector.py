@@ -5,11 +5,21 @@ import sys
 from types import FrameType, TracebackType
 from typing import Any, Set, Tuple, Type, Optional, Callable
 
-from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarEvent, \
-    get_file_resistant
+from TestWrapper.root.Events import SharedEventContainer, LineCoveredEvent, ReturnValueEvent, ScalarEvent
 from TestWrapper.root.debuggingbook.StatisticalDebugger import CoverageCollector
 
 EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarEvent]
+
+
+def get_file_resistant(o):
+    if hasattr(o, '__code__'):
+        return o.__code__.co_filename
+    if hasattr(o, '__func__'):
+        return o.__func__.__code__.co_filename
+    try:
+        return inspect.getfile(o)
+    except TypeError:
+        return "<unknown>"
 
 
 class SharedFunctionBuffer:
@@ -113,7 +123,7 @@ class EventCollector(CoverageCollector):
             return
 
         for t in self.event_types:
-            t.collect(frame, event, arg, function)
+            t.collect(frame, event, arg, get_file_resistant(function), function.__name__)
 
     def __exit__(self, exc_tp: Type, exc_value: BaseException,
                  exc_traceback: TracebackType) -> Optional[bool]:

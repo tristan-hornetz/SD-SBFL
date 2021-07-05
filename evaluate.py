@@ -34,5 +34,5 @@ if __name__ == "__main__":
             print(f"#{i}: {r} - Suspiciousness {s}")
 
         sys.stdout = old_stdout
-    os.system(f"less \"{result_dump}\"")  #
-    print("Results have been written to " + result_dump)
+    os.system(f"less \"{result_dump}\"")
+    os.remove(result_dump)
