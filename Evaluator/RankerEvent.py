@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Tuple, Set
+from typing import Any, Tuple, Set, Iterable
 
 
 class RankerEvent:
@@ -67,7 +67,7 @@ class SDScalarPairEvent(RankerEvent):
         return hash((self.event_type, self.location, self.operands, self.operator, self.outcome))
 
 
-class EventContainer:
+class EventContainer(Iterable):
     def __init__(self):
         self.events = dict()
         self.events_by_program_element = dict()
@@ -86,6 +86,9 @@ class EventContainer:
 
     def __contains__(self, item):
         return hash(item) in self.events.keys()
+
+    def __iter__(self):
+        return iter(self.events.values())
 
     def get_from_program_element(self, program_element) -> Set[RankerEvent]:
         h = hash(program_element)

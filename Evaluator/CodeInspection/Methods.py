@@ -29,10 +29,7 @@ class DebuggerMethod:
     def __str__(self):
         if len(self.suspiciousness) == 0:
             self.suspiciousness = [-1]
-        return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]" + \
-               (f"\n             -> Suspiciousness: (Max: "
-                f"{max(self.suspiciousness)}, Avg:{sum(self.suspiciousness) / len(self.suspiciousness)})"
-                if hasattr(self, 'suspiciousness') else "")
+        return f"{self.file}[{self.name} | Lines {';'.join(str(n) for n in sorted(self.linenos))}]"
 
     def __eq__(self, other):
         if not isinstance(other, DebuggerMethod):
@@ -189,5 +186,5 @@ def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int]
         for method, linenos in lines_per_method:
             method_object = DebuggerMethod(method, file, linenos)
             for lineno in linenos:
-                method_objects[file, method, lineno] = method_object
+                method_objects[info.work_dir + "/" + file, method, lineno] = method_object
     return method_objects
