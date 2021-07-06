@@ -2,8 +2,8 @@ import argparse
 import os
 import sys
 
-from Evaluator.Evaluation import SFL_Evaluation
-from Evaluator.Predicates import NoPredicate
+from OldEvaluator.Evaluation import SFL_Evaluation
+from OldEvaluator.Predicates import NoPredicate
 
 if __name__ == "__main__":
     DEFAULT_INPUT = os.path.dirname(os.path.abspath(sys.argv[0])) + "/TestWrapper/results.pickle.gz"

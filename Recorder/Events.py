@@ -58,7 +58,6 @@ class LineCoveredEvent(DebuggerEvent):
 class ReturnValueEvent(DebuggerEvent):
     def __init__(self, *args, **kwargs):
         super(ReturnValueEvent, self).__init__(*args, **kwargs)
-        self.previous_items = set()
         self.types = {int, str, float, bool}
 
     def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
