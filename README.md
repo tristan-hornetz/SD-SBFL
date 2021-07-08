@@ -23,7 +23,7 @@ Before running any of the scripts, activate the Pyenv environment with ```$(cat 
 
 To start a test-run for a specific bug, run
 ```shell
-python run_test.py -p <project_name> -i <bug_id> [-o <output_file>] 
+python run_single_test.py -p <project_name> -i <bug_id> [-o <output_file>] 
 ```
 The selected project is then cloned to a temporary folder and a pyenv
 environment is set up to replicate the environment in which the bug occurs.

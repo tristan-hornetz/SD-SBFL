@@ -107,6 +107,9 @@ class SDScalarPairEventTranslator(EventTranslator):
                 event_container.add(event_object)
 
 
+DEFAULT_TRANSLATORS = [LineCoveredEventTranslator, SDScalarPairEventTranslator, SDReturnValueEventTranslator]
+
+
 class EventProcessor:
     def __init__(self, translators: Iterable):
         self.translators = translators

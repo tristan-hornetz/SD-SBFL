@@ -251,7 +251,7 @@ def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instr
         for file in os.scandir(info.info_dir):
             if os.path.isfile(str(file.path)):
                 copy(str(file.path), directory + "/bugsinpy_" + str(file.path).replace(info.info_dir + "/", ""))
-        debugger_module = os.path.abspath(root_dir + '/run_test.py')
+        debugger_module = os.path.abspath(root_dir + '/run_single_test.py')
         os.system(
             f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory} > /dev/null 2>&1')
 

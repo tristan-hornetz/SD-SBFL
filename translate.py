@@ -5,7 +5,7 @@ import sys
 import gzip
 import pickle
 
-from Evaluator.EventTranslation import EventProcessor, LineCoveredEventTranslator, SDReturnValueEventTranslator, SDScalarPairEventTranslator
+from Evaluator.EventTranslation import EventProcessor, DEFAULT_TRANSLATORS
 from Evaluator.Ranking import Ranking
 from Evaluator.SimilarityCoefficient import OchiaiCoefficient
 from Evaluator.CombiningMethod import CombineMaxThenAvg
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     with gzip.open(args.result_file) as f:
         _results = pickle.load(f)
 
-    processor = EventProcessor([LineCoveredEventTranslator, SDScalarPairEventTranslator, SDReturnValueEventTranslator])
+    processor = EventProcessor(DEFAULT_TRANSLATORS)
 
     events, methods, info = processor.process(_results)
 

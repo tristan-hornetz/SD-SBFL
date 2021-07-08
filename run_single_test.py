@@ -37,7 +37,7 @@ def get_test_ids():
     return ret
 
 
-def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file):
+def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, work_dir=""):
     """
     Start a test run for a specific bug
     :param root_dir: The StatisticalDebugger Repository's absoltue path
@@ -46,9 +46,10 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file):
     :return: None
     """
     binary_dir = root_dir + '/_BugsInPy/framework/bin'
-    work_dir = os.path.abspath(binary_dir + '/temp/' + project)
-    debugger_module = os.path.abspath(root_dir + '/run_test.py')
-    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0')
+    if work_dir == "":
+        work_dir = os.path.abspath(binary_dir + '/temp/' + project)
+    debugger_module = os.path.abspath(root_dir + '/run_single_test.py')
+    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0 -w {work_dir}')
     os.system(f'{binary_dir}/bugsinpy-compile -w {work_dir}')
     os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {work_dir}')
     with open(work_dir + "/output_file.info", "wt") as f:
