@@ -42,6 +42,9 @@ class SDBranchEvent(RankerEvent):
     def __hash__(self):
         return hash((self.event_type, self.location, self.outcome))
 
+    def __str__(self):
+        return f"Branch @ {self.location} - {self.outcome}"
+
 
 class SDReturnValueEvent(RankerEvent):
     def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
@@ -57,7 +60,6 @@ class SDReturnValueEvent(RankerEvent):
 
     def __str__(self):
         return f"Return v. {self.operator} - {self.outcome} @ {self.location}"
-
 
 
 class SDScalarPairEvent(RankerEvent):
@@ -89,10 +91,10 @@ class EventContainer(Iterable):
             self.events[h].failed_with_event.update(event.failed_with_event)
         else:
             self.events[h] = event
-            if hash(event.program_element) not in self.events_by_program_element:
-                self.events_by_program_element[hash(event.program_element)] = {event}
+            if event.program_element not in self.events_by_program_element:
+                self.events_by_program_element[event.program_element] = {event}
             else:
-                self.events_by_program_element[hash(event.program_element)].add(event)
+                self.events_by_program_element[event.program_element].add(event)
 
     def __contains__(self, item):
         return hash(item) in self.events.keys()
@@ -101,8 +103,6 @@ class EventContainer(Iterable):
         return iter(self.events.values())
 
     def get_from_program_element(self, program_element) -> Set[RankerEvent]:
-        h = hash(program_element)
-        if h not in self.events_by_program_element.keys():
+        if program_element not in self.events_by_program_element.keys():
             return set()
-        return self.events_by_program_element[h]
-
+        return self.events_by_program_element[program_element]
