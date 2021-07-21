@@ -78,7 +78,7 @@ symlinks: $(PY_FILES)
 	ln -s "$(REPO_DIR)/framework/py/TestWrapper" "$(shell pwd)/TestWrapper"
 	ln -s "$(shell pwd)/debuggingbook" "$(shell pwd)/$(DEBUGGER_SYMDIR)/debuggingbook"
 	ln -s "$(shell pwd)/$(DEBUGGER_SYMDIR)" "$(REPO_DIR)/framework/py/TestWrapper/root"
-	ln -s "$(shell pwd)/run_test.py" "$(shell pwd)/$(DEBUGGER_SYMDIR)/run_test.py"
+	ln -s "$(shell pwd)/run_single_test.py" "$(shell pwd)/$(DEBUGGER_SYMDIR)/run.py"
 
 
 environment:

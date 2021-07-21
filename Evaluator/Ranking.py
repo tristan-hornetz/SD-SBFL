@@ -17,6 +17,7 @@ class Ranking(Iterable):
         for element in set(method_objects.values()):
             self.ranking.append((element, combining_method.combine(element, events, self.events)))
         self.ranking.sort(key=lambda v: v[1], reverse=True)
+        assert(len(self.ranking) > 0)
 
     def __iter__(self):
         return iter(self.ranking)
@@ -35,11 +36,11 @@ class Ranking(Iterable):
             for m in self.buggy_methods:
                 if self.are_methods_equal(program_element, m):
                     buggy_in_top_k += 1.0
-        return buggy_in_top_k > 0, buggy_in_top_k / len(self.buggy_methods), buggy_in_top_k / len(top_k)
+        return buggy_in_top_k > 0, buggy_in_top_k / len(self.buggy_methods), buggy_in_top_k / k
 
 
 class MetaRanking:
-    def __init__(self, events: EventContainer, method_objects: Dict, _results, info: BugInfo):
+    def __init__(self, events: EventContainer, method_objects: Dict, info: BugInfo, _results):
         self._results = _results
         self.info = info
         self.events = events

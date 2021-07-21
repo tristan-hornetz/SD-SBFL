@@ -1,5 +1,4 @@
 import os
-import sys
 import gzip
 import pickle
 
@@ -35,15 +34,15 @@ class MetaEvaluation:
         assert os.path.exists(path)
         with gzip.open(path) as f:
             _results = pickle.load(f)
-        self.meta_rankings.append(MetaRanking(*self.event_processor.process(_results)))
+        self.meta_rankings.append(MetaRanking(*self.event_processor.process(_results), _results))
 
     def add_from_directory(self, path):
         assert os.path.isdir(path)
         for filename in os.listdir(path):
             try:
-                self.add_from_file(filename)
-            except:
-                pass
+                self.add_from_file(f"{str(path)}/{filename}")
+            except Exception as e:
+                print(e)
 
     def evaluate(self, similarity_coefficient, combining_method: CombiningMethod):
         rankings = list(r.rank(similarity_coefficient, combining_method) for r in self.meta_rankings)

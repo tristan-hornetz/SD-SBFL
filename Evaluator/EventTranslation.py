@@ -122,4 +122,5 @@ class EventProcessor:
         for t in self.translators:
             print(f"Translating for {t}")
             t.translate(_results, event_container, method_objects)
+        assert(len(method_objects) > 0)
         return event_container, method_objects, info

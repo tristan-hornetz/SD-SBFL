@@ -48,8 +48,10 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, wo
     binary_dir = root_dir + '/_BugsInPy/framework/bin'
     if work_dir == "":
         work_dir = os.path.abspath(binary_dir + '/temp/' + project)
-    debugger_module = os.path.abspath(root_dir + '/run_single_test.py')
-    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0 -w {work_dir}')
+    else:
+        work_dir += "/" + project
+    debugger_module = os.path.abspath(root_dir + '/_root/run.py')
+    os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0 -w {os.path.dirname(work_dir)}')
     os.system(f'{binary_dir}/bugsinpy-compile -w {work_dir}')
     os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {work_dir}')
     with open(work_dir + "/output_file.info", "wt") as f:
@@ -71,9 +73,12 @@ if __name__ == '__main__':
 
     run_test(root_dir, project, bug_id, os.path.abspath(args.output_file))
 else:
-    if os.path.exists("./output_file.info"):
-        with open("./output_file.info", "rt") as f:
-            dump_file = f.read()
-    from TestWrapper.root.Debugger import debugger, SFL_Results
-    debugger.dump_file = dump_file
-    test_ids.extend(get_test_ids())
+    try:
+        if os.path.exists("./output_file.info"):
+            with open("./output_file.info", "rt") as f:
+                dump_file = f.read()
+        from TestWrapper.root.Debugger import debugger, SFL_Results
+        debugger.dump_file = dump_file
+        test_ids.extend(get_test_ids())
+    except:
+        pass

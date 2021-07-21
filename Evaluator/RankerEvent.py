@@ -27,6 +27,9 @@ class LineCoveredEvent(RankerEvent):
     def __hash__(self):
         return hash((self.event_type, self.location))
 
+    def __str__(self):
+        return f"Covered {self.location}"
+
 
 class SDBranchEvent(RankerEvent):
     def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
@@ -52,6 +55,10 @@ class SDReturnValueEvent(RankerEvent):
     def __hash__(self):
         return hash((self.event_type, self.location, self.operator, self.outcome))
 
+    def __str__(self):
+        return f"Return v. {self.operator} - {self.outcome} @ {self.location}"
+
+
 
 class SDScalarPairEvent(RankerEvent):
     def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
@@ -65,6 +72,9 @@ class SDScalarPairEvent(RankerEvent):
 
     def __hash__(self):
         return hash((self.event_type, self.location, self.operands, self.operator, self.outcome))
+
+    def __str__(self):
+        return f"Pair {self.operands[0]} {self.operator} {self.operands[1]} - {self.outcome} @ {self.location}"
 
 
 class EventContainer(Iterable):

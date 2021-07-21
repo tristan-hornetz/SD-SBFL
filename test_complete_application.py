@@ -1,7 +1,7 @@
 import os
 import sys
 from Evaluator.CodeInspection.utils import mkdirRecursive
-from .run_single_test import run_test
+from run_single_test import run_test
 
 if __name__ == '__main__':
     import argparse
@@ -15,16 +15,16 @@ if __name__ == '__main__':
     root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     project = args.project_name
 
-    bugsinpy_directory = root_dir + "/_BugsInPy/projects/" + project
+    bugsinpy_directory = root_dir + "/_BugsInPy/projects/" + project + "/bugs"
     if not os.path.isdir(bugsinpy_directory):
         print(f"The project '{project}' is not part of BugsInPy.")
         exit(-1)
 
-    dump_dir = args.output_directory + "/project_name"
+    dump_dir = args.output_directory + "/" + project
     if not os.path.isdir(dump_dir):
         mkdirRecursive(dump_dir)
 
-    bugs = filter(lambda n: str(n).isnumeric(), os.listdir(bugsinpy_directory))
-
+    bugs = list(int(b) for b in (filter(lambda n: str(n).lstrip("0").isnumeric(), os.listdir(bugsinpy_directory))))
+    bugs.sort()
     for bug in bugs:
         run_test(root_dir, project, int(bug), output_file=dump_dir + f"/{project}_{bug}.pickle.gz")

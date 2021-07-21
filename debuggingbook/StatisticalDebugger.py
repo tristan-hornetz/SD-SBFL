@@ -347,7 +347,7 @@ if __name__ == '__main__':
     c.args()
 
 if __name__ == '__main__':
-    c.id()
+    c._id()
 
 if __name__ == '__main__':
     c.argstring()
