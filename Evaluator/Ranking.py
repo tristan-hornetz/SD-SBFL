@@ -10,6 +10,7 @@ class Ranking(Iterable):
         self.info = info
         self.events = list()
         self.buggy_methods = buggy_methods
+
         for e in events:
             self.events.append((e, similarity_coefficient.compute(e)))
         self.events.sort(key=lambda v: v[1], reverse=True)
@@ -17,7 +18,23 @@ class Ranking(Iterable):
         for element in set(method_objects.values()):
             self.ranking.append((element, combining_method.combine(element, events, self.events)))
         self.ranking.sort(key=lambda v: v[1], reverse=True)
+        self.buggy_in_top_k = dict()
+        self.buggy_in_ranking = list()
+        assert len(buggy_methods) > 0
+        assert len(method_objects) > 0
+
+        for buggy_method in self.buggy_methods:
+            for program_element, sus in self.ranking:
+                if self.are_methods_equal(buggy_method, program_element):
+                    self.buggy_in_ranking.append((program_element, sus))
+                    break
+
+        if len(self.buggy_in_ranking) < 1:
+            self.buggy_in_ranking = [(m, (0, 0)) for m in self.buggy_methods]
+
         assert(len(self.ranking) > 0)
+        for k in [1, 3, 5, 10]:
+            self.set_evaluation_metrics(k)
 
     def __iter__(self):
         return iter(self.ranking)
@@ -30,13 +47,20 @@ class Ranking(Iterable):
         :param k: k
         :return: TopK-Accurate?, Recall@k, Precision@k
         """
+        if k not in self.buggy_in_top_k.keys():
+            self.set_evaluation_metrics(k)
+        return self.buggy_in_top_k[k] > 0, self.buggy_in_top_k[k] / len(self.buggy_in_ranking), self.buggy_in_top_k[k] / k
+
+    def set_evaluation_metrics(self, k: int):
+        """
+        :param k: k
+        """
         top_k = self.ranking[:k]
-        buggy_in_top_k = 0
+        self.buggy_in_top_k[k] = 0
         for program_element, suspiciousness in top_k:
             for m in self.buggy_methods:
                 if self.are_methods_equal(program_element, m):
-                    buggy_in_top_k += 1.0
-        return buggy_in_top_k > 0, buggy_in_top_k / len(self.buggy_methods), buggy_in_top_k / k
+                    self.buggy_in_top_k[k] += 1.0
 
 
 class MetaRanking:

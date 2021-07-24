@@ -1,11 +1,19 @@
 import os
+import signal
 import sys
+import multiprocessing
+import subprocess
+from multiprocessing.connection import Connection
+import time
 
 if __name__ == '__main__' and (not os.path.islink(os.path.abspath(os.path.dirname(sys.argv[0])) + '/TestWrapper')):
     print('Symlinks not found. Did you run make?')
     exit(-1)
 dump_file = os.path.curdir + '/TestWrapper/results.pickle.gz'
 test_ids = []
+
+
+
 
 
 def get_info_directory(_results):
@@ -37,6 +45,29 @@ def get_test_ids():
     return ret
 
 
+def test_execute(command: str, connection: Connection):
+    class PFile:
+        def write(self, s):
+            connection.send(s)
+    sys.stdout = PFile()
+    sys.stderr = PFile()
+    os.system(command)
+
+
+def get_subprocesses(pid: int):
+    sp = subprocess.Popen(['ps', '-opid', '--no-headers', '--ppid', str(pid)], encoding='utf8', stdout=subprocess.PIPE)
+    ret = list()
+    try:
+        ret = [int(line) for line in sp.stdout.read().splitlines()]
+    except Exception as e:
+        print(e)
+    if len(ret) > 0:
+        for i in ret:
+            ret.extend(set(get_subprocesses(i)))
+    print(ret)
+    return ret
+
+
 def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, work_dir=""):
     """
     Start a test run for a specific bug
@@ -53,11 +84,43 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, wo
     debugger_module = os.path.abspath(root_dir + '/_root/run.py')
     os.system(f'{binary_dir}/bugsinpy-checkout -p {project} -i {bug_id} -v 0 -w {os.path.dirname(work_dir)}')
     os.system(f'{binary_dir}/bugsinpy-compile -w {work_dir}')
+    if os.path.exists(f'{work_dir}/bugsinpy_setup.sh'):
+        print("\n=========setup============\n")
+        os.system(f'chmod +x {work_dir}/bugsinpy_setup.sh')
+        os.system(f'(cd \'{work_dir}\' && ./bugsinpy_setup.sh)')
     os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {work_dir}')
     with open(work_dir + "/output_file.info", "wt") as f:
         f.write(output_file)
-    os.system(f'{binary_dir}/bugsinpy-test -a -w {work_dir}')
 
+    info_dir = root_dir + '/_BugsInPy/projects/' + project
+
+    if os.path.isfile(info_dir + "/alltest.sh"):
+        os.system(f"cp {binary_dir}/alltest_template.sh {work_dir}/alltest.sh")
+        os.system(f"cat {info_dir +'/alltest.sh'} >> {work_dir}/alltest.sh")
+        os.system(f"chmod +x {work_dir}/alltest.sh")
+        os.system(f"echo '\n\npyenv deactivate' >> {work_dir}/alltest.sh")
+        command = f"(cd \'{work_dir}\' && {work_dir}/alltest.sh)"
+    else:
+        command = f'{binary_dir}/bugsinpy-test -a -w {work_dir}'
+    os.system(command)
+    """
+    parent_conn, child_conn = multiprocessing.Pipe()
+    p = multiprocessing.Process(target=test_execute, args=(command, child_conn))
+    p.start()
+    while p.is_alive():
+        if parent_conn.poll(timeout=10.0):
+            sys.stdout.write(parent_conn.recv())
+        else:
+            print("TIMEOUT")
+
+            for pid in get_subprocesses(p.pid):
+                if pid == p.pid:
+                    continue
+                os.kill(pid, signal.SIGALRM)
+
+            for i in range(5):
+                print(parent_conn.poll(1.0))
+    """
 
 if __name__ == '__main__':
     import argparse

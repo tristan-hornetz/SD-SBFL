@@ -83,7 +83,6 @@ class SDBranchEventTranslator(EventTranslator):
                 if body < head:
                     collectors_for[False].add(collector)
 
-
             SDBranchEventTranslator.create_event(_results, event_container, branch, collectors_for, True)
             SDBranchEventTranslator.create_event(_results, event_container, branch, collectors_for, False)
 
@@ -174,8 +173,10 @@ class EventProcessor:
         info = BugInfo(_results)
         print("Extracting method objects")
         method_objects = extractMethodsFromCode(_results, info)
+        if len(method_objects.items()) < 1:
+            print("No methods extracted")
+            raise AssertionError()
         for t in self.translators:
             print(f"Translating for {t}")
             t.translate(_results, event_container, method_objects)
-        assert (len(method_objects) > 0)
         return event_container, method_objects, info

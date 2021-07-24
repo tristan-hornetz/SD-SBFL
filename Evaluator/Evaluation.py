@@ -1,6 +1,12 @@
 import os
 import gzip
 import pickle
+import sys
+import time
+
+from multiprocessing import Process, Queue
+from time import sleep
+from copy import deepcopy
 
 from .EventTranslation import EventProcessor, DEFAULT_TRANSLATORS
 from .Ranking import MetaRanking
@@ -30,22 +36,69 @@ class MetaEvaluation:
             processor = EventProcessor(DEFAULT_TRANSLATORS)
         self.event_processor = processor
 
+    @staticmethod
+    def from_me(me):
+        ret = MetaEvaluation(me.event_processor)
+        ret.meta_rankings = me.meta_rankings
+        return ret
+
     def add_from_file(self, path):
         assert os.path.exists(path)
-        with gzip.open(path) as f:
-            _results = pickle.load(f)
-        self.meta_rankings.append(MetaRanking(*self.event_processor.process(_results), _results))
+        try:
+            with gzip.open(path) as f:
+                _results = pickle.load(f)
+            self.meta_rankings.append(MetaRanking(*self.event_processor.process(_results), _results))
+            print("Succeeded " + path)
+        except:
+            print("Failed " + path)
 
     def add_from_directory(self, path):
         assert os.path.isdir(path)
         for filename in os.listdir(path):
-            try:
-                self.add_from_file(f"{str(path)}/{filename}")
-            except Exception as e:
-                print(e)
+            self.add_from_file(f"{str(path)}/{filename}")
 
-    def evaluate(self, similarity_coefficient, combining_method: CombiningMethod):
-        rankings = list(r.rank(similarity_coefficient, combining_method) for r in self.meta_rankings)
+    @staticmethod
+    def get_ranking(meta_ranking: MetaRanking, similarity_coefficient, combining_method: CombiningMethod, destination: Queue):
+        c = meta_ranking
+        try:
+            ranking = c.rank(similarity_coefficient, combining_method)
+            if len(ranking.buggy_methods) > 0:
+                destination.put(ranking)
+        except:
+            print("Not Valid")
+        finally:
+            destination.close()
+        #print(str(c) + " - Done")
+
+    def evaluate(self, similarity_coefficient, combining_method: CombiningMethod, num_threads=-1):
+        if num_threads < 1:
+            num_threads = max(os.cpu_count() - 2, 1)
+        rqueue = Queue(maxsize=num_threads)
+        processes = [Process(target=MetaEvaluation.get_ranking, name=str(r), args=(r, similarity_coefficient, combining_method, rqueue)) for r in self.meta_rankings]
+        active_processes = []
+        rankings = list()
+        while len(processes) > 0:
+            while len(active_processes) < num_threads and len(processes) > 0:
+                t = processes.pop()
+                t.start()
+                active_processes.append(t)
+            rankings.append(rqueue.get())
+            for t in active_processes:
+                if not t.is_alive():
+                    active_processes.remove(t)
+
+        while len(active_processes) > 0:
+            if not rqueue.empty():
+                rankings.append(rqueue.get())
+            for t in active_processes:
+                if not t.is_alive():
+                    active_processes.remove(t)
+
+        time.sleep(3)
+        while not rqueue.empty():
+            rankings.append(rqueue.get())
+            rqueue.join()
+
         return Evaluation(rankings, similarity_coefficient, combining_method)
 
 
