@@ -141,7 +141,6 @@ def getBuggyMethods(_results, info: BugInfo):
     patch_set = getPatchSet(info)
     fixed_state_methods = set()
 
-    path_extension = "tests/" if _results.project_name == "sanic" else ""
     repo_dir = getValidProjectDir(_results, info, True, instrument=True)
 
     for file in patch_set.modified_files:
@@ -159,7 +158,7 @@ def getBuggyMethods(_results, info: BugInfo):
     for file in patch_set.modified_files:
         buggy_state_methods.update(
             (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, False))
-    return list(DebuggerMethod(name, path_extension + path, set(linenos)) for path, name, linenos in buggy_state_methods)
+    return list(DebuggerMethod(name, path, set(linenos)) for path, name, linenos in buggy_state_methods)
 
 
 def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int], DebuggerMethod]:

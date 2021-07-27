@@ -13,11 +13,11 @@ EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarEvent]
 
 def get_file_resistant(o):
     if hasattr(o, '__code__'):
-        return o.__code__.co_filename
+        return os.path.realpath(o.__code__.co_filename)
     if hasattr(o, '__func__'):
-        return o.__func__.__code__.co_filename
+        return os.path.realpath(o.__func__.__code__.co_filename)
     try:
-        return inspect.getfile(o)
+        return os.path.realpath(inspect.getfile(o))
     except TypeError:
         return "<unknown>"
 
@@ -59,7 +59,8 @@ class EventCollector(CoverageCollector):
     @staticmethod
     def get_project_name(work_dir_base):
         defined_in = inspect.getfile(EventCollector.get_project_name)
-        assert work_dir_base in defined_in
+        if work_dir_base not in defined_in:
+            return ""
         project_dir = work_dir_base + "/" + defined_in.replace(work_dir_base + "/", "").split("/", 1)[0]
         assert os.path.exists(project_dir + "/bugsinpy_id.info")
         with open(project_dir + "/bugsinpy_id.info", "rt") as f:
@@ -104,7 +105,7 @@ class EventCollector(CoverageCollector):
             if self.work_dir_base not in function_filename:
                 if f"/{self.project_name}/" in function_filename and "/.pyenv/" in function_filename:
                     function_filename = self.work_dir_base + f"/{self.project_name}/{self.project_name}/" + \
-                                        function_filename.split(f"/{self.project_name}/", 1)[0]
+                                        function_filename.split(f"/{self.project_name}/", 1)[1]
                     function = self.NonFunction(function.__name__, function_filename)
                 else:
                     return None
