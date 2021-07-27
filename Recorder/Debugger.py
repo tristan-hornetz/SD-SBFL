@@ -27,6 +27,8 @@ class BetterOchiaiDebugger(OchiaiDebugger):
         self.collectors_with_result = {self.FAIL: dict(), self.PASS: dict()}
         self.processed_collectors = set()
         self.shared_coverage = isinstance(collector_type, SharedCoverageCollector)
+        self.extracted_test_ids = None
+        self.covered_test_ids = []
 
     def add_collector(self, outcome: str, collector: Collector) -> Collector:
         if not self.shared_coverage:
@@ -79,8 +81,6 @@ class ReportingDebugger(BetterOchiaiDebugger):
         Dump the SFL_Results of debugger to debugger.dump_file using pickle
         """
         super().teardown()
-        # if len(self.collectors[self.FAIL]) == 0:
-        #    raise NoFailuresError()
         if not hasattr(self, "dump_file"):
             dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
         else:
@@ -97,6 +97,21 @@ class SFL_Results:
     This is required because a debugger object itself cannot be stored with pickle.
     """
 
+    @staticmethod
+    def get_workdir(work_dir):
+        if work_dir == "":
+            split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(SFL_Results.get_workdir) else "/_root"
+            work_dir_info_file = inspect.getfile(SFL_Results.get_workdir).split(split_dir)[
+                                     0] + "/TestWrapper/work_dir.info"
+            if os.path.exists(work_dir_info_file):
+                with open(work_dir_info_file, "rt") as f:
+                    work_dir_base = f.readline().replace("\n", "")
+            else:
+                work_dir_base = os.curdir.rsplit("/", 1)[0]
+            return work_dir_base + "/" + \
+                   os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
+        return work_dir
+
     def __init__(self, debugger: ReportingDebugger, work_dir=""):
         """
         Create a SFL_Results object from a debugger instance
@@ -111,6 +126,8 @@ class SFL_Results:
                            debugger.FAIL: debugger.collectors[debugger.FAIL]}
         self.collectors_with_event = debugger.collectors_with_result
         self.collectors_with_result = dict()
+        self.extracted_test_ids = debugger.extracted_test_ids if hasattr(debugger, "extracted_test_ids") else None
+        self.covered_test_ids = debugger.covered_test_ids if hasattr(debugger, "covered_test_ids") else []
         self.FAIL = debugger.FAIL
         self.PASS = debugger.PASS
         for o in self.collectors_with_event.keys():
@@ -118,16 +135,8 @@ class SFL_Results:
             for k in self.collectors_with_event[o].keys():
                 self.collectors_with_result[o][k] = set(e[0] for e in self.collectors_with_event[o][k])
 
-        if work_dir == "":
-            split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(self.__init__) else "/_root"
-            work_dir_info_file = inspect.getfile(self.__init__).split(split_dir)[0] + "/TestWrapper/work_dir.info"
-            if os.path.exists(work_dir_info_file):
-                with open(work_dir_info_file, "rt") as f:
-                    work_dir_base = f.readline().replace("\n", "")
-            else:
-                work_dir_base = os.curdir.rsplit("/", 1)[0]
-            self.work_dir = work_dir_base + "/" + \
-                            os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
+        self.work_dir = SFL_Results.get_workdir(work_dir)
+
         with open(self.work_dir + "/bugsinpy_id.info", "rt") as f:
             while True:
                 line = f.readline()

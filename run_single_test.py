@@ -103,24 +103,6 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, wo
     else:
         command = f'{binary_dir}/bugsinpy-test -a -w {work_dir}'
     os.system(command)
-    """
-    parent_conn, child_conn = multiprocessing.Pipe()
-    p = multiprocessing.Process(target=test_execute, args=(command, child_conn))
-    p.start()
-    while p.is_alive():
-        if parent_conn.poll(timeout=10.0):
-            sys.stdout.write(parent_conn.recv())
-        else:
-            print("TIMEOUT")
-
-            for pid in get_subprocesses(p.pid):
-                if pid == p.pid:
-                    continue
-                os.kill(pid, signal.SIGALRM)
-
-            for i in range(5):
-                print(parent_conn.poll(1.0))
-    """
 
 if __name__ == '__main__':
     import argparse

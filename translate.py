@@ -1,15 +1,10 @@
 import argparse
 import os
-import random
 import sys
 import gzip
 import pickle
 
 from Evaluator.EventTranslation import EventProcessor, DEFAULT_TRANSLATORS
-from Evaluator.Ranking import Ranking
-from Evaluator.SimilarityCoefficient import OchiaiCoefficient
-from Evaluator.CombiningMethod import CombineMaxThenAvg
-from Evaluator.CodeInspection.Methods import getBuggyMethods
 from Evaluator.Evaluation import MetaEvaluation
 
 if __name__ == "__main__":

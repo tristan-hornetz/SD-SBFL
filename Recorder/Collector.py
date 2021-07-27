@@ -56,6 +56,21 @@ class EventCollector(CoverageCollector):
             self.__code__ = NonCode()
             setattr(self.__code__, "co_filename", file)
 
+    @staticmethod
+    def get_project_name(work_dir_base):
+        defined_in = inspect.getfile(EventCollector.get_project_name)
+        assert work_dir_base in defined_in
+        project_dir = work_dir_base + "/" + defined_in.replace(work_dir_base + "/", "").split("/", 1)[0]
+        assert os.path.exists(project_dir + "/bugsinpy_id.info")
+        with open(project_dir + "/bugsinpy_id.info", "rt") as f:
+            id_info = f.read()
+        for line in id_info.split("\n"):
+            if "=" in line:
+                split = line.split("=")
+                if split[0] == "PROJECT_NAME":
+                    return split[1]
+        return ""
+
     def __init__(self, *args, **kwargs):
         super(EventCollector, self).__init__(*args, **kwargs)
         if os.path.exists(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info"):
@@ -66,6 +81,7 @@ class EventCollector(CoverageCollector):
         self.event_types = []
         self.function_buffer = SharedFunctionBuffer()
         self.to_exclude = ["/TestWrapper/", "/test_", "_test.py", "/WrapClass.py"]
+        self.project_name = self.get_project_name(self.work_dir_base)
 
     def __int__(self):
         return hash(str(self))
@@ -86,7 +102,12 @@ class EventCollector(CoverageCollector):
                 function = function.__wrapped__
                 function_filename = get_file_resistant(function)
             if self.work_dir_base not in function_filename:
-                return None
+                if f"/{self.project_name}/" in function_filename and "/.pyenv/" in function_filename:
+                    function_filename = self.work_dir_base + f"/{self.project_name}/{self.project_name}/" + \
+                                        function_filename.split(f"/{self.project_name}/", 1)[0]
+                    function = self.NonFunction(function.__name__, function_filename)
+                else:
+                    return None
 
         for s in self.to_exclude:
             if s in function_filename:
@@ -101,12 +122,9 @@ class EventCollector(CoverageCollector):
 
         if not found:
             function = self.search_func(frame.f_code.co_name, frame)
-
-            if isinstance(function, Callable) and hasattr(function, '__name__'):
-                ret = self.check_function(function)
-            else:
+            if not(isinstance(function, Callable) and hasattr(function, '__name__')):
                 function = self.NonFunction(frame.f_code.co_name, frame.f_code.co_filename)
-                ret = self.check_function(function)
+            ret = self.check_function(function)
 
             self.function_buffer.put((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno), ret)
 

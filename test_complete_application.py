@@ -26,5 +26,5 @@ if __name__ == '__main__':
 
     bugs = list(int(b) for b in (filter(lambda n: str(n).lstrip("0").isnumeric(), os.listdir(bugsinpy_directory))))
     bugs.sort()
-    for bug in bugs[26:]:
+    for bug in bugs:
         run_test(root_dir, project, int(bug), output_file=dump_dir + f"/{project}_{bug}.pickle.gz")

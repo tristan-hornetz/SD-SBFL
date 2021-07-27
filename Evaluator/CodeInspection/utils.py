@@ -101,6 +101,16 @@ def getCleanRepo(_results, info: BugInfo, directory):
         repo.git.checkout(info.buggy_commit_id)
     return repo
 
+def extra_instrumentation(_results, info: BugInfo, directory):
+    """
+    Perform project-specific instrumentation steps to replicate the effects of alltest.sh
+    :param _results: The SFL_Results of the test run
+    :param info: The BugInfo for _resultd
+    :param directory: The directory to create the repo in
+    """
+    if _results.project_name == "sanic":
+        os.system(f"ln -s $(readlink -f {directory})/sanic $(readlink -f {directory})/tests/sanic")
+
 
 def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instrument=False):
     """
@@ -127,5 +137,6 @@ def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instr
         debugger_module = os.path.abspath(root_dir + '/run_single_test.py')
         os.system(
             f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory} > /dev/null 2>&1')
+        extra_instrumentation(_results, info, directory)
 
     return directory
