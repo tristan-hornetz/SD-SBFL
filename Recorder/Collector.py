@@ -79,7 +79,7 @@ class EventCollector(CoverageCollector):
                       "rt") as f:
                 self.work_dir_base = os.path.realpath(str(f.readline().replace("\n", "")))
         else:
-            self.work_dir_base = os.path.realpath(inspect.getfile(EventCollector) + "/../_BugsInPy/framework/bin/temp")
+            self.work_dir_base = os.path.realpath(os.path.dirname(inspect.getfile(EventCollector)) + "/../_BugsInPy/framework/bin/temp")
 
         self.event_types = []
         self.function_buffer = SharedFunctionBuffer()
