@@ -86,7 +86,7 @@ class ReportingDebugger(BetterOchiaiDebugger):
         else:
             dump_file = self.dump_file
         if os.path.isfile(dump_file):
-            if len(self.rank()) < 0:
+            if len(self.rank()) < 1:
                 return
             os.remove(dump_file)
         with gzip.open(dump_file, "xb") as f:
