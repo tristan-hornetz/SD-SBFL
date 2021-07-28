@@ -77,7 +77,7 @@ class EventCollector(CoverageCollector):
         if os.path.exists(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info"):
             with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info",
                       "rt") as f:
-                self.work_dir_base = str(f.readline().replace("\n", ""))
+                self.work_dir_base = os.path.realpath(str(f.readline().replace("\n", "")))
         else:
             self.work_dir_base = os.path.realpath(inspect.getfile(EventCollector) + "/../_BugsInPy/framework/bin/temp")
 
