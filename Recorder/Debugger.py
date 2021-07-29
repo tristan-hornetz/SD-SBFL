@@ -76,6 +76,10 @@ class BetterOchiaiDebugger(OchiaiDebugger):
 
 
 class ReportingDebugger(BetterOchiaiDebugger):
+    @classmethod
+    def tearDownClass(cls):
+        debugger.teardown()
+
     def teardown(self):
         """
         Dump the SFL_Results of debugger to debugger.dump_file using pickle
