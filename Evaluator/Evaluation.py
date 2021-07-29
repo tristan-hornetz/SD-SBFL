@@ -54,7 +54,7 @@ class MetaEvaluation:
 
     def add_from_directory(self, path):
         assert os.path.isdir(path)
-        for filename in os.listdir(path):
+        for filename in sorted(os.listdir(path)):
             self.add_from_file(f"{str(path)}/{filename}")
 
     @staticmethod

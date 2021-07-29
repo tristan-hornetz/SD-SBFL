@@ -128,7 +128,6 @@ class EventCollector(CoverageCollector):
             if not(isinstance(function, Callable) and hasattr(function, '__name__')):
                 function = self.NonFunction(frame.f_code.co_name, frame.f_code.co_filename)
             ret = self.check_function(function)
-
             self.function_buffer.put((frame.f_code.co_filename, frame.f_code.co_name, frame.f_code.co_firstlineno), ret)
 
         return ret

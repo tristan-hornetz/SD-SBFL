@@ -18,8 +18,6 @@ class Ranking(Iterable):
         for element in set(method_objects.values()):
             self.ranking.append((element, combining_method.combine(element, events, self.events)))
         self.ranking.sort(key=lambda v: v[1], reverse=True)
-        print("\n".join(f"{str(m)} - {s}" for m, s in self.ranking))
-        print("\n".join(f"{str(m)}" for m in self.buggy_methods))
         self.buggy_in_top_k = dict()
         self.buggy_in_ranking = list()
         assert len(buggy_methods) > 0

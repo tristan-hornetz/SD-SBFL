@@ -86,8 +86,10 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, wo
     os.system(f'{binary_dir}/bugsinpy-compile -w {work_dir}')
     if os.path.exists(f'{work_dir}/bugsinpy_setup.sh'):
         print("\n=========setup============\n")
-        os.system(f'chmod +x {work_dir}/bugsinpy_setup.sh')
-        os.system(f'(cd \'{work_dir}\' && ./bugsinpy_setup.sh)')
+        os.system(f"cp {binary_dir}/alltest_template.sh {work_dir}/bugsinpy_modified_setup.sh")
+        os.system(f"cat {work_dir}/bugsinpy_setup.sh >> {work_dir}/bugsinpy_modified_setup.sh")
+        os.system(f'chmod +x {work_dir}/bugsinpy_modified_setup.sh')
+        os.system(f'(cd \'{work_dir}\' && ./bugsinpy_modified_setup.sh)')
     os.system(f'{binary_dir}/bugsinpy-instrument -c {debugger_module} -w {work_dir}')
     with open(work_dir + "/output_file.info", "wt") as f:
         f.write(output_file)

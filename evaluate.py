@@ -20,8 +20,6 @@ if __name__ == "__main__":
 
     args = arg_parser.parse_args()
 
-    print(os.cpu_count())
-
     with gzip.open(args.result_file, "rb") as f:
         meta_evaluation = MetaEvaluation.from_me(pickle.load(f))
 
