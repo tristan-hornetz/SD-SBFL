@@ -13,3 +13,5 @@ results_*
 /results
 translated_*
 Evaluator/CodeInspection/__pycache__
+evaluation_*
+__pycache__*
