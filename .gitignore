@@ -1,7 +1,6 @@
 /bugsinpy_binaries
 /TestWrapper
 /_BugsInPy
-/__pycache__
 /debuggingbook/__pycache__
 /Recorder/__pycache__
 /Evaluator/__pycache__
@@ -11,3 +10,6 @@
 activate
 /.temp
 results_*
+/results
+translated_*
+Evaluator/CodeInspection/__pycache__

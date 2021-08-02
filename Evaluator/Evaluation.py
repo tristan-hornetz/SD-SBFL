@@ -64,7 +64,8 @@ class MetaEvaluation:
             ranking = c.rank(similarity_coefficient, combining_method)
             if len(ranking.buggy_methods) > 0:
                 destination.put(ranking)
-        except:
+        except Exception as e:
+#            raise e
             print("Not Valid")
         finally:
             destination.close()

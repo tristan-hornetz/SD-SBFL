@@ -4,7 +4,7 @@ import sys
 import gzip
 import pickle
 
-from Evaluator.CombiningMethod import CombineMaxThenAvg, CombineMaxThenAvgFilter, CombineMaxThenInvAvg, CombineAvgThenMax
+from Evaluator.CombiningMethod import GenericCombiningMethod, avg, inv_arg, WeightedCombiningMethod
 from Evaluator.SimilarityCoefficient import OchiaiCoefficient
 from Evaluator.RankerEvent import SDBranchEvent, LineCoveredEvent, SDReturnValueEvent, SDScalarPairEvent
 from Evaluator.Evaluation import MetaEvaluation
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         meta_evaluation = MetaEvaluation.from_me(pickle.load(f))
 
     print(meta_evaluation.event_processor.translators)
-    combining_method = CombineMaxThenInvAvg()
+    combining_method = WeightedCombiningMethod(((LineCoveredEvent, .5), (SDBranchEvent, .1), (SDReturnValueEvent, .2)), max, inv_arg)
     evaluation = meta_evaluation.evaluate(OchiaiCoefficient, combining_method, num_threads=THREADS)
 
     avg_buggy_in_ranking = sum(len(ranking.buggy_in_ranking)/len(ranking.buggy_methods) for ranking in evaluation.rankings) / len(evaluation.rankings)

@@ -42,6 +42,11 @@ def get_test_ids():
             run_test_sh = line.strip(' \n')
             if run_test_sh.startswith('python') or run_test_sh.startswith('pytest ') or run_test_sh.startswith('tox'):
                 ret.append(list(filter(lambda s: not s.startswith('-'), run_test_sh.split(' '))).pop())
+    if str(os.path.realpath(info_dir + "/../..")).rstrip("/").endswith("/tqdm"):
+        rc = ret.copy()
+        ret = []
+        for id in rc:
+            ret.append(id.replace("tqdm/tests/tests_", "tqdm/tests/test_tests_"))
     return ret
 
 

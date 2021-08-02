@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Collection, Tuple, Any
+from typing import Collection, Tuple, Any, Iterable, Callable, List
 from .RankerEvent import RankerEvent, EventContainer
 
 
@@ -9,53 +9,49 @@ class CombiningMethod:
         pass
 
 
-class CombineMaxThenAvg(CombiningMethod):
+def avg(cs):
+    return sum(cs) / len(cs)
+
+
+def inv_arg(cs):
+    return 1 - avg(cs)
+
+
+class GenericCombiningMethod(CombiningMethod):
+    def __init__(self, *methods: Callable[[Iterable[float]], float]):
+        self.methods = methods
+
     def combine(self, program_element, event_container: EventContainer, event_ranking: Collection[Tuple[RankerEvent, Any]]):
         events = list(event_container.get_from_program_element(program_element))
         coefficients = list(e[1] for e in filter(lambda e: e[0] in events, event_ranking))
         if len(coefficients) == 0:
-            return 0, 0
-        return max(coefficients), sum(coefficients) / len(coefficients)
+            return *([0] * len(self.methods)),
+        return *(m(coefficients) for m in self.methods),
 
 
-class CombineMaxThenInvAvg(CombiningMethod):
+class FilteredCombiningMethod(CombiningMethod):
+    def __init__(self, event_types, *methods: Callable[[Iterable[float]], float]):
+        self.methods = methods
+        self.event_types = event_types
+
     def combine(self, program_element, event_container: EventContainer, event_ranking: Collection[Tuple[RankerEvent, Any]]):
         events = list(event_container.get_from_program_element(program_element))
-        coefficients = list(e[1] for e in filter(lambda e: e[0] in events, event_ranking))
+        coefficients = list(e[1] for e in filter(lambda e: e[0] in events, filter(lambda c: type(c[0]) in self.event_types, event_ranking)))
         if len(coefficients) == 0:
-            return 0, 0
-        return max(coefficients), 1 - (sum(coefficients) / len(coefficients))
+            return *([0] * len(self.methods)),
+        return *(m(coefficients) for m in self.methods),
 
 
-class CombineMaxThenAvgFilter(CombiningMethod):
-    def __init__(self, allowed_event_types):
-        self.allowed_event_types = allowed_event_types
+class WeightedCombiningMethod(CombiningMethod):
+    def __init__(self, weights: Iterable[Tuple[Any, float]], *methods: Callable[[Iterable[float]], float]):
+        self.methods = methods
+        self.weight_sum = sum(e[1] for e in weights)
+        self.weights = {e[0]: e[1] / self.weight_sum for e in weights}
 
-    def combine(self, program_element, event_container: EventContainer, event_ranking: Collection[Tuple[RankerEvent, Any]]):
-        events = list(filter(lambda e: type(e) in self.allowed_event_types, event_container.get_from_program_element(program_element)))
-        coefficients = list(e[1] for e in filter(lambda e: e[0] in events, event_ranking))
-        if len(coefficients) == 0:
-            return 0, 0
-        return max(coefficients), sum(coefficients) / len(coefficients)
-
-
-class CombineAvgThenMax(CombiningMethod):
     def combine(self, program_element, event_container: EventContainer, event_ranking: Collection[Tuple[RankerEvent, Any]]):
         events = list(event_container.get_from_program_element(program_element))
-        coefficients = list(e[1] for e in filter(lambda e: e[0] in events, event_ranking))
+        coefficients = list(e[1] * self.weights[type(e[0])] for e in filter(lambda e: e[0] in events, filter(lambda c: type(c[0]) in self.weights.keys(), event_ranking)))
         if len(coefficients) == 0:
-            return 0, 0
-        return sum(coefficients) / len(coefficients), max(coefficients)
-
-class CombineMaxThenInvAvgFilter(CombiningMethod):
-    def __init__(self, allowed_event_types):
-        self.allowed_event_types = allowed_event_types
-
-    def combine(self, program_element, event_container: EventContainer, event_ranking: Collection[Tuple[RankerEvent, Any]]):
-        events = list(filter(lambda e: type(e) in self.allowed_event_types, event_container.get_from_program_element(program_element)))
-        coefficients = list(e[1] for e in filter(lambda e: e[0] in events, event_ranking))
-        if len(coefficients) == 0:
-            return 0, 0
-        return max(coefficients), 1 - (sum(coefficients) / len(coefficients))
-
+            return *([0] * len(self.methods)),
+        return *(m(coefficients) for m in self.methods),
 
