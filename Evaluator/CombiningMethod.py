@@ -13,7 +13,7 @@ def avg(cs):
     return sum(cs) / len(cs)
 
 
-def inv_arg(cs):
+def inv_avg(cs):
     return 1 - avg(cs)
 
 
