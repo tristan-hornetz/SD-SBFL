@@ -211,12 +211,12 @@ class EventProcessor:
     def process(self, _results):
         event_container = EventContainer()
         info = BugInfo(_results)
-        print("Extracting method objects")
+        #print("Extracting method objects")
         method_objects = extractMethodsFromCode(_results, info)
         if len(method_objects.items()) < 1:
-            print("No methods extracted")
+            print(f"{_results.project_name}, {_results.bug_id} - No methods extracted")
             raise AssertionError()
         for t in self.translators:
-            print(f"Translating for {t}")
+            #print(f"Translating for {t}")
             t.translate(_results, event_container, method_objects)
         return event_container, method_objects, info
