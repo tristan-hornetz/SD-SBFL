@@ -14,8 +14,8 @@ def get_info_directory(_results):
     :param _results: The SFL_Results of a test run
     :return: The absolute path of the BugsInPy directory containing information on the bug tested in _results
     """
-    base = _results.work_dir.split("_BugsInPy")[0]
-    return os.path.abspath(f"{base}_BugsInPy/projects/{_results.project_name}/bugs/{_results.bug_id}")
+    base = os.path.dirname(os.path.realpath(sys.argv[0]))
+    return os.path.abspath(f"{base}/_BugsInPy/projects/{_results.project_name}/bugs/{_results.bug_id}")
 
 
 class BugInfo:
