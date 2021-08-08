@@ -11,16 +11,14 @@ from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import SDBranchEvent, LineCoveredEvent, SDReturnValueEvent
 from Evaluator.SimilarityCoefficient import OchiaiCoefficient
 
-THREADS = os.cpu_count() - 2
+THREADS = os.cpu_count()
 
 
-def create_evaluation(meta_evaluation, similarity_coefficient, combining_method: CombiningMethod, save_destination="",
+def create_evaluation(result_dir, similarity_coefficient, combining_method: CombiningMethod, save_destination="",
                       print_results=False, num_threads=-1):
-    if print_results:
-        print(meta_evaluation.event_processor.translators)
 
-    evaluation = meta_evaluation.evaluate(similarity_coefficient, combining_method,
-                                          num_threads=THREADS if num_threads < 1 else num_threads)
+    evaluation = Evaluation(similarity_coefficient, combining_method)
+    evaluation.add_directory(result_dir, THREADS if num_threads < 1 else num_threads)
 
     if save_destination != "":
         if not exists(dirname(save_destination)):
@@ -31,13 +29,7 @@ def create_evaluation(meta_evaluation, similarity_coefficient, combining_method:
             pickle.dump(evaluation, f)
 
     if print_results:
-        avg_buggy_in_ranking = sum(
-            len(ranking.buggy_in_ranking) / len(ranking.buggy_methods) for ranking in evaluation.rankings) / len(
-            evaluation.rankings)
-
-        print(len(meta_evaluation.meta_rankings))
         print(len(evaluation.rankings))
-        print(avg_buggy_in_ranking)
         print("\n")
 
         print(evaluation.fraction_top_k_accurate)
@@ -58,12 +50,6 @@ if __name__ == "__main__":
     similarity_coefficient = OchiaiCoefficient
 
     result_dir = os.path.realpath(args.result_dir)
-    evaluation = Evaluation(similarity_coefficient, combining_method)
-    evaluation.add_directory(result_dir, os.cpu_count())
 
-    print(len(evaluation.rankings))
-    print("\n")
+    create_evaluation(result_dir, similarity_coefficient, combining_method, print_results=True)
 
-    print(evaluation.fraction_top_k_accurate)
-    print(evaluation.avg_recall_at_k)
-    print(evaluation.avg_precision_at_k)

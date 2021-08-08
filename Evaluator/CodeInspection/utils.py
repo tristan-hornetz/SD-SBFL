@@ -45,6 +45,8 @@ class BugInfo:
         self.parse_file(self.info_dir + "/bug.info")
         self.parse_file(self.info_dir + "/../../project.info", "project_")
         self.work_dir = _results.work_dir + "/" + _results.project_name
+        self.project_name = _results.project_name
+        self.bug_id = _results.bug_id
 
     def __str__(self):
         ret = ""

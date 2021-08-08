@@ -4,6 +4,7 @@ import pickle
 from multiprocessing import Process, Queue
 
 from .CombiningMethod import CombiningMethod
+from .Ranking import RankingInfo
 
 
 class Evaluation:
@@ -13,6 +14,7 @@ class Evaluation:
         self.ks = ks
 
         self.rankings = list()
+        self.ranking_infos = list()
         self.similarity_coefficient = similarity_coefficient
         self.combining_method = combining_method
 
@@ -48,7 +50,7 @@ class Evaluation:
         metrics = dict()
         for k in self.ks:
             metrics[k] = ranking.get_evaluation_metrics(k)
-        rqueue.put((ranking_id, metrics))
+        rqueue.put((ranking_id, metrics, RankingInfo(ranking)))
 
     def add_directory(self, dir_path, num_threads=-1):
         if num_threads < 1:
@@ -64,7 +66,7 @@ class Evaluation:
                 t.start()
                 active_processes.append(t)
             res = rqueue.get()
-            metrics[res[0]] = res[1]
+            metrics[res[0]] = (res[1], res[2])
             for t in active_processes:
                 if not t.is_alive():
                     active_processes.remove(t)
@@ -72,14 +74,14 @@ class Evaluation:
         while len(active_processes) > 0:
             if not rqueue.empty():
                 res = rqueue.get()
-                metrics[res[0]] = res[1]
+                metrics[res[0]] = (res[1], res[2])
             for t in active_processes:
                 if not t.is_alive():
                     active_processes.remove(t)
 
         while not rqueue.empty():
             res = rqueue.get()
-            metrics[res[0]] = res[1]
+            metrics[res[0]] = (res[1], res[2])
             rqueue.join()
 
         assert (rqueue.empty())
@@ -88,8 +90,9 @@ class Evaluation:
 
         for m in metrics.items():
             for k in self.ks:
-                self.evaluation_metrics[k].append(m[1][k])
+                self.evaluation_metrics[k].append(m[1][0][k])
             self.rankings.append(m[0])
+            self.ranking_infos.append(m[1][1])
 
         self.update_averages()
 

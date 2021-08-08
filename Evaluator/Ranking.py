@@ -49,7 +49,7 @@ class Ranking(Iterable):
         """
         if k not in self.buggy_in_top_k.keys():
             self.set_evaluation_metrics(k)
-        return self.buggy_in_top_k[k] > 0, self.buggy_in_top_k[k] / len(self.buggy_in_ranking), self.buggy_in_top_k[k] / k
+        return self.buggy_in_top_k[k] > 0, self.buggy_in_top_k[k] / len(self.buggy_methods), self.buggy_in_top_k[k] / k
 
     def set_evaluation_metrics(self, k: int):
         """
@@ -61,6 +61,18 @@ class Ranking(Iterable):
             for m in self.buggy_methods:
                 if self.are_methods_equal(program_element, m):
                     self.buggy_in_top_k[k] += 1.0
+
+
+class RankingInfo:
+    def __init__(self, ranking: Ranking):
+        self.info = ranking.info
+        self.project_name = ranking.info.project_name
+        self.bug_id = ranking.info.bug_id
+        self.len_events = len(ranking.events)
+        self.len_methods = len(ranking.ranking)
+        self.buggy_in_ranking = len(ranking.buggy_in_ranking)
+        self.num_buggy_methods = len(ranking.buggy_methods)
+        self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
 
 
 class MetaRanking:
