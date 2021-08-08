@@ -3,7 +3,7 @@ from typing import Dict, Tuple, Iterable
 
 from .CodeInspection.Branches import extractBranchesFromCode
 from .CodeInspection.Methods import DebuggerMethod, extractMethodsFromCode, BugInfo
-from .RankerEvent import EventContainer, LineCoveredEvent, SDReturnValueEvent, SDScalarPairEvent, SDBranchEvent
+from .RankerEvent import *
 
 
 class EventTranslator:
@@ -159,6 +159,46 @@ class SDScalarPairEventTranslator(EventTranslator):
                                                  failed_collectors, total_passed, total_failed, op, result,
                                                  (name, o_name))
                 event_container.add(event_object)
+
+
+class AbsoluteReturnValueEventTranslator(EventTranslator):
+    @staticmethod
+    def translate(_results, event_container: EventContainer,
+                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+        total_passed = len(_results.collectors[_results.PASS])
+        total_failed = len(_results.collectors[_results.FAIL])
+        for event in filter(lambda e: e[3] == "Return", _results.results):
+            filename, method_name, lineno, value, type_str = event
+            if (filename, method_name, lineno) not in method_objects.keys():
+                continue
+            passed_collectors = _results.collectors_with_event[_results.PASS][event]
+            failed_collectors = _results.collectors_with_event[_results.FAIL][event]
+
+            event_object = AbsoluteReturnValueEvent(method_objects[filename, method_name, lineno],
+                                                    (filename, method_name, lineno), passed_collectors,
+                                                    failed_collectors, total_passed, total_failed, value)
+
+            event_container.add(event_object)
+
+
+class AbsoluteScalarValueEventTranslator(EventTranslator):
+    @staticmethod
+    def translate(_results, event_container: EventContainer,
+                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+        total_passed = len(_results.collectors[_results.PASS])
+        total_failed = len(_results.collectors[_results.FAIL])
+        for event in filter(lambda e: e[3] == "Scalar", _results.results):
+            filename, method_name, lineno, (var_name, value) = event
+            if (filename, method_name, lineno) not in method_objects.keys():
+                continue
+            passed_collectors = _results.collectors_with_event[_results.PASS][event]
+            failed_collectors = _results.collectors_with_event[_results.FAIL][event]
+
+            event_object = AbsoluteScalarValueEvent(method_objects[filename, method_name, lineno],
+                                                    (filename, method_name, lineno), passed_collectors,
+                                                    failed_collectors, total_passed, total_failed, var_name, value)
+
+            event_container.add(event_object)
 
 
 DEFAULT_TRANSLATORS = [LineCoveredEventTranslator, SDBranchEventTranslator, SDScalarPairEventTranslator, SDReturnValueEventTranslator]

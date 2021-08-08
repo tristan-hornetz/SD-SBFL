@@ -79,6 +79,37 @@ class SDScalarPairEvent(RankerEvent):
         return f"Pair {self.operands[0]} {self.operator} {self.operands[1]} - {self.outcome} @ {self.location}"
 
 
+class AbsoluteReturnValueEvent(RankerEvent):
+    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
+                 failed_with_event: Set[Any], total_passed: int, total_failed: int,
+                 value: Any):
+        super(AbsoluteReturnValueEvent, self).__init__(program_element, location, passed_with_event,
+                                                 failed_with_event, total_passed, total_failed)
+        self.value = value
+
+    def __hash__(self):
+        return hash((self.event_type, self.location, self.value))
+
+    def __str__(self):
+        return f"Return v. {self.value} @ {self.location}"
+
+
+class AbsoluteScalarValueEvent(RankerEvent):
+    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
+                 failed_with_event: Set[Any], total_passed: int, total_failed: int,
+                 name: str, value: Any):
+        super(AbsoluteScalarValueEvent, self).__init__(program_element, location, passed_with_event,
+                                                 failed_with_event, total_passed, total_failed)
+        self.name = name
+        self.value = value
+
+    def __hash__(self):
+        return hash((self.event_type, self.location, self.name, self.value))
+
+    def __str__(self):
+        return f"Scalar {self.name} <- {self.value} @ {self.location}"
+
+
 class EventContainer(Iterable):
     def __init__(self):
         self.events = dict()
@@ -98,6 +129,9 @@ class EventContainer(Iterable):
 
     def __contains__(self, item):
         return hash(item) in self.events.keys()
+
+    def __len__(self):
+        return len(self.events.items())
 
     def __iter__(self):
         return iter(self.events.values())

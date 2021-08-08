@@ -1,6 +1,6 @@
 import gzip
 import os
-import pickle
+import pickle, time
 from multiprocessing import Process, Queue
 
 from .CombiningMethod import CombiningMethod
