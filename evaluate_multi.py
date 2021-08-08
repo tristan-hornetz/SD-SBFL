@@ -1,28 +1,29 @@
-import argparse
+import pickle
 import gzip
 import os
-import pickle
-from os.path import dirname, exists, abspath
+import time
 
+from evaluate_single import THREADS
+from translate import get_subdirs_recursive
 from Evaluator.CodeInspection.utils import mkdirRecursive
 from Evaluator.CombiningMethod import CombiningMethod, inv_arg, WeightedCombiningMethod
 from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import SDBranchEvent, LineCoveredEvent, SDReturnValueEvent
 from Evaluator.SimilarityCoefficient import OchiaiCoefficient
 
-THREADS = os.cpu_count()
 
-
-def create_evaluation(result_dir, similarity_coefficient, combining_method: CombiningMethod, save_destination="",
+def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod, save_destination="",
                       print_results=False, num_threads=-1):
 
     evaluation = Evaluation(similarity_coefficient, combining_method)
-    evaluation.add_directory(result_dir, THREADS if num_threads < 1 else num_threads)
+    dirs = get_subdirs_recursive(result_dir)
+    for dir in dirs:
+        evaluation.add_directory(dir, THREADS if num_threads < 1 else num_threads)
 
     if save_destination != "":
-        if not exists(dirname(save_destination)):
-            mkdirRecursive(abspath(dirname(save_destination)))
-        if exists(save_destination):
+        if not os.path.exists(os.path.dirname(save_destination)):
+            mkdirRecursive(os.path.abspath(os.path.dirname(save_destination)))
+        if os.path.exists(save_destination):
             os.remove(save_destination)
         with gzip.open(save_destination, "xb") as f:
             pickle.dump(evaluation, f)
@@ -37,16 +38,22 @@ def create_evaluation(result_dir, similarity_coefficient, combining_method: Comb
 
 
 if __name__ == "__main__":
+    import argparse
     arg_parser = argparse.ArgumentParser(description='Evaluate fault localization results.')
-    arg_parser.add_argument("-r", "--result_dir", required=True, type=str,
+    arg_parser.add_argument("-r", "--result_dir", required=False, type=str,
                             help="The directory containing test results")
 
     args = arg_parser.parse_args()
+
     combining_method = WeightedCombiningMethod(((LineCoveredEvent, .5), (SDBranchEvent, .1), (SDReturnValueEvent, .2)),
                                                max, inv_arg)
     similarity_coefficient = OchiaiCoefficient
 
     result_dir = os.path.realpath(args.result_dir)
 
-    create_evaluation(result_dir, similarity_coefficient, combining_method, print_results=True)
+    start_time = time.time()
+
+    create_evaluation_recursive(result_dir, similarity_coefficient, combining_method, print_results=True)
+
+    print(f"Done in {time.time() - start_time} seconds")
 

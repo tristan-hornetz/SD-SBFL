@@ -1,6 +1,6 @@
 import gzip
 import os
-import pickle, time
+import pickle
 from multiprocessing import Process, Queue
 
 from .CombiningMethod import CombiningMethod
@@ -31,6 +31,13 @@ class Evaluation:
         self.avg_precision_at_k = {k: sum(e[2] for e in self.evaluation_metrics[k]) / len(self.rankings) for k in
                                    self.ks}
 
+    def merge(self, other):
+        assert set(self.rankings).isdisjoint(other.rankings)
+        self.rankings.extend(other.rankings)
+        self.ranking_infos.extend(other.ranking_infos)
+        self.evaluation_metrics.update(other.evaluation_metrics)
+        self.update_averages()
+
     @staticmethod
     def add_meta_ranking(self, mr_path: str, rqueue: Queue):
         try:
@@ -57,7 +64,8 @@ class Evaluation:
             num_threads = max(os.cpu_count() - 2, 1)
         rqueue = Queue(maxsize=num_threads)
         processes = [Process(target=Evaluation.add_meta_ranking, name=file_path, args=(self, file_path, rqueue))
-                     for file_path in list(os.path.realpath(f"{dir_path}/{f}") for f in os.listdir(dir_path))]
+                     for file_path in filter(lambda p: not os.path.isdir(p),
+                                             list(os.path.realpath(f"{dir_path}/{f}") for f in os.listdir(dir_path)))]
         active_processes = []
         metrics = dict()
         while len(processes) > 0:
