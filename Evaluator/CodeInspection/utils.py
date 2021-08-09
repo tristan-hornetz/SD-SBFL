@@ -30,7 +30,7 @@ class BugInfo:
                 if not line:
                     break
                 if "=" in line:
-                    attr = attr_prefix + line.split("=", 1)[0]
+                    attr = attr_prefix + line.split("=", 1)[0].strip("\" \n")
                     val = line.split("=", 1)[1].strip("\" \n")
                     setattr(self, attr, val)
                     self.attrs.append(attr)
