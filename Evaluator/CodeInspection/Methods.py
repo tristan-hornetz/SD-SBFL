@@ -89,7 +89,11 @@ def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int
     """
     if os.path.exists(directory + "/" + file):
         with open(directory + "/" + file, "rt") as f:
-            node = ast.parse(f.read())
+            try:
+                node = ast.parse(f.read())
+            except SyntaxError:
+                print(f"Syntax Error in {directory + '/' + file}")
+                return list()
         function_defs = set(
             filter(lambda n: isinstance(n, ast.FunctionDef) or isinstance(n, ast.AsyncFunctionDef), ast.walk(node)))
         lines_per_method = list()
