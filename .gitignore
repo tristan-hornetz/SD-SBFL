@@ -15,3 +15,5 @@ translated_*
 Evaluator/CodeInspection/__pycache__
 evaluation_*
 __pycache__*
+/local_only
+test.py
