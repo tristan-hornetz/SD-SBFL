@@ -98,11 +98,17 @@ def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int
             filter(lambda n: isinstance(n, ast.FunctionDef) or isinstance(n, ast.AsyncFunctionDef), ast.walk(node)))
         lines_per_method = list()
         for d in filter(lambda n: n.name in methods.keys(), function_defs):
-
             extractor = LineNumberExtractor()
             extractor.visit(d)
             if len(methods[d.name].intersection(extractor.linenos)) > 0:
                 lines_per_method.append((d.name, extractor.linenos))
+
+        #compensate for methods which could not be extracted
+        found = {n for n, _ in lines_per_method}
+        for n, ls in methods:
+            if n not in found:
+                lines_per_method.append((n, ls))
+
         return lines_per_method
     return list()
 
@@ -132,6 +138,9 @@ def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file
             extracted_methods[name].update(linenos)
         else:
             extracted_methods[name] = set(linenos)
+
+    #TODO
+
     return extractMethodsFromFile(project_root, file.path, extracted_methods)
 
 

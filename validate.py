@@ -17,6 +17,25 @@ def get_files_recursively(directory: str):
     return filenames
 
 
+def validate(filename):
+    try:
+        with gzip.open(filename, "rb") as f:
+            _results = pickle.load(f)
+    except:
+        print(f"{filename} - Invalid, not result file")
+        return False, None
+    try:
+        assert len(_results.results) > 0
+        assert len(_results.collectors_with_event[_results.FAIL]) > 0
+        print(f"{filename} - Valid")
+        return True, _results
+    except AssertionError:
+        print(f"{filename} - Invalid, assertion error")
+    except AttributeError:
+        print(f"{filename} - Invalid, attribute error")
+    return False, _results
+
+
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description='Check whether results from Recorder are valid for evaluation')
     arg_parser.add_argument("-d", "--directory", required=True, type=str, default=None,
@@ -31,24 +50,13 @@ if __name__ == "__main__":
     invalid_files = []
     for filename in sorted(get_files_recursively(args.directory)) if args.recursive \
             else sorted(map(lambda s: f"{args.directory}/{s}", os.listdir(args.directory))):
-        try:
-            with gzip.open(filename, "rb") as f:
-                _results = pickle.load(f)
+        valid, _results = validate(filename)
+        if _results is not None:
             result_files += 1
-        except:
-            print(f"{filename} - Invalid, not result file")
-            continue
-        try:
-            assert len(_results.results) > 0
-            assert len(_results.collectors_with_event[_results.FAIL]) > 0
-            print(f"{filename} - Valid")
-            valid_result_files += 1
-        except AssertionError:
-            print(f"{filename} - Invalid, assertion error")
-            invalid_files.append((filename, _results))
-        except AttributeError:
-            print(f"{filename} - Invalid, attribute error")
-            invalid_files.append((filename, _results))
+            if valid:
+                valid_result_files += 1
+            else:
+                invalid_files.append((filename, _results))
 
     print(f"\nResult files: {result_files}\nValid result files: {valid_result_files}\nValid percentage: {valid_result_files*100.0/result_files}%")
 

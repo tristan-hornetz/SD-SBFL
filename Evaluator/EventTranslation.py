@@ -201,7 +201,9 @@ class AbsoluteScalarValueEventTranslator(EventTranslator):
             event_container.add(event_object)
 
 
-DEFAULT_TRANSLATORS = [LineCoveredEventTranslator, SDBranchEventTranslator, SDScalarPairEventTranslator, SDReturnValueEventTranslator]
+DEFAULT_TRANSLATORS = [LineCoveredEventTranslator, SDBranchEventTranslator, SDScalarPairEventTranslator,
+                       SDReturnValueEventTranslator, AbsoluteReturnValueEventTranslator,
+                       AbsoluteScalarValueEventTranslator]
 
 
 class EventProcessor:

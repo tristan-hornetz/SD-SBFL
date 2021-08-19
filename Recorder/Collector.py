@@ -12,14 +12,20 @@ EVENT_TYPES = [LineCoveredEvent, ReturnValueEvent, ScalarEvent]
 
 
 def get_file_resistant(o):
-    if hasattr(o, '__code__'):
-        return os.path.realpath(o.__code__.co_filename)
-    if hasattr(o, '__func__'):
-        return os.path.realpath(o.__func__.__code__.co_filename)
     try:
+        if hasattr(o, '__code__'):
+            return os.path.realpath(o.__code__.co_filename)
+        if hasattr(o, '__func__'):
+            return os.path.realpath(o.__func__.__code__.co_filename)
         return os.path.realpath(inspect.getfile(o))
     except TypeError:
-        return "<unknown>"
+        pass
+    except:
+        try:
+            return os.path.abspath(inspect.getfile(o))
+        except:
+            pass
+    return "<unknown>"
 
 
 class SharedFunctionBuffer:
@@ -74,12 +80,21 @@ class EventCollector(CoverageCollector):
 
     def __init__(self, *args, **kwargs):
         super(EventCollector, self).__init__(*args, **kwargs)
+        self.work_dir_base = "#"
         if os.path.exists(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info"):
-            with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info",
-                      "rt") as f:
-                self.work_dir_base = os.path.realpath(str(f.readline().replace("\n", "")))
-        else:
-            self.work_dir_base = os.path.realpath(os.path.dirname(inspect.getfile(EventCollector)) + "/../_BugsInPy/framework/bin/temp")
+            try:
+                with open(inspect.getfile(self.__init__).split("/TestWrapper/")[0] + "/TestWrapper/work_dir.info",
+                          "rt") as f:
+                    self.work_dir_base = os.path.realpath(str(f.readline().replace("\n", "")))
+            except:
+                pass
+        if self.work_dir_base == "#":
+            try:
+                self.work_dir_base = os.path.realpath(os.path.dirname(inspect.getfile(EventCollector)) + "/../_BugsInPy/framework/bin/temp")
+            except:
+                pass
+        if self.work_dir_base == "#":
+            self.work_dir_base = os.path.abspath(inspect.getfile(EventCollector)).split("/temp/", 1)[0] + "/temp"
 
         self.event_types = []
         self.function_buffer = SharedFunctionBuffer()
