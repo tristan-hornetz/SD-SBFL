@@ -103,12 +103,6 @@ def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int
             if len(methods[d.name].intersection(extractor.linenos)) > 0:
                 lines_per_method.append((d.name, extractor.linenos))
 
-        #compensate for methods which could not be extracted
-        found = {n for n, _ in lines_per_method}
-        for n, ls in methods:
-            if n not in found:
-                lines_per_method.append((n, ls))
-
         return lines_per_method
     return list()
 
@@ -133,13 +127,15 @@ def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file
 
     names = set(filter(lambda o: o is not None, (getParentFunctionFromLineNo(source, lineno) for lineno in linenos)))
     extracted_methods = dict()
-    for name, linenos in names:
+    for name, _linenos in names:
         if name in extracted_methods.keys():
-            extracted_methods[name].update(linenos)
+            extracted_methods[name].update(_linenos)
         else:
-            extracted_methods[name] = set(linenos)
+            extracted_methods[name] = set(_linenos)
+        linenos = linenos.difference(_linenos)
 
-    #TODO
+    if len(linenos) > 0:
+        extracted_methods["<module>"] = linenos.copy()
 
     return extractMethodsFromFile(project_root, file.path, extracted_methods)
 

@@ -27,7 +27,8 @@ def translate_file(path, event_processor, output_dir):
         with gzip.open(output_file, "xb") as f:
             pickle.dump(mr, f)
         print("Succeeded " + path)
-    except:
+    except Exception as e:
+        raise(e)
         print("Failed " + path)
 
 

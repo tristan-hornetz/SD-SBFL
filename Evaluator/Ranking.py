@@ -58,7 +58,6 @@ class Ranking(Iterable):
                 if self.are_methods_equal(program_element, m):
                     self.buggy_in_top_k[k] += 1.0
 
-
 class RankingInfo:
     def __init__(self, ranking: Ranking):
         self.info = ranking.info

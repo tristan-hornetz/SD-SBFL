@@ -1,5 +1,4 @@
-from abc import abstractmethod
-from typing import Dict, Tuple, Iterable
+from typing import Dict
 
 from .CodeInspection.Branches import extractBranchesFromCode
 from .CodeInspection.Methods import DebuggerMethod, extractMethodsFromCode, BugInfo
@@ -7,6 +6,15 @@ from .RankerEvent import *
 
 
 class EventTranslator:
+    @staticmethod
+    def match_method(filename, method_name, lineno, method_objects):
+        if str(method_name).startswith("<") and method_name != "<module>":
+            possible_methods = list(
+                                filter(lambda m: m[0] == filename and lineno == m[2] and "<" not in m[1], method_objects.keys()))
+            if len(possible_methods) > 0:
+                method_name = possible_methods[0][1]
+        return filename, method_name, lineno
+
     @staticmethod
     @abstractmethod
     def translate(_results, event_container: EventContainer,
@@ -22,6 +30,7 @@ class LineCoveredEventTranslator(EventTranslator):
         total_failed = len(_results.collectors[_results.FAIL])
         for event in filter(lambda e: e[3] == "Covered", _results.results):
             filename, method_name, lineno, *other = event
+            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
@@ -127,6 +136,7 @@ class SDScalarPairEventTranslator(EventTranslator):
         total_failed = len(_results.collectors[_results.FAIL])
         for event in filter(lambda e: e[3] == "Scalar" or e[3] == "Pair", _results.results):
             filename, method_name, lineno, e_type, *other = event
+            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
@@ -168,7 +178,8 @@ class AbsoluteReturnValueEventTranslator(EventTranslator):
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
         for event in filter(lambda e: e[3] == "Return", _results.results):
-            filename, method_name, lineno, value, type_str = event
+            filename, method_name, lineno, _, value, type_str = event
+            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
@@ -188,7 +199,8 @@ class AbsoluteScalarValueEventTranslator(EventTranslator):
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
         for event in filter(lambda e: e[3] == "Scalar", _results.results):
-            filename, method_name, lineno, (var_name, value) = event
+            filename, method_name, lineno, _, (var_name, value) = event
+            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
