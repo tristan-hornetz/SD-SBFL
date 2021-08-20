@@ -6,6 +6,7 @@ import sys
 
 from run_single_test import run_test
 
+FIX_REPORT_FILENAME = "results_fix.txt"
 
 def get_files_recursively(directory: str):
     filenames = []
@@ -61,9 +62,25 @@ if __name__ == "__main__":
     print(f"\nResult files: {result_files}\nValid result files: {valid_result_files}\nValid percentage: {valid_result_files*100.0/result_files}%")
 
     if args.fix:
+        fixed = []
+        not_fixed = []
         for f, r in invalid_files:
             project_name = r.project_name
             bug_id = r.bug_id
             root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
             run_test(root_dir, project_name, bug_id, os.path.abspath(f))
+            valid, _results = validate(f)
+            if valid and _results is not None:
+                fixed.append(f)
+            else:
+                not_fixed.append(f)
+
+        report_str = f"FIXED: {len(fixed)}\nNOT FIXED: {len(not_fixed)}\nTOTAL: {len(invalid_files)}\n\n"
+        report_str += f"FIXED FILES:\n{(os.linesep + '    ').join(fixed)}\n\n"
+        report_str += f"UNFIXED FILES:\n{(os.linesep + '    ').join(not_fixed)}"
+        if os.path.exists(FIX_REPORT_FILENAME):
+            os.remove(FIX_REPORT_FILENAME)
+        with open(FIX_REPORT_FILENAME, "xt") as f:
+            f.write(report_str)
+
 

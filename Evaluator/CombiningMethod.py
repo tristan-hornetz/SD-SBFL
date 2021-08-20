@@ -1,6 +1,6 @@
 from abc import abstractmethod
-from typing import Collection, Tuple, Any, Iterable, Callable, List
-from .RankerEvent import RankerEvent, EventContainer
+from typing import Tuple, Any, Iterable, Callable, List
+from .RankerEvent import EventContainer
 
 
 class CombiningMethod:
@@ -63,4 +63,20 @@ class WeightedCombiningMethod(CombiningMethod):
         if len(coefficients) == 0:
             return *([0] * len(self.methods)),
         return *(m(coefficients) for m in self.methods),
+
+
+class TypeOrderCombiningMethod(GenericCombiningMethod):
+    def __init__(self, types: List[type], *methods: Callable[[Iterable[float]], float]):
+        super().__init__(*methods)
+        self.types = types
+
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        events = list(event_container.get_from_program_element(program_element))
+        coefficients = {t: [] for t in self.types}
+        for e in filter(lambda c: type(c) in self.types, events):
+            c = similarity_coefficient.compute(e)
+            coefficients[type(e)].append(c)
+
+        return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)), ) for t, cs in coefficients.items()),
+
 

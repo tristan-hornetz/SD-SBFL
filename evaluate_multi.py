@@ -9,7 +9,7 @@ from translate import get_subdirs_recursive
 from Evaluator.CodeInspection.utils import mkdirRecursive
 from Evaluator.CombiningMethod import *
 from Evaluator.Evaluation import Evaluation
-from Evaluator.RankerEvent import SDBranchEvent, LineCoveredEvent, SDReturnValueEvent
+from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import OchiaiCoefficient
 
 
@@ -53,9 +53,10 @@ if __name__ == "__main__":
 
     combining_methods = [
         GenericCombiningMethod(max, avg),
-        GenericCombiningMethod(max, inv_avg),
-        GenericCombiningMethod(avg, max),
-        GenericCombiningMethod(inv_avg, max),
+        #GenericCombiningMethod(max, inv_avg),
+        #GenericCombiningMethod(avg, max),
+        #GenericCombiningMethod(inv_avg, max),
+        TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteScalarValueEvent, SDScalarPairEvent], max, inv_avg)
     ]
 
     similarity_coefficient = OchiaiCoefficient
