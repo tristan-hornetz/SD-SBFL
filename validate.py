@@ -57,16 +57,14 @@ if __name__ == "__main__":
             if valid:
                 valid_result_files += 1
             else:
-                invalid_files.append((filename, _results))
+                invalid_files.append((filename, _results.project_name, _results.bug_id))
 
     print(f"\nResult files: {result_files}\nValid result files: {valid_result_files}\nValid percentage: {valid_result_files*100.0/result_files}%")
 
     if args.fix:
         fixed = []
         not_fixed = []
-        for f, r in invalid_files:
-            project_name = r.project_name
-            bug_id = r.bug_id
+        for f, project_name, bug_id in invalid_files:
             root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
             run_test(root_dir, project_name, bug_id, os.path.abspath(f))
             valid, _results = validate(f)
