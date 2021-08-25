@@ -65,7 +65,7 @@ class EvaluationRun(Collection):
         self.name = name
 
     def run_task(self, task: Iterable[Tuple[str, Any, CombiningMethod]]):
-        i = 1
+        i = 0
         for result_dir, similarity_coefficient, combining_method in task:
             i += 1
             print(f"{self.name}, {i}: {str(similarity_coefficient)} \n{str(combining_method)}")
