@@ -111,6 +111,8 @@ if __name__ == "__main__":
 
     # TASK 1 - BASIC COMBINING METHODS
     basic_combining_methods = [
+        GenericCombiningMethod(max),
+        GenericCombiningMethod(avg),
         GenericCombiningMethod(max, avg),
         GenericCombiningMethod(max, inv_avg),
         GenericCombiningMethod(avg, max),
