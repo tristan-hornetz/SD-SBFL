@@ -148,7 +148,7 @@ if __name__ == "__main__":
              "weights_1": task_weights_1,
              }
 
-    for task_name, task in TASKS:
+    for task_name, task in TASKS.items():
         run = EvaluationRun(task_name, output_dir)
         run.run_task(task)
         run.save()
