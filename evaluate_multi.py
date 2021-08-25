@@ -73,7 +73,7 @@ class EvaluationRun(Collection):
                                                                 print_results=True))
 
     def save(self):
-        filename = self.destination + f"'{self.name}.pickle.gz'"
+        filename = self.destination + f"/'{self.name}.pickle.gz'"
         if os.path.exists(filename):
             os.remove(filename)
         with gzip.open(filename, "xb") as f:
