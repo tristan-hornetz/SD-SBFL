@@ -108,3 +108,12 @@ class Evaluation:
             print(f"All objects in {dir_path} were added.")
         else:
             print(f"{len(metrics.values())} of {len(os.listdir(dir_path))} objects in {dir_path} were added.")
+
+    def __str__(self):
+        out = f"Similarity Coefficient: {self.similarity_coefficient.__name__}\n"
+        out += f"Combining Method: {self.combining_method.__name__}\n    {(os.linesep + '    ').join(str(self.combining_method).split(os.linesep))}\n\n"
+        out += f"Top-k accuracy: {' | '.join(f'{k}: {v}' for k, v in sorted(self.fraction_top_k_accurate.items()))}"
+        out += f"Avg. recall@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_recall_at_k.items()))}"
+        out += f"Avg. precision@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_precision_at_k.items()))}"
+        return out
+

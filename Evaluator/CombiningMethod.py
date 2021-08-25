@@ -30,6 +30,10 @@ class GenericCombiningMethod(CombiningMethod):
             return *([0] * len(self.methods)),
         return *(m(coefficients) for m in self.methods),
 
+    def __str__(self):
+        out = f"{self.__name__}\nMethods: {str(tuple(self.methods))}"
+        return out
+
 
 class FilteredCombiningMethod(CombiningMethod):
     def __init__(self, event_types, *methods: Callable[[Iterable[float]], float]):
@@ -44,6 +48,10 @@ class FilteredCombiningMethod(CombiningMethod):
         if len(coefficients) == 0:
             return *([0] * len(self.methods)),
         return *(m(coefficients) for m in self.methods),
+
+    def __str__(self):
+        out = f"{self.__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.event_types))}"
+        return out
 
 
 class WeightedCombiningMethod(CombiningMethod):
@@ -64,6 +72,10 @@ class WeightedCombiningMethod(CombiningMethod):
             return *([0] * len(self.methods)),
         return *(m(coefficients) for m in self.methods),
 
+    def __str__(self):
+        out = f"{self.__name__}\nMethods: {str(tuple(self.methods))}\nWeighted event types:{str(tuple(f'{t.__name__}: {v}' for t, v in self.weights))}"
+        return out
+
 
 class TypeOrderCombiningMethod(GenericCombiningMethod):
     def __init__(self, types: List[type], *methods: Callable[[Iterable[float]], float]):
@@ -79,4 +91,7 @@ class TypeOrderCombiningMethod(GenericCombiningMethod):
 
         return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)), ) for t, cs in coefficients.items()),
 
+    def __str__(self):
+        out = f"{self.__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.types))}"
+        return out
 
