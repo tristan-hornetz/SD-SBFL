@@ -1,8 +1,9 @@
 import pickle
 import gzip
 import os
+import signal
+import subprocess
 import sys
-import time
 import itertools
 from typing import Collection, Iterator
 
@@ -49,7 +50,14 @@ def create_evaluation_recursive(result_dir, similarity_coefficient, combining_me
     return evaluation
 
 
+def interrupt_handler():
+    raise EvaluationRun.SigIntException
+
+
 class EvaluationRun(Collection):
+    class SigIntException(Exception):
+        pass
+
     def __len__(self) -> int:
         return len(self.evaluations)
 
@@ -69,8 +77,18 @@ class EvaluationRun(Collection):
         for result_dir, similarity_coefficient, combining_method in task:
             i += 1
             print(f"{self.name}, {i}: {str(similarity_coefficient)} \n{str(combining_method)}")
-            self.evaluations.append(create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
-                                                                print_results=True))
+            try:
+                self.evaluations.append(create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
+                                                                    print_results=True))
+            except EvaluationRun.SigIntException:
+                sp = subprocess.Popen(['ps', '-opid', '--no-headers', '--ppid', str(os.getpid())], encoding='utf8',
+                                      stdout=subprocess.PIPE)
+                child_process_ids = [int(line) for line in sp.stdout.read().splitlines()]
+                for child in child_process_ids:
+                    os.kill(child, signal.SIGTERM)
+                print("INTERRUPTED")
+            if i % 10 == 0:
+                self.save()
 
     def save(self):
         filename = self.destination + f"/'{self.name}.pickle.gz'"
@@ -123,14 +141,14 @@ if __name__ == "__main__":
     # TASK 2 - EVENT TYPE ORDERS
     event_type_combinations = list()
     event_type_combinations.extend(list(p) for p in itertools.permutations(EVENT_TYPES, 4))
-    event_type_combination_filters = [TypeOrderCombiningMethod(es, max, inv_avg) for es in event_type_combinations]
+    event_type_combination_filters = [TypeOrderCombiningMethod(es, max, avg) for es in event_type_combinations]
     task_event_type_orders = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters)
 
     # TASK 3 - EVENT TYPE COMBINATIONS
     event_type_combinations = list()
     for i in range(len(EVENT_TYPES)):
         event_type_combinations.extend(itertools.combinations(EVENT_TYPES, i + 1))
-    event_type_combination_filters = [FilteredCombiningMethod(es, max, inv_avg) for es in event_type_combinations]
+    event_type_combination_filters = [FilteredCombiningMethod(es, max, avg) for es in event_type_combinations]
     task_event_type_combinations = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters)
 
     # TASK 4 - WEIGHTS I
@@ -141,14 +159,16 @@ if __name__ == "__main__":
         for e in p:
             w.append((e, weight_map[p.index(e)]))
         weights.append(w)
-    event_type_weight_filters = [FilteredCombiningMethod(ws, max, inv_avg) for ws in weights]
+    event_type_weight_filters = [FilteredCombiningMethod(ws, max, avg) for ws in weights]
     task_weights_1 = list((result_dir, OchiaiCoefficient, c) for c in event_type_weight_filters)
 
-    TASKS = {"basic_combining_methods": task_basic_combining_methods,
-             "event_type_orders": task_event_type_orders,
+    TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              "event_type_combinations": task_event_type_combinations,
+             "event_type_orders": task_event_type_orders,
              "weights_1": task_weights_1,
              }
+
+    signal.signal(signal.SIGINT, interrupt_handler)
 
     for task_name, task in TASKS.items():
         run = EvaluationRun(task_name, output_dir)

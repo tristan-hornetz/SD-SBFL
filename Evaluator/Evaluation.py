@@ -111,9 +111,10 @@ class Evaluation:
 
     def __str__(self):
         out = f"Similarity Coefficient: {self.similarity_coefficient.__name__}\n"
-        out += f"Combining Method: {self.combining_method.__name__}\n    {(os.linesep + '    ').join(str(self.combining_method).split(os.linesep))}\n\n"
-        out += f"Top-k accuracy: {' | '.join(f'{k}: {v}' for k, v in sorted(self.fraction_top_k_accurate.items()))}"
-        out += f"Avg. recall@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_recall_at_k.items()))}"
-        out += f"Avg. precision@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_precision_at_k.items()))}"
+        out += f"Combining Method: {type(self.combining_method).__name__}\n    {(os.linesep + '    ').join(str(self.combining_method).split(os.linesep))}\n\n"
+        out += f"Top-k accuracy: {' | '.join(f'{k}: {v}' for k, v in sorted(self.fraction_top_k_accurate.items()))}\n"
+        out += f"Avg. recall@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_recall_at_k.items()))}\n"
+        out += f"Avg. precision@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_precision_at_k.items()))}\n"
+        out += f"Avg. ties in Top-10: {sum(r.top_10_suspiciousness_value_ties for r in self.ranking_infos)/len(self.ranking_infos)}"
         return out
 
