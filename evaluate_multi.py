@@ -156,7 +156,7 @@ if __name__ == "__main__":
     weights = list()
     for p in itertools.permutations(EVENT_TYPES):
         weights.append({p[i]: weight_map[i] for i in range(len(p))})
-    event_type_weight_filters = [WeightedCombiningMethod(ws.items(), max, avg) for ws in weights]
+    event_type_weight_filters = [WeightedCombiningMethod(list(ws.items()), max, avg) for ws in weights]
     task_weights_1 = list((result_dir, OchiaiCoefficient, c) for c in event_type_weight_filters)
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
