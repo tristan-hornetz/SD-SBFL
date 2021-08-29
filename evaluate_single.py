@@ -5,7 +5,7 @@ import pickle
 from os.path import dirname, exists, abspath
 
 from Evaluator.CodeInspection.utils import mkdirRecursive
-from Evaluator.CombiningMethod import CombiningMethod, inv_avg, WeightedCombiningMethod
+from Evaluator.CombiningMethod import *
 from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import SDBranchEvent, LineCoveredEvent, SDReturnValueEvent
 from Evaluator.SimilarityCoefficient import OchiaiCoefficient
@@ -42,8 +42,7 @@ if __name__ == "__main__":
                             help="The directory containing test results")
 
     args = arg_parser.parse_args()
-    combining_method = WeightedCombiningMethod(((LineCoveredEvent, .5), (SDBranchEvent, .1), (SDReturnValueEvent, .2)),
-                                               max, inv_avg)
+    combining_method = GenericCombiningMethod(max, avg)
     similarity_coefficient = OchiaiCoefficient
 
     result_dir = os.path.realpath(args.result_dir)
