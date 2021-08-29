@@ -50,7 +50,7 @@ class FilteredCombiningMethod(CombiningMethod):
         return *(m(coefficients) for m in self.methods),
 
     def __str__(self):
-        out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.event_types))}"
+        out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.event_types.items()))}"
         return out
 
 
