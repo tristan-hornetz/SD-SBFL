@@ -91,7 +91,7 @@ class EvaluationRun(Collection):
                 self.save()
 
     def save(self):
-        filename = self.destination + f"/'{self.name}.pickle.gz'"
+        filename = self.destination + f"/{self.name}.pickle.gz"
         if os.path.exists(filename):
             os.remove(filename)
         with gzip.open(filename, "xb") as f:
@@ -155,16 +155,13 @@ if __name__ == "__main__":
     weight_map = [1.0, .7, .5, .3, .2, .1]
     weights = list()
     for p in itertools.permutations(EVENT_TYPES):
-        w = list()
-        for e in p:
-            w.append((e, weight_map[p.index(e)]))
-        weights.append(w)
-    event_type_weight_filters = [FilteredCombiningMethod(ws, max, avg) for ws in weights]
+        weights.append({p[i]: weight_map[i] for i in range(len(p))})
+    event_type_weight_filters = [FilteredCombiningMethod(ws.items(), max, avg) for ws in weights]
     task_weights_1 = list((result_dir, OchiaiCoefficient, c) for c in event_type_weight_filters)
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
-             "event_type_combinations": task_event_type_combinations,
-             "event_type_orders": task_event_type_orders,
+             #"event_type_combinations": task_event_type_combinations,
+             #"event_type_orders": task_event_type_orders,
              "weights_1": task_weights_1,
              }
 
