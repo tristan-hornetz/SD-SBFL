@@ -57,8 +57,8 @@ class FilteredCombiningMethod(CombiningMethod):
 class WeightedCombiningMethod(CombiningMethod):
     def __init__(self, weights: Iterable[Tuple[Any, float]], *methods: Callable[[Iterable[float]], float]):
         self.methods = methods
-        self.weight_sum = sum(e[1] for e in weights)
-        self.weights = {e[0]: e[1] / self.weight_sum for e in weights}
+        self.weight_max = max([e[1] for e in weights])
+        self.weights = {e[0]: e[1] / self.weight_max for e in weights}
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
