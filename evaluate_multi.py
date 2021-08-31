@@ -110,6 +110,15 @@ class EvaluationRun(Collection):
         out += "\n--------------------------\n".join(str(e) for e in sorted(self.evaluations,
                                                                             key=lambda e: e.avg_recall_at_k[5],
                                                                             reverse=True))
+        len = 0
+        sum = {k: 0 for k in [1, 3, 5, 10]}
+        for ev in self.evaluations:
+            for ri in ev.ranking_infos:
+                len += 1
+                for k in sum.keys():
+                    sum[k] += (ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods
+        avgs = {k: v/len for k, v in sum.items()}
+        out += f"\n\nRecall upper bound: {avgs}\n"
         return out
 
 
@@ -162,14 +171,17 @@ if __name__ == "__main__":
     # SIMILARITY COEFFICIENTS
     task_similarity_coefficients = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
 
+    # SIMILARITY COEFFICIENTS II
+
+    task_similarity_coefficients2 = list(
+        (result_dir, s, FilteredCombiningMethod([e], max, avg)) for s, e in itertools.product(SIMILARITY_COEFFICIENTS, EVENT_TYPES))
+
     task_test = [(result_dir, OchiaiIICoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
              #"event_type_orders": task_event_type_orders,
-            "test": task_test,
-             "similarity_coefficients": task_similarity_coefficients,
-             "weights_1.2": task_weights_1[548:],
+             "similarity_coefficients2": task_similarity_coefficients2,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
