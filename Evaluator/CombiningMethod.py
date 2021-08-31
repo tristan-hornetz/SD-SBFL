@@ -1,5 +1,9 @@
+import math
 from abc import abstractmethod
 from typing import Tuple, Any, Iterable, Callable, List
+
+import numpy
+
 from .RankerEvent import EventContainer
 
 
@@ -15,6 +19,22 @@ def avg(cs):
 
 def inv_avg(cs):
     return 1 - avg(cs)
+
+
+def median(cs):
+    return sorted(cs)[len(cs)//2] if len(cs) % 2 == 1 else sum(sorted(cs)[len(cs)//2-1:len(cs)//2+1])/2
+
+
+def geometric_mean(cs):
+    return numpy.prod(cs) ** (1.0/len(cs))
+
+
+def harmonic_mean(cs):
+    return len(cs) / sum(1.0/c for c in cs)
+
+
+def quadratic_mean(cs):
+    return math.sqrt((1/len(cs)) * sum(c**2 for c in cs))
 
 
 class GenericCombiningMethod(CombiningMethod):

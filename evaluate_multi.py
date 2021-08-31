@@ -5,6 +5,7 @@ import signal
 import subprocess
 import sys
 import itertools
+import random
 from typing import Collection, Iterator
 
 from evaluate_single import THREADS
@@ -21,6 +22,8 @@ EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPair
 SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, AnderbergCoefficient, OchiaiCoefficient,
                            SimpleMatchingCoefficient, RogersTanimotoCoefficient, OchiaiIICoefficient,
                            RusselRaoCoefficient, TarantulaCoefficient]
+
+AGGREGATORS = [max, avg, inv_avg, geometric_mean, harmonic_mean, quadratic_mean, median]
 
 
 def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
@@ -172,16 +175,20 @@ if __name__ == "__main__":
     task_similarity_coefficients = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
 
     # SIMILARITY COEFFICIENTS II
-
     task_similarity_coefficients2 = list(
         (result_dir, s, FilteredCombiningMethod([e], max, avg)) for s, e in itertools.product(SIMILARITY_COEFFICIENTS, EVENT_TYPES))
+
+    # AGGREGATORS
+    perms = itertools.permutations(AGGREGATORS, 3)
+    task_aggregators = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms)
 
     task_test = [(result_dir, OchiaiIICoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
              #"event_type_orders": task_event_type_orders,
-             "similarity_coefficients2": task_similarity_coefficients2,
+             #"similarity_coefficients2": task_similarity_coefficients2,
+             "aggregators": task_aggregators,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
