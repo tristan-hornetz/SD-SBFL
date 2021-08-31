@@ -162,7 +162,7 @@ if __name__ == "__main__":
     # SIMILARITY COEFFICIENTS
     task_similarity_coefficients = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
 
-    task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg)),]
+    task_test = [(result_dir, OchiaiIICoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
