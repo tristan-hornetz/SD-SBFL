@@ -50,7 +50,7 @@ def create_evaluation_recursive(result_dir, similarity_coefficient, combining_me
     return evaluation
 
 
-def interrupt_handler():
+def interrupt_handler(*args, **kwargs):
     raise EvaluationRun.SigIntException
 
 
@@ -159,10 +159,14 @@ if __name__ == "__main__":
     event_type_weight_filters = [WeightedCombiningMethod(list(ws.items()), max, avg) for ws in weights]
     task_weights_1 = list((result_dir, OchiaiCoefficient, c) for c in event_type_weight_filters)
 
+    # SIMILARITY COEFFICIENTS
+    task_similarity_coefficients = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
+
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
              #"event_type_orders": task_event_type_orders,
-             "weights_1": task_weights_1,
+             "similarity_coefficients": task_similarity_coefficients,
+             "weights_1.2": task_weights_1[548:],
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
