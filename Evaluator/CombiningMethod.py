@@ -30,7 +30,7 @@ def geometric_mean(cs):
 
 
 def harmonic_mean(cs):
-    return len(cs) / sum(1.0/c for c in cs)
+    return len(cs) / sum(1.0/(c if c > 0 else .01) for c in cs)
 
 
 def quadratic_mean(cs):
