@@ -13,7 +13,7 @@ class Ranking(Iterable):
         self.ranking = list()
         for element in set(method_objects.values()):
             self.ranking.append((element, combining_method.combine(element, events, similarity_coefficient)))
-        self.ranking.sort(key=lambda v: v[1], reverse=True)
+        self.ranking.sort(key=lambda v: (v[1], element.name, element.filename, min(element.linenos)), reverse=True)
         self.buggy_in_top_k = dict()
         self.buggy_in_ranking = list()
         assert len(buggy_methods) > 0
