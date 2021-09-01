@@ -37,6 +37,10 @@ def quadratic_mean(cs):
     return math.sqrt((1/len(cs)) * sum(c**2 for c in cs))
 
 
+def make_tuple(cs):
+    return *sorted(cs, reverse=True),
+
+
 class GenericCombiningMethod(CombiningMethod):
     def __init__(self, *methods: Callable[[Iterable[float]], float]):
         self.methods = methods

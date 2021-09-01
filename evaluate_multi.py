@@ -111,16 +111,16 @@ class EvaluationRun(Collection):
     def __str__(self):
         out = f"EVALUATION RUN - {self.name}\n\n"
         out += "\n--------------------------\n".join(str(e) for e in sorted(self.evaluations,
-                                                                            key=lambda e: e.avg_recall_at_k[5],
+                                                                            key=lambda e: sum(e.fraction_top_k_accurate[k] + e.avg_recall_at_k[k] + e.avg_precision_at_k[k]for k in [1, 3, 5, 10]),
                                                                             reverse=True))
         len = 0
-        sum = {k: 0 for k in [1, 3, 5, 10]}
+        _sum = {k: 0 for k in [1, 3, 5, 10]}
         for ev in self.evaluations:
             for ri in ev.ranking_infos:
                 len += 1
-                for k in sum.keys():
-                    sum[k] += (ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods
-        avgs = {k: v/len for k, v in sum.items()}
+                for k in _sum.keys():
+                    _sum[k] += (ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods
+        avgs = {k: v/len for k, v in _sum.items()}
         out += f"\n\nRecall upper bound: {avgs}\n"
         return out
 
@@ -182,13 +182,19 @@ if __name__ == "__main__":
     perms = itertools.permutations(AGGREGATORS, 3)
     task_aggregators = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms)
 
-    task_test = [(result_dir, OchiaiIICoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg)),]
+    # AGGREGATORS 2
+    perms = itertools.permutations(AGGREGATORS + [make_tuple], 3)
+    task_aggregators2 = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in filter(lambda l: make_tuple in l, perms))
+
+    task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], make_tuple, max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
-             "aggregators": task_aggregators,
+             #"aggregators": task_aggregators,#
+             #"test_task": task_test
+             "aggregators2": task_aggregators2,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
