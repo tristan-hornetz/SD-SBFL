@@ -183,8 +183,12 @@ if __name__ == "__main__":
     task_aggregators = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms)
 
     # AGGREGATORS 2
-    perms = itertools.permutations(AGGREGATORS + [make_tuple], 3)
-    task_aggregators2 = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in filter(lambda l: make_tuple in l, perms))
+    perms = list(set(map(lambda l: l[:l.index(make_tuple) + 1], filter(lambda l: make_tuple in l, itertools.permutations(AGGREGATORS + [make_tuple], 3)))))
+    task_aggregators2 = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms)
+
+    # SIMILARITY COEFFICIENTS III
+    task_similarity_coefficients3 = list(
+        (result_dir, s, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg, make_tuple)) for s in SIMILARITY_COEFFICIENTS)
 
     task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], make_tuple, max, avg)),]
 
@@ -195,6 +199,7 @@ if __name__ == "__main__":
              #"aggregators": task_aggregators,#
              #"test_task": task_test
              "aggregators2": task_aggregators2,
+             "similarity_coefficients3": task_similarity_coefficients3,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
