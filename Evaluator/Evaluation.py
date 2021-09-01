@@ -1,6 +1,7 @@
 import gzip
 import os
 import pickle
+import time
 from multiprocessing import Process, Queue
 
 from .CombiningMethod import CombiningMethod
@@ -90,7 +91,7 @@ class Evaluation:
         while not rqueue.empty():
             res = rqueue.get()
             metrics[res[0]] = (res[1], res[2])
-            rqueue.join()
+            time.sleep(.01)
 
         assert (rqueue.empty())
         assert (len(active_processes) == 0)
