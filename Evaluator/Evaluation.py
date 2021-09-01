@@ -1,6 +1,7 @@
 import gzip
 import os
 import pickle
+import queue
 import time
 from multiprocessing import Process, Queue
 
@@ -74,8 +75,11 @@ class Evaluation:
                 t = processes.pop()
                 t.start()
                 active_processes.append(t)
-            res = rqueue.get()
-            metrics[res[0]] = (res[1], res[2])
+            try:
+                res = rqueue.get(timeout=30.0)
+                metrics[res[0]] = (res[1], res[2])
+            except queue.Empty:
+                pass
             for t in active_processes:
                 if not t.is_alive():
                     active_processes.remove(t)
