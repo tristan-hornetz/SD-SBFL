@@ -51,7 +51,7 @@ class GenericCombiningMethod(CombiningMethod):
         for e in events:
             coefficients.append(similarity_coefficient.compute(e))
         if len(coefficients) == 0:
-            return *([0] * len(self.methods)),
+            return *(m([0]) for m in self.methods),
         return *(m(coefficients) for m in self.methods),
 
     def __str__(self):
@@ -70,7 +70,7 @@ class FilteredCombiningMethod(CombiningMethod):
         for e in filter(lambda c: type(c) in self.event_types, events):
             coefficients.append(similarity_coefficient.compute(e))
         if len(coefficients) == 0:
-            return *([0] * len(self.methods)),
+            return *(m([0]) for m in self.methods),
         return *(m(coefficients) for m in self.methods),
 
     def __str__(self):
@@ -93,7 +93,7 @@ class WeightedCombiningMethod(CombiningMethod):
             coefficients.append(c * self.weights[type(e)])
 
         if len(coefficients) == 0:
-            return *([0] * len(self.methods)),
+            return *(m([0]) for m in self.methods),
         return *(m(coefficients) for m in self.methods),
 
     def __str__(self):

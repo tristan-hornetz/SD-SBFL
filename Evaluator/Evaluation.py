@@ -107,7 +107,8 @@ class Evaluation:
             self.rankings.append(m[0])
             self.ranking_infos.append(m[1][1])
 
-        self.update_averages()
+        if len(self.rankings) > 0:
+            self.update_averages()
 
         if len(metrics.values()) == len(os.listdir(dir_path)):
             print(f"All objects in {dir_path} were added.")

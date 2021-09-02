@@ -23,7 +23,7 @@ SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, Anderber
                            SimpleMatchingCoefficient, RogersTanimotoCoefficient, OchiaiIICoefficient,
                            RusselRaoCoefficient, TarantulaCoefficient]
 
-AGGREGATORS = [max, avg, inv_avg, geometric_mean, harmonic_mean, quadratic_mean, median]
+AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median]
 
 
 def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
