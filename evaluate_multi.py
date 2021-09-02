@@ -5,7 +5,7 @@ import signal
 import subprocess
 import sys
 import itertools
-import random
+import traceback
 from typing import Collection, Iterator
 
 from evaluate_single import THREADS
@@ -83,13 +83,14 @@ class EvaluationRun(Collection):
             try:
                 self.evaluations.append(create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
                                                                     print_results=True))
-            except EvaluationRun.SigIntException:
+            except EvaluationRun.SigIntException as e:
                 sp = subprocess.Popen(['ps', '-opid', '--no-headers', '--ppid', str(os.getpid())], encoding='utf8',
                                       stdout=subprocess.PIPE)
                 child_process_ids = [int(line) for line in sp.stdout.read().splitlines()]
                 for child in child_process_ids:
                     os.kill(child, signal.SIGTERM)
-                print("INTERRUPTED")
+                print("\nINTERRUPTED")
+                traceback.print_tb(e.__traceback__)
             if i % 10 == 0:
                 self.save()
 
@@ -190,6 +191,18 @@ if __name__ == "__main__":
     task_similarity_coefficients3 = list(
         (result_dir, s, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg, make_tuple)) for s in SIMILARITY_COEFFICIENTS)
 
+    # SIMILARITY COEFFICIENTS IV
+    task_similarity_coefficients4 = list(
+        (result_dir, s,  GenericCombiningMethod(max, avg, make_tuple)) for s in
+        SIMILARITY_COEFFICIENTS)
+
+    # EVENT TYPE COMBINATIONS II
+    event_type_combinations2 = list()
+    for i in range(len(EVENT_TYPES)):
+        event_type_combinations2.extend(itertools.combinations(EVENT_TYPES, i + 1))
+    event_type_combination_filters2 = [FilteredCombiningMethod(es, max, avg, make_tuple) for es in sorted(event_type_combinations2, key=lambda l: len(l))]
+    task_event_type_combinations2 = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters2)
+
     task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], make_tuple, max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
@@ -198,8 +211,10 @@ if __name__ == "__main__":
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
              #"test_task": task_test
-             "aggregators2": task_aggregators2,
-             "similarity_coefficients3": task_similarity_coefficients3,
+             #"aggregators2": task_aggregators2,
+             #"similarity_coefficients3": task_similarity_coefficients3,
+             "event_type_combinations2": task_event_type_combinations2,
+             "similarity_coefficients4": task_similarity_coefficients4,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
