@@ -213,8 +213,8 @@ if __name__ == "__main__":
              #"test_task": task_test
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
-             "event_type_combinations2": task_event_type_combinations2,
              "similarity_coefficients4": task_similarity_coefficients4,
+             "event_type_combinations2": task_event_type_combinations2,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
