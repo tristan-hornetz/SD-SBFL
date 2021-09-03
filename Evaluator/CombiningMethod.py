@@ -37,6 +37,13 @@ def quadratic_mean(cs):
     return math.sqrt((1/len(cs)) * sum(c**2 for c in cs))
 
 
+def stddev(cs):
+    if len(cs) < 1:
+        return 0
+    m = avg(cs)
+    return math.sqrt(sum((c-m)**2 for c in cs) / len(cs))
+
+
 def make_tuple(cs):
     return *sorted(cs, reverse=True),
 

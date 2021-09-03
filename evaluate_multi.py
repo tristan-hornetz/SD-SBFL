@@ -209,19 +209,19 @@ if __name__ == "__main__":
         perms_r.extend(filter(lambda p: (i < 2 and make_tuple not in p) or (i == 2 and list(p).pop() == make_tuple), itertools.permutations([avg, max, make_tuple], i + 1)))
     task_aggregators_restricted = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms_r)
 
-    task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], make_tuple, max, avg)),]
+    task_test = [(result_dir, OchiaiCoefficient, GenericCombiningMethod(max, avg, stddev)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
-             #"test_task": task_test
+             "test_task": task_test
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
              #"similarity_coefficients4": task_similarity_coefficients4,
              #"event_type_combinations2": task_event_type_combinations2,
-             "aggregators_restricted": task_aggregators_restricted,
+             #"aggregators_restricted": task_aggregators_restricted,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
@@ -229,4 +229,5 @@ if __name__ == "__main__":
     for task_name, task in TASKS.items():
         run = EvaluationRun(task_name, output_dir)
         run.run_task(task)
+        print(run)
         run.save()
