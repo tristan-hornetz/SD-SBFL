@@ -203,6 +203,12 @@ if __name__ == "__main__":
     event_type_combination_filters2 = [FilteredCombiningMethod(es, max, avg, make_tuple) for es in sorted(event_type_combinations2, key=lambda l: len(l))]
     task_event_type_combinations2 = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters2)
 
+    # AGGREGATORS RESTRICTED
+    perms_r = []
+    for i in range(3):
+        perms_r.extend(filter(lambda p: (i < 2 and make_tuple not in p) or (i == 2 and list(p).pop() == make_tuple), itertools.permutations([avg, max, make_tuple], i + 1)))
+    task_aggregators_restricted = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms_r)
+
     task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], make_tuple, max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
@@ -213,8 +219,9 @@ if __name__ == "__main__":
              #"test_task": task_test
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
-             "similarity_coefficients4": task_similarity_coefficients4,
-             "event_type_combinations2": task_event_type_combinations2,
+             #"similarity_coefficients4": task_similarity_coefficients4,
+             #"event_type_combinations2": task_event_type_combinations2,
+             "aggregators_restricted": task_aggregators_restricted,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
