@@ -1,8 +1,11 @@
 from typing import Iterable, Dict
-from .RankerEvent import EventContainer
+from .RankerEvent import *
 from .CombiningMethod import CombiningMethod
 from .CodeInspection.utils import BugInfo
 from .CodeInspection.Methods import getBuggyMethods, DebuggerMethod
+
+EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent,
+               AbsoluteScalarValueEvent]
 
 
 class Ranking(Iterable):
@@ -58,6 +61,7 @@ class Ranking(Iterable):
                 if self.are_methods_equal(program_element, m):
                     self.buggy_in_top_k[k] += 1.0
 
+
 class RankingInfo:
     def __init__(self, ranking: Ranking):
         self.info = ranking.info
@@ -70,6 +74,25 @@ class RankingInfo:
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.top_10_suspiciousness_values = list(s for e, s in ranking.ranking[:10])
         self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(set(self.top_10_suspiciousness_values))
+        self.num_events_by_type = {t: 0 for t in EVENT_TYPES}
+        for t in self.num_events_by_type.keys():
+            self.num_events_by_type[t] = len(list(filter(lambda e: type(e) == t, ranking.events.events.values())))
+        self.unique_lines_covered = self.num_events_by_type[LineCoveredEvent]
+        collectors = set()
+        collectors_passed = set()
+        collectors_failed = set()
+        for e in ranking.events.events.values():
+            try:
+                collectors.update(c for c, _ in e.passed_with_event)
+                collectors_passed.update(c for c, _ in e.passed_with_event)
+                collectors.update(c for c, _ in e.failed_with_event)
+                collectors_failed.update(c for c, _ in e.failed_with_event)
+            except:
+                pass
+        self.num_tests = len(collectors)
+        self.num_tests_passed = len(collectors_passed)
+        self.num_tests_failed = len(collectors_failed)
+        self.covered_lines_per_test = self.unique_lines_covered / self.num_tests
 
 
 class MetaRanking:
