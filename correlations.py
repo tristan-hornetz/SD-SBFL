@@ -98,8 +98,15 @@ class EvaluationProfile:
         arr_coverage_fraction = np.array(list(p.unique_lines_covered/LOC_BY_APP[p.info.project_name] for p in self.ranking_profiles))
         apps = list(LOC_BY_APP.keys())
         arr_app_id = np.array(list(apps.index(p.info.project_name) for p in self.ranking_profiles))
+        arr_sum_num_events = np.array(list(p.sum_num_events for p in self.ranking_profiles))
+        arr_sum_events_passed = np.array(list(p.sum_events_passed for p in self.ranking_profiles))
+        arr_sum_events_failed = np.array(list(p.sum_events_failed for p in self.ranking_profiles))
+        print(arr_sum_events_failed)
         datasets = {
             "Num events": arr_num_events,
+            "Sum num events": arr_sum_num_events,
+            "Sum num events passed": arr_sum_events_passed,
+            "Sum num events failed": arr_sum_events_failed,
             "Num methods": arr_len_ranking,
             "Num LOC Covered": arr_unique_lines_covered,
             "Num LOC total": arr_loc,
