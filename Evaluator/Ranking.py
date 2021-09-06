@@ -102,10 +102,11 @@ class RankingInfo:
         self.sum_events_passed = sum(
             i for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
         self.sum_events_failed = sum(i for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
-        self.sum_unique_events_passed = sum(
-            1 for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
-        self.sum_unique_events_failed = sum(
-            1 for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
+        self.sum_unique_events_passed = 0
+        self.sum_unique_events_failed = 0
+        for e in ranking.events:
+            self.sum_unique_events_failed += len(e.failed_with_event) > 0
+            self.sum_unique_events_passed += len(e.passed_with_event) > 0
         self.num_tests = len(collectors)
         self.num_tests_passed = len(collectors_passed)
         self.num_tests_failed = len(collectors_failed)
