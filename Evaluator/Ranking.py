@@ -78,6 +78,8 @@ class RankingInfo:
         for t in self.num_events_by_type.keys():
             self.num_events_by_type[t] = len(list(filter(lambda e: type(e) == t, ranking.events.events.values())))
         self.unique_lines_covered = self.num_events_by_type[LineCoveredEvent]
+        self.num_sum_events_by_type = {t: 0 for t in EVENT_TYPES}
+        self.sum_events_by_collector = dict()
         collectors = set()
         collectors_passed = set()
         collectors_failed = set()
@@ -87,8 +89,19 @@ class RankingInfo:
                 collectors_passed.update(c for c, _ in e.passed_with_event)
                 collectors.update(c for c, _ in e.failed_with_event)
                 collectors_failed.update(c for c, _ in e.failed_with_event)
+                for cs in (e.passed_with_event, e.failed_with_event):
+                    for c, i in cs:
+                        self.num_sum_events_by_type[type(e)] += i
+                        if c in self.sum_events_by_collector.keys():
+                            self.sum_events_by_collector[c] += i
+                        else:
+                            self.sum_events_by_collector[c] = i
             except:
                 pass
+        self.sum_num_events = sum(self.sum_events_by_collector.values())
+        self.sum_events_passed = sum(
+            i for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
+        self.sum_events_failed = sum(i for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
         self.num_tests = len(collectors)
         self.num_tests_passed = len(collectors_passed)
         self.num_tests_failed = len(collectors_failed)
