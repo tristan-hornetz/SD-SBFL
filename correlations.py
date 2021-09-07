@@ -47,17 +47,19 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
         for k in datasets.keys():
             datasets[k] = rankdata(datasets[k])
     r = np.corrcoef(list(datasets.values()))
+    to_print = np.tri(r.shape[0], k=-1).astype(np.bool)
+    r = np.ma.array(r, mask=to_print)
     print(r)
     if plot:
         fig, ax = plt.subplots()
         im = ax.imshow(r)
-        im.set_clim(-1, 1)
+        im.set_clim(0, 1)
         ax.grid(False)
         plt.xticks(np.arange(len(datasets.items())), datasets.keys(), rotation='vertical')
         ax.yaxis.set(ticks=np.arange(len(datasets.items())), ticklabels=(datasets.keys()))
         for i in range(len(datasets)):
             for j in range(len(datasets)):
-                ax.text(j, i,  str(r[i, j])[:4], ha='center', va='center',
+                ax.text(j, i, '{:.2f}'.format(float(r[i, j])) if str(r[i, j]) != "--" else "", ha='center', va='center',
                         color='r')
         cbar = ax.figure.colorbar(im, ax=ax, format='% .2f')
         plt.show()
@@ -113,21 +115,22 @@ class EvaluationProfile:
         arr_crs_cvg = np.array(list(p.lines_covered_more_than_once for p in self.ranking_profiles))
         arr_frac_covered_m = np.array(list((p.lines_covered_more_than_once / p.num_events_by_type[LineCoveredEvent]) for p in self.ranking_profiles))
         print(arr_sum_events_failed)
+        datasets = dict()
         datasets = {
             "Num events": arr_num_events,
-            "Frac events once": arr_frac_evt_once,
+            #"Frac events once": arr_frac_evt_once,
             "Sum num events": arr_sum_num_events,
-            "Sum num events passed": arr_sum_events_passed,
-            "Sum num events failed": arr_sum_events_failed,
-            "L cov. m. t. once": arr_crs_cvg,
-            "Frac. L cov. m. t. once": arr_frac_covered_m,
-            "Unq events passed": arr_unq_events_passed,
-            "Unq events failed": arr_unq_events_failed,
-            "Events ol. recd. once": arr_evt_once,
-            "Events ol. recd. once fail.": arr_evt_only_f,
+            #"Sum num events passed": arr_sum_events_passed,
+            #"Sum num events failed": arr_sum_events_failed,
+            #"L cov. m. t. once": arr_crs_cvg,
+            #"Frac. L cov. m. t. once": arr_frac_covered_m,
+            #"Unq events passed": arr_unq_events_passed,
+            #"Unq events failed": arr_unq_events_failed,
+            #"Events ol. recd. once": arr_evt_once,
+            #"Events ol. recd. once fail.": arr_evt_only_f,
             "Num methods": arr_len_ranking,
-            "Num methods sus": arr_methods_sus,
-            "Num methods unsus": arr_methods_unsus,
+            #"Num methods sus": arr_methods_sus,
+            #"Num methods unsus": arr_methods_unsus,
             "Num LOC Covered": arr_unique_lines_covered,
             "Num LOC total": arr_loc,
             "Coverage": arr_coverage_fraction,
@@ -141,6 +144,8 @@ class EvaluationProfile:
         }
         for t in EVENT_TYPES:
             datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
+        for t in EVENT_TYPES:
+            datasets.update({f"Frac {t.__name__}": arr_num_events_by_type[t] / arr_num_events})
         for i in range(3):
             for k in [1, 3, 5, 10]:
                 datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})

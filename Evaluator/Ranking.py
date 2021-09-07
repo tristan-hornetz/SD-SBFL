@@ -13,6 +13,7 @@ class Ranking(Iterable):
         self.info = info
         self.events = events
         self.buggy_methods = buggy_methods
+        self.similarity_coefficient = similarity_coefficient
         self.ranking = list()
         for element in set(method_objects.values()):
             self.ranking.append((element, combining_method.combine(element, events, similarity_coefficient)))
@@ -68,6 +69,8 @@ class RankingInfo:
         self.project_name = ranking.info.project_name
         self.bug_id = ranking.info.bug_id
         self.len_events = len(ranking.events)
+        events_sus = set(filter(lambda e: ranking.similarity_coefficient.compute(e) > 0, ranking.events.events.values()))
+        self.len_events_sus = len(events_sus)
         self.len_methods = len(ranking.ranking)
         self.len_methods_susp = len(list(filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0]*len(e[1])), ranking.ranking)))
         self.len_methods_unsusp = len(list(filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0]*len(e[1])), ranking.ranking)))
@@ -77,8 +80,10 @@ class RankingInfo:
         self.top_10_suspiciousness_values = list(s for e, s in ranking.ranking[:10])
         self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(set(self.top_10_suspiciousness_values))
         self.num_events_by_type = {t: 0 for t in EVENT_TYPES}
+        self.num_sus_events_by_type = {t: 0 for t in EVENT_TYPES}
         for t in self.num_events_by_type.keys():
             self.num_events_by_type[t] = len(list(filter(lambda e: type(e) == t, ranking.events.events.values())))
+            self.num_sus_events_by_type[t] = len(events_sus.intersection(filter(lambda e: type(e) == t, ranking.events.events.values())))
         self.unique_lines_covered = self.num_events_by_type[LineCoveredEvent]
         self.num_sum_events_by_type = {t: 0 for t in EVENT_TYPES}
         self.sum_events_by_collector = dict()
