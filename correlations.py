@@ -53,7 +53,7 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
     if plot:
         fig, ax = plt.subplots()
         im = ax.imshow(r)
-        im.set_clim(0, 1)
+        im.set_clim(-1, 1)
         ax.grid(False)
         plt.xticks(np.arange(len(datasets.items())), datasets.keys(), rotation='vertical')
         ax.yaxis.set(ticks=np.arange(len(datasets.items())), ticklabels=(datasets.keys()))
@@ -84,6 +84,7 @@ class EvaluationProfile:
 
     def get_datasets(self):
         arr_num_events = np.array(list(p.len_events for p in self.ranking_profiles))
+        arr_num_sus_events = np.array(list(p.len_events_sus for p in self.ranking_profiles))
         arr_num_events_by_type = {t: np.array(list(p.num_events_by_type[t] for p in self.ranking_profiles)) for t in
                                   EVENT_TYPES}
         arr_len_ranking = np.array(list(p.len_methods for p in self.ranking_profiles))
@@ -120,6 +121,7 @@ class EvaluationProfile:
             "Num events": arr_num_events,
             #"Frac events once": arr_frac_evt_once,
             "Sum num events": arr_sum_num_events,
+            "Sus events": arr_num_sus_events,
             #"Sum num events passed": arr_sum_events_passed,
             #"Sum num events failed": arr_sum_events_failed,
             #"L cov. m. t. once": arr_crs_cvg,
@@ -145,7 +147,7 @@ class EvaluationProfile:
         for t in EVENT_TYPES:
             datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
         for t in EVENT_TYPES:
-            datasets.update({f"Frac {t.__name__}": arr_num_events_by_type[t] / arr_num_events})
+            datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
         for i in range(3):
             for k in [1, 3, 5, 10]:
                 datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
@@ -155,5 +157,4 @@ class EvaluationProfile:
             metric_avgs.append(avg(list(a_1[i] for i in range(3))))
         datasets.update({'metric_avgs': np.array(metric_avgs)})
         return datasets
-
 

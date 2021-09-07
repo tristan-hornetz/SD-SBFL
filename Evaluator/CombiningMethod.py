@@ -4,7 +4,11 @@ from typing import Tuple, Any, Iterable, Callable, List
 
 import numpy
 
-from .RankerEvent import EventContainer
+from .RankerEvent import *
+
+SBFL_EVENTS = [LineCoveredEvent]
+SD_EVENTS = [SDScalarPairEvent, SDBranchEvent, SDReturnValueEvent]
+VALUE_EVENTS = [AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
 
 
 class CombiningMethod:
@@ -14,7 +18,7 @@ class CombiningMethod:
 
 
 def avg(cs):
-    return sum(cs) / len(cs)
+    return sum(cs) / len(cs) if len(cs) > 0 else 0
 
 
 def inv_avg(cs):
@@ -64,6 +68,26 @@ class GenericCombiningMethod(CombiningMethod):
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}"
         return out
+
+
+class LinPredCombiningMethod(CombiningMethod):
+    def __init__(self, *methods: Callable[[Iterable[float]], float]):
+        self.methods = methods
+
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        events = list(event_container.get_from_program_element(program_element))
+        coefficients_sbfl = []
+        coefficients_sd = []
+        for e in filter(lambda c: type(c) in SD_EVENTS, events):
+            coefficients_sd.append(similarity_coefficient.compute(e))
+        for e in filter(lambda c: type(c) in SBFL_EVENTS, events):
+            coefficients_sbfl.append(similarity_coefficient.compute(e))
+        return *((m(coefficients_sbfl) + m(coefficients_sd))/2.0 for m in self.methods),
+
+    def __str__(self):
+        out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}"
+        return out
+
 
 
 class FilteredCombiningMethod(CombiningMethod):

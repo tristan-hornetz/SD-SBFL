@@ -209,7 +209,7 @@ if __name__ == "__main__":
         perms_r.extend(filter(lambda p: (i < 2 and make_tuple not in p) or (i == 2 and list(p).pop() == make_tuple), itertools.permutations([avg, max, make_tuple], i + 1)))
     task_aggregators_restricted = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms_r)
 
-    task_test = [(result_dir, OchiaiCoefficient, GenericCombiningMethod(max, avg, stddev)),]
+    task_test = [(result_dir, OchiaiCoefficient, LinPredCombiningMethod(max, avg, make_tuple)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
