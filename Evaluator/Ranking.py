@@ -1,4 +1,4 @@
-from typing import Iterable, Dict
+from typing import Iterable, Dict, SupportsFloat
 from .RankerEvent import *
 from .CombiningMethod import CombiningMethod
 from .CodeInspection.utils import BugInfo
@@ -69,6 +69,8 @@ class RankingInfo:
         self.bug_id = ranking.info.bug_id
         self.len_events = len(ranking.events)
         self.len_methods = len(ranking.ranking)
+        self.len_methods_susp = len(list(filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0]*len(e[1])), ranking.ranking)))
+        self.len_methods_unsusp = len(list(filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0]*len(e[1])), ranking.ranking)))
         self.buggy_in_ranking = len(ranking.buggy_in_ranking)
         self.num_buggy_methods = len(ranking.buggy_methods)
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
@@ -80,10 +82,19 @@ class RankingInfo:
         self.unique_lines_covered = self.num_events_by_type[LineCoveredEvent]
         self.num_sum_events_by_type = {t: 0 for t in EVENT_TYPES}
         self.sum_events_by_collector = dict()
+        self.num_events_only_covered_by_one_test = 0
+        self.num_events_only_covered_by_failed_tests = 0
+        self.lines_covered_more_than_once = 0
         collectors = set()
         collectors_passed = set()
         collectors_failed = set()
         for e in ranking.events.events.values():
+            if len(e.passed_with_event) < 1:
+                self.num_events_only_covered_by_failed_tests += 1
+            if len(e.passed_with_event) + len(e.failed_with_event) == 1:
+                self.num_events_only_covered_by_one_test += 1
+            elif isinstance(e, LineCoveredEvent):
+                self.lines_covered_more_than_once += 1
             try:
                 collectors.update(c for c, _ in e.passed_with_event)
                 collectors_passed.update(c for c, _ in e.passed_with_event)

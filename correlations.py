@@ -1,5 +1,6 @@
 from Evaluator.Ranking import EVENT_TYPES
 from Evaluator.Evaluation import Evaluation
+from Evaluator.RankerEvent import *
 from Evaluator.CombiningMethod import avg
 from evaluate_multi import EvaluationRun
 from scipy.stats import rankdata
@@ -33,8 +34,7 @@ def scatter_plot(datasets, x_metric: str, y_metric: str, x_title: str, y_title: 
     fig, ax = plt.subplots()
     for i, name in enumerate(LOC_BY_APP.keys()):
         print(f"{name} - {category_colors[i]}")
-    for i, id in enumerate(datasets["App ID"]):
-        ax.scatter(datasets[x_metric][i], datasets[y_metric][i], s=5, alpha=1, color=category_colors[id])
+    ax.scatter(datasets[x_metric], datasets[y_metric], s=100, alpha=1)
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
     fig.set_size_inches(4, 3)
@@ -93,21 +93,41 @@ class EvaluationProfile:
         arr_num_tests_passed = np.array(list(p.num_tests_passed for p in self.ranking_profiles))
         arr_num_tests_failed = np.array(list(p.num_tests_failed for p in self.ranking_profiles))
         arr_covered_lines_per_test = np.array(list(p.covered_lines_per_test for p in self.ranking_profiles))
+        arr_total_lines_per_test = np.array(list(LOC_BY_APP[p.info.project_name] / p.num_tests for p in self.ranking_profiles))
         arr_unique_values_in_top_10 = np.array(list(10 - p.top_10_suspiciousness_value_ties for p in self.ranking_profiles))
         arr_loc = np.array(list(LOC_BY_APP[p.info.project_name] for p in self.ranking_profiles))
         arr_coverage_fraction = np.array(list(p.unique_lines_covered/LOC_BY_APP[p.info.project_name] for p in self.ranking_profiles))
+        arr_coverage_fraction = (arr_coverage_fraction - min(arr_coverage_fraction)) / (max(arr_coverage_fraction) - min(arr_coverage_fraction))
         apps = list(LOC_BY_APP.keys())
         arr_app_id = np.array(list(apps.index(p.info.project_name) for p in self.ranking_profiles))
         arr_sum_num_events = np.array(list(p.sum_num_events for p in self.ranking_profiles))
         arr_sum_events_passed = np.array(list(p.sum_events_passed for p in self.ranking_profiles))
         arr_sum_events_failed = np.array(list(p.sum_events_failed for p in self.ranking_profiles))
+        arr_unq_events_passed = np.array(list(p.sum_unique_events_passed for p in self.ranking_profiles))
+        arr_unq_events_failed = np.array(list(p.sum_unique_events_failed for p in self.ranking_profiles))
+        arr_methods_sus = np.array(list(p.len_methods_susp for p in self.ranking_profiles))
+        arr_methods_unsus = np.array(list(p.len_methods_unsusp for p in self.ranking_profiles))
+        arr_evt_once = np.array(list(p.num_events_only_covered_by_one_test for p in self.ranking_profiles))
+        arr_frac_evt_once = np.array(list(p.num_events_only_covered_by_one_test / p.len_events for p in self.ranking_profiles))
+        arr_evt_only_f = np.array(list(p.num_events_only_covered_by_failed_tests for p in self.ranking_profiles))
+        arr_crs_cvg = np.array(list(p.lines_covered_more_than_once for p in self.ranking_profiles))
+        arr_frac_covered_m = np.array(list((p.lines_covered_more_than_once / p.num_events_by_type[LineCoveredEvent]) for p in self.ranking_profiles))
         print(arr_sum_events_failed)
         datasets = {
             "Num events": arr_num_events,
+            "Frac events once": arr_frac_evt_once,
             "Sum num events": arr_sum_num_events,
             "Sum num events passed": arr_sum_events_passed,
             "Sum num events failed": arr_sum_events_failed,
+            "L cov. m. t. once": arr_crs_cvg,
+            "Frac. L cov. m. t. once": arr_frac_covered_m,
+            "Unq events passed": arr_unq_events_passed,
+            "Unq events failed": arr_unq_events_failed,
+            "Events ol. recd. once": arr_evt_once,
+            "Events ol. recd. once fail.": arr_evt_only_f,
             "Num methods": arr_len_ranking,
+            "Num methods sus": arr_methods_sus,
+            "Num methods unsus": arr_methods_unsus,
             "Num LOC Covered": arr_unique_lines_covered,
             "Num LOC total": arr_loc,
             "Coverage": arr_coverage_fraction,
@@ -115,6 +135,7 @@ class EvaluationProfile:
             "Num tests_p": arr_num_tests_passed,
             "Num tests_f": arr_num_tests_failed,
             "Num lc_per_test": arr_covered_lines_per_test,
+            "Num loc_per_test": arr_total_lines_per_test,
             "Num unq. in t10": arr_unique_values_in_top_10,
             "App ID": arr_app_id,
         }
@@ -129,6 +150,5 @@ class EvaluationProfile:
             metric_avgs.append(avg(list(a_1[i] for i in range(3))))
         datasets.update({'metric_avgs': np.array(metric_avgs)})
         return datasets
-
 
 
