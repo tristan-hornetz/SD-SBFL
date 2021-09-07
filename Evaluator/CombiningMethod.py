@@ -82,7 +82,7 @@ class LinPredCombiningMethod(CombiningMethod):
             coefficients_sd.append(similarity_coefficient.compute(e))
         for e in filter(lambda c: type(c) in SBFL_EVENTS, events):
             coefficients_sbfl.append(similarity_coefficient.compute(e))
-        return *((m(coefficients_sbfl) + m(coefficients_sd))/2.0 for m in self.methods),
+        return *((m(coefficients_sbfl if len(coefficients_sbfl) > 0 else [0]) + m(coefficients_sd if len(coefficients_sd) > 0 else [0]) / 2.0) for m in self.methods),
 
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}"

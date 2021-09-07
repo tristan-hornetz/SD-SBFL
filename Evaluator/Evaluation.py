@@ -54,7 +54,6 @@ class Evaluation:
         try:
             ranking = mr.rank(self.similarity_coefficient, self.combining_method)
         except:
-            print(f"Error with {mr_path}")
             return
         metrics = dict()
         for k in self.ks:
