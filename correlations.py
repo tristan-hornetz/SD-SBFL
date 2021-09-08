@@ -1,7 +1,9 @@
+import itertools
+
 from Evaluator.Ranking import EVENT_TYPES
 from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
-from Evaluator.CombiningMethod import avg
+from Evaluator.CombiningMethod import *
 from evaluate_multi import EvaluationRun
 from scipy.stats import rankdata
 import numpy as np
@@ -34,7 +36,7 @@ def scatter_plot(datasets, x_metric: str, y_metric: str, x_title: str, y_title: 
     fig, ax = plt.subplots()
     for i, name in enumerate(LOC_BY_APP.keys()):
         print(f"{name} - {category_colors[i]}")
-    ax.scatter(datasets[x_metric], datasets[y_metric], s=100, alpha=1)
+    ax.scatter(datasets[x_metric], datasets[y_metric], s=30, alpha=1)
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
     fig.set_size_inches(4, 3)
@@ -55,19 +57,19 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
         im = ax.imshow(r)
         im.set_clim(-1, 1)
         ax.grid(False)
-        plt.xticks(np.arange(len(datasets.items())), datasets.keys(), rotation='vertical')
-        ax.yaxis.set(ticks=np.arange(len(datasets.items())), ticklabels=(datasets.keys()))
+        plt.xticks(np.arange(len(datasets.items())), datasets.keys(), fontsize=8, rotation='vertical')
+        plt.yticks(np.arange(len(datasets.items())), datasets.keys(), fontsize=8)
         for i in range(len(datasets)):
             for j in range(len(datasets)):
                 ax.text(j, i, '{:.2f}'.format(float(r[i, j])) if str(r[i, j]) != "--" else "", ha='center', va='center',
-                        color='r')
+                        color='r', fontsize=14)
         cbar = ax.figure.colorbar(im, ax=ax, format='% .2f')
         plt.show()
     return r
 
 class EvaluationProfile:
     def __init__(self, ev: Evaluation):
-        self.ranking_profiles = ev.ranking_infos.copy()
+        self.ranking_profiles = list(sorted(ev.ranking_infos.copy(), key=lambda ri: (ri.project_name, ri.bug_id)))
         self.num_rankings = len(self.ranking_profiles)
         self.avg_num_events = avg(list(p.len_events for p in self.ranking_profiles))
         self.avg_num_events_by_type = {t: avg(list(p.num_events_by_type[t] for p in self.ranking_profiles)) for t in EVENT_TYPES}
@@ -146,15 +148,34 @@ class EvaluationProfile:
         }
         for t in EVENT_TYPES:
             datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
-        for t in EVENT_TYPES:
-            datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
-        for i in range(3):
-            for k in [1, 3, 5, 10]:
-                datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
+        #for t in EVENT_TYPES:
+        #    datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
+        #for i in range(3):
+        #    for k in [1, 3, 5, 10]:
+        #        datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
         metric_avgs = []
         for p in self.ranking_profiles:
             a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
             metric_avgs.append(avg(list(a_1[i] for i in range(3))))
         datasets.update({'metric_avgs': np.array(metric_avgs)})
         return datasets
+
+
+def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
+    methods = {ev.combining_method.event_types[0] for ev in evs.evaluations}
+    for ev in evs.evaluations:
+        if not isinstance(ev.combining_method, FilteredCombiningMethod):
+            continue
+        if len(ev.combining_method.event_types) > 1:
+            continue
+        metric_avgs = []
+        for p in list(sorted(ev.ranking_infos.copy(), key=lambda ri: (ri.project_name, ri.bug_id))):
+            a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
+            metric_avgs.append(avg(list(a_1[i] for i in range(3))))
+        datasets[f"{ev.combining_method.event_types[0].__name__}"] = np.array(metric_avgs)
+    #for m1, m2 in itertools.combinations(methods, 2):
+    #    datasets[f"Diff. metrics  {m1.__name__} | {m2.__name__}"] = datasets[f"Avg. metrics only {m1.__name__}"] - datasets[f"Avg. metrics only {m2.__name__}"]
+
+
+
 

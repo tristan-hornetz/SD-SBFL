@@ -16,8 +16,8 @@ from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import *
 
-EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent,
-               AbsoluteScalarValueEvent]
+EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent,
+               AbsoluteScalarValueEvent]#, SDScalarPairEvent]
 
 SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, AnderbergCoefficient, OchiaiCoefficient,
                            SimpleMatchingCoefficient, RogersTanimotoCoefficient, OchiaiIICoefficient,
@@ -209,6 +209,12 @@ if __name__ == "__main__":
         perms_r.extend(filter(lambda p: (i < 2 and make_tuple not in p) or (i == 2 and list(p).pop() == make_tuple), itertools.permutations([avg, max, make_tuple], i + 1)))
     task_aggregators_restricted = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms_r)
 
+    # TASK 2 - EVENT TYPE ORDERS II
+    event_type_combinations = list()
+    event_type_combinations.extend(list(p) for p in itertools.permutations(EVENT_TYPES, 3))
+    event_type_combination_filters = [TypeOrderCombiningMethod(es, max) for es in event_type_combinations]
+    task_event_type_orders2 = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters)
+
     task_test = [(result_dir, OchiaiCoefficient, LinPredCombiningMethod(max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
@@ -216,12 +222,13 @@ if __name__ == "__main__":
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
-             "test_task": task_test
+             #"test_task": task_test
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
              #"similarity_coefficients4": task_similarity_coefficients4,
              #"event_type_combinations2": task_event_type_combinations2,
              #"aggregators_restricted": task_aggregators_restricted,
+             "event_type_orders2": task_event_type_orders2,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
