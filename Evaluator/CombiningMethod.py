@@ -157,9 +157,9 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
             return *(m([0]) for m in self.methods),
         return *(m(coefficients) for m in self.methods),
 
-    def update_results(self, evaluation_metrics, *args, **kwargs):
+    def update_results(self, e, *args, **kwargs):
         old_quality = self.current_evaluation_quality
-        self.current_evaluation_quality = avg(list(avg(list(evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
+        self.current_evaluation_quality = sum(e.fraction_top_k_accurate[k] + e.avg_recall_at_k[k] + e.avg_precision_at_k[k]for k in [1, 3, 5, 10])
         if old_quality > self.current_evaluation_quality:
             self.weights[self.adjust_index % len(self.weights)] -= self.adjust_by
             self.adjust_by = self.adjust_by * -1

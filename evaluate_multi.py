@@ -78,7 +78,7 @@ class EvaluationRun(Collection):
     def create_evaluation(self, result_dir, similarity_coefficient, combining_method):
         evaluation = create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
                                                             print_results=True)
-        combining_method.update_results(evaluation.evaluation_metrics)
+        combining_method.update_results(evaluation)
         self.evaluations.append(evaluation)
 
     def run_task(self, task: Iterable[Tuple[str, Any, CombiningMethod]]):
