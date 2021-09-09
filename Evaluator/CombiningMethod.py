@@ -1,8 +1,10 @@
 import math
+import traceback
 from abc import abstractmethod
 from typing import Tuple, Any, Iterable, Callable, List
 
 import numpy
+import numpy as np
 
 from .RankerEvent import *
 
@@ -149,4 +151,73 @@ class TypeOrderCombiningMethod(GenericCombiningMethod):
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.types))}"
         return out
+
+
+class GroupedTypeOrderCombiningMethod(GenericCombiningMethod):
+    def __init__(self, types: List[Tuple[type]], *methods: Callable[[Iterable[float]], float]):
+        super().__init__(*methods)
+        self.type_groups = types
+
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        events = list(event_container.get_from_program_element(program_element))
+        coefficients = {t: [] for t in self.type_groups}
+        for tg in self.type_groups:
+            for e in filter(lambda c: type(c) in tg, events):
+                c = similarity_coefficient.compute(e)
+                coefficients[tg].append(c)
+        return *(tuple(m(cs) if len(cs)>0 else 0 for cs in coefficients.values()) for m in self.methods),
+
+    def __str__(self):
+        out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(self.type_groups))}"
+        return out
+
+
+class SystematicCombiningMethod(GenericCombiningMethod):
+    def __init__(self, types: List[type], *methods: Callable[[Iterable[float]], float]):
+        super().__init__(*methods)
+        self.types = types
+        self.current_event_container = None
+        self.current_ranking = list()
+        self.pre_ranking = dict()
+        self.steps = [25, 15, 10]
+        self.step_weights = [1, .5, .5]
+
+    def update_event_container(self, event_container: EventContainer, similarity_coefficient):
+        if event_container == self.current_event_container:
+            return
+        self.current_event_container = event_container
+        try:
+            program_elements = list(event_container.events_by_program_element.keys())
+            pre_rankings = list(list(sorted(((p, self.pre_combine(p, similarity_coefficient, self.types[i])) for p in program_elements), key=lambda p: p[1], reverse=True))[:self.steps[i]] for i in range(len(self.types)))
+            base_ranking = {e: tuple([0]*len(self.methods)) for e, _ in pre_rankings[0]}
+            for e, _ in pre_rankings[0]:
+                for i, r in enumerate(pre_rankings):
+                    f = list(filter(lambda v: v[0] == e, r))
+                    adjusted_coefficient = (*(x * self.step_weights[i] for x in f[0][1]),) if len(f) > 0 else tuple([0]*len(self.methods))
+                    base_ranking[e] = *(adjusted_coefficient[i] + base_ranking[e][i] for i in range(len(self.methods))),
+            self.current_ranking = list(e for e, _ in sorted(base_ranking.items(), key=lambda e: e[1], reverse=True))[:10]
+        except Exception as e:
+            print(e)
+            print("AAAAAA")
+            traceback.print_tb(e.__traceback__)
+
+    def pre_combine(self, program_element, similarity_coefficient, t):
+        events = list(filter(lambda e: type(e) == t, self.current_event_container.get_from_program_element(program_element)))
+        coefficients = []
+        for e in events:
+            coefficients.append(similarity_coefficient.compute(e))
+        if len(coefficients) == 0:
+            return *(m([0]) for m in self.methods),
+        return *(m(coefficients) for m in self.methods),
+
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        self.update_event_container(event_container, similarity_coefficient)
+        if program_element in self.current_ranking:
+            return 1.0/(self.current_ranking.index(program_element)+1),
+        return 0,
+
+    def __str__(self):
+        out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.types))}"
+        return out
+
 

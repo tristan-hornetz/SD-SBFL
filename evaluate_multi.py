@@ -215,20 +215,20 @@ if __name__ == "__main__":
     event_type_combination_filters = [TypeOrderCombiningMethod(es, max) for es in event_type_combinations]
     task_event_type_orders2 = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters)
 
-    task_test = [(result_dir, OchiaiCoefficient, LinPredCombiningMethod(max, avg)),]
+    task_test = [(result_dir, OchiaiCoefficient, GroupedTypeOrderCombiningMethod([(LineCoveredEvent,), (SDBranchEvent,), (SDScalarPairEvent,)], max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
-             #"test_task": task_test
+             "test_task": task_test
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
              #"similarity_coefficients4": task_similarity_coefficients4,
              #"event_type_combinations2": task_event_type_combinations2,
              #"aggregators_restricted": task_aggregators_restricted,
-             "event_type_orders2": task_event_type_orders2,
+             #"event_type_orders2": task_event_type_orders2,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)

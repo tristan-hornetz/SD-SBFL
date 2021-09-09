@@ -36,7 +36,8 @@ def scatter_plot(datasets, x_metric: str, y_metric: str, x_title: str, y_title: 
     fig, ax = plt.subplots()
     for i, name in enumerate(LOC_BY_APP.keys()):
         print(f"{name} - {category_colors[i]}")
-    ax.scatter(datasets[x_metric], datasets[y_metric], s=30, alpha=1)
+    for i in range(len(datasets[x_metric])):
+        ax.scatter(datasets[x_metric][i], datasets[y_metric][i], s=30, alpha=.3, color=category_colors[datasets["App ID"][i]])
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
     fig.set_size_inches(4, 3)
@@ -62,7 +63,7 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
         for i in range(len(datasets)):
             for j in range(len(datasets)):
                 ax.text(j, i, '{:.2f}'.format(float(r[i, j])) if str(r[i, j]) != "--" else "", ha='center', va='center',
-                        color='r', fontsize=14)
+                        color='r', fontsize=12)
         cbar = ax.figure.colorbar(im, ax=ax, format='% .2f')
         plt.show()
     return r
@@ -117,24 +118,23 @@ class EvaluationProfile:
         arr_evt_only_f = np.array(list(p.num_events_only_covered_by_failed_tests for p in self.ranking_profiles))
         arr_crs_cvg = np.array(list(p.lines_covered_more_than_once for p in self.ranking_profiles))
         arr_frac_covered_m = np.array(list((p.lines_covered_more_than_once / p.num_events_by_type[LineCoveredEvent]) for p in self.ranking_profiles))
-        print(arr_sum_events_failed)
         datasets = dict()
         datasets = {
             "Num events": arr_num_events,
-            #"Frac events once": arr_frac_evt_once,
+            "Frac events once": arr_frac_evt_once,
             "Sum num events": arr_sum_num_events,
             "Sus events": arr_num_sus_events,
-            #"Sum num events passed": arr_sum_events_passed,
-            #"Sum num events failed": arr_sum_events_failed,
-            #"L cov. m. t. once": arr_crs_cvg,
-            #"Frac. L cov. m. t. once": arr_frac_covered_m,
-            #"Unq events passed": arr_unq_events_passed,
-            #"Unq events failed": arr_unq_events_failed,
-            #"Events ol. recd. once": arr_evt_once,
-            #"Events ol. recd. once fail.": arr_evt_only_f,
+            "Sum num events passed": arr_sum_events_passed,
+            "Sum num events failed": arr_sum_events_failed,
+            "L cov. m. t. once": arr_crs_cvg,
+            "Frac. L cov. m. t. once": arr_frac_covered_m,
+            "Unq events passed": arr_unq_events_passed,
+            "Unq events failed": arr_unq_events_failed,
+            "Events ol. recd. once": arr_evt_once,
+            "Events ol. recd. once fail.": arr_evt_only_f,
             "Num methods": arr_len_ranking,
-            #"Num methods sus": arr_methods_sus,
-            #"Num methods unsus": arr_methods_unsus,
+            "Num methods sus": arr_methods_sus,
+            "Num methods unsus": arr_methods_unsus,
             "Num LOC Covered": arr_unique_lines_covered,
             "Num LOC total": arr_loc,
             "Coverage": arr_coverage_fraction,
@@ -146,19 +146,49 @@ class EvaluationProfile:
             "Num unq. in t10": arr_unique_values_in_top_10,
             "App ID": arr_app_id,
         }
-        for t in EVENT_TYPES:
-            datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
+        #for t in EVENT_TYPES:
+        #    datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
         #for t in EVENT_TYPES:
         #    datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
         #for i in range(3):
         #    for k in [1, 3, 5, 10]:
         #        datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
-        metric_avgs = []
-        for p in self.ranking_profiles:
-            a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
-            metric_avgs.append(avg(list(a_1[i] for i in range(3))))
-        datasets.update({'metric_avgs': np.array(metric_avgs)})
+        #metric_avgs = []
+        #for p in self.ranking_profiles:
+        #    a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
+        #    metric_avgs.append(avg(list(a_1[i] for i in range(3))))
+        #datasets.update({'metric_avgs': np.array(metric_avgs)})
         return datasets
+
+
+def get_best_ris_by_type(run: EvaluationRun):
+    evs = list(filter(
+        lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
+        run.evaluations))
+    best_ris_by_type = {t: [] for t in selected_events}
+    ri_to_avg = lambda ri: avg(list(avg(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
+    for i in range(len(evs[0].ranking_infos)):
+        avgs = {e: ri_to_avg(e.ranking_infos[i]) for e in evs}
+        best_e, _ = sorted(avgs.items(), key=lambda v: v[1], reverse=True)[0]
+        best_ris_by_type[best_e.combining_method.event_types[0]].append(best_e.ranking_infos[i])
+
+
+def extend_w_relative_performance(datasets, run: EvaluationRun):
+    evs = list(filter(
+        lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
+        run.evaluations))
+    for t in selected_events:
+        datasets[f"Relative {t.__name__}"] = []
+    ri_to_avg = lambda ri: avg(list(avg(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
+    for i in range(len(evs[0].ranking_infos)):
+        avgs = {e.combining_method.event_types[0]: ri_to_avg(sorted(e.ranking_infos, key=lambda ri: (ri.project_name, ri.bug_id))[i]) for e in evs}
+        for t in selected_events:
+            avg_all = np.average(list(avgs.values()))
+            datasets[f"Relative {t.__name__}"].append(avgs[t]/avg_all if avg_all > 0 else 1)
+    for t in selected_events:
+        print(datasets[f"Relative {t.__name__}"])
+
+
 
 
 def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
@@ -172,10 +202,9 @@ def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
         for p in list(sorted(ev.ranking_infos.copy(), key=lambda ri: (ri.project_name, ri.bug_id))):
             a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
             metric_avgs.append(avg(list(a_1[i] for i in range(3))))
-        datasets[f"{ev.combining_method.event_types[0].__name__}"] = np.array(metric_avgs)
+        datasets[ev.combining_method.event_types[0].__name__.replace("Return", "Return-\n").replace("Scalar", "Scalar-\n")] = np.array(metric_avgs)
     #for m1, m2 in itertools.combinations(methods, 2):
     #    datasets[f"Diff. metrics  {m1.__name__} | {m2.__name__}"] = datasets[f"Avg. metrics only {m1.__name__}"] - datasets[f"Avg. metrics only {m2.__name__}"]
-
 
 
 
