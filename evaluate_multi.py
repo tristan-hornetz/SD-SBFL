@@ -75,14 +75,19 @@ class EvaluationRun(Collection):
         self.destination = os.path.realpath(destination)
         self.name = name
 
+    def create_evaluation(self, result_dir, similarity_coefficient, combining_method):
+        evaluation = create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
+                                                            print_results=True)
+        combining_method.update_results(evaluation.evaluation_metrics)
+        self.evaluations.append(evaluation)
+
     def run_task(self, task: Iterable[Tuple[str, Any, CombiningMethod]]):
         i = 0
         for result_dir, similarity_coefficient, combining_method in task:
             i += 1
             print(f"{self.name}, {i}: {str(similarity_coefficient)} \n{str(combining_method)}")
             try:
-                self.evaluations.append(create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
-                                                                    print_results=True))
+                self.create_evaluation(result_dir, similarity_coefficient, combining_method)
             except EvaluationRun.SigIntException as e:
                 sp = subprocess.Popen(['ps', '-opid', '--no-headers', '--ppid', str(os.getpid())], encoding='utf8',
                                       stdout=subprocess.PIPE)
@@ -215,6 +220,17 @@ if __name__ == "__main__":
     event_type_combination_filters = [TypeOrderCombiningMethod(es, max) for es in event_type_combinations]
     task_event_type_orders2 = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters)
 
+    # TASK 4 - WEIGHTS II
+    weight_maps = [[1.0, .7, .5, .3, .2], [.5, .5, .5, .5, .5], [.2, .3, .5, .7, 1.0]]
+    w2_events = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, SDScalarPairEvent]
+    weights = dict()
+    for i, weight_map in enumerate(weight_maps):
+        weights[i] = {w2_events[i]: weight_map[i] for i in range(len(w2_events))}
+    event_type_weight_filters = [AdjustingWeightedCombiningMethod(list(ws.items()), max, avg) for ws in weights.values()]
+    task_weights_2 = []
+    for c in event_type_weight_filters:
+        task_weights_2.extend([(result_dir, OchiaiCoefficient, c)] * 50)
+
     task_test = [(result_dir, OchiaiCoefficient, GroupedTypeOrderCombiningMethod([(LineCoveredEvent,), (SDBranchEvent,), (SDScalarPairEvent,)], max, avg)),]
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
@@ -222,13 +238,14 @@ if __name__ == "__main__":
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
-             "test_task": task_test
+             #"test_task": task_test
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
              #"similarity_coefficients4": task_similarity_coefficients4,
              #"event_type_combinations2": task_event_type_combinations2,
              #"aggregators_restricted": task_aggregators_restricted,
              #"event_type_orders2": task_event_type_orders2,
+             "weights_2": task_weights_2
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
