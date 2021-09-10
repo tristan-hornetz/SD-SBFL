@@ -220,7 +220,7 @@ if __name__ == "__main__":
     event_type_combination_filters = [TypeOrderCombiningMethod(es, max) for es in event_type_combinations]
     task_event_type_orders2 = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters)
 
-    # TASK 4 - WEIGHTS II
+    # WEIGHTS II
     weight_maps = [[1.0, .7, .5, .3, .2], [.5, .5, .5, .5, .5], [.2, .3, .5, .7, 1.0]]
     w2_events = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, SDScalarPairEvent]
     weights = dict()
@@ -231,21 +231,43 @@ if __name__ == "__main__":
     for c in event_type_weight_filters:
         task_weights_2.extend([(result_dir, OchiaiCoefficient, c)] * 50)
 
-    task_test = [(result_dir, OchiaiCoefficient, GroupedTypeOrderCombiningMethod([(LineCoveredEvent,), (SDBranchEvent,), (SDScalarPairEvent,)], max, avg)),]
+    # WEIGHTS III
+    weight_maps = [[0.75, 1.2, -0.7, 0.7, 0], [0.01, 0.628, 0.014, 0.4, 0], [1.4, 0.475, 0.025, 0.325, 0]]
+    for i in range(len(weight_maps)):
+        weight_maps[i] = list(w / max(weight_maps[i]) for w in weight_maps[i])
+
+    w3_events = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, SDScalarPairEvent]
+    weights = dict()
+    for i, weight_map in enumerate(weight_maps):
+        weights[i] = {w3_events[i]: weight_map[i] for i in range(len(w3_events))}
+    event_type_weight_filters = [AdjustingWeightedCombiningMethod(list(ws.items()), max, avg) for ws in
+                                 weights.values()]
+    task_weights_3 = []
+    for c in event_type_weight_filters:
+        task_weights_3.extend([(result_dir, OchiaiCoefficient, c)] * 50)
+
+    test_task_combiners = []
+    for ws in weights.values():
+        test_task_combiners.append(WeightedCombiningMethod(list(ws.items()), max))
+    for ws in weights.values():
+        test_task_combiners.append(WeightedCombiningMethod(list(ws.items()), avg))
+    task_test = [(result_dir, OchiaiCoefficient, CompoundCombiningMethod(test_task_combiners, max))]
+
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
-             #"test_task": task_test
+             "test_task": task_test,
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
              #"similarity_coefficients4": task_similarity_coefficients4,
              #"event_type_combinations2": task_event_type_combinations2,
              #"aggregators_restricted": task_aggregators_restricted,
              #"event_type_orders2": task_event_type_orders2,
-             "weights_2": task_weights_2
+             #"weights_2": task_weights_2
+             "weights_3": task_weights_2
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
