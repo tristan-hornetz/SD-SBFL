@@ -267,7 +267,7 @@ if __name__ == "__main__":
              #"aggregators_restricted": task_aggregators_restricted,
              #"event_type_orders2": task_event_type_orders2,
              #"weights_2": task_weights_2
-             "weights_3": task_weights_2
+             "weights_3": task_weights_3
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)

@@ -143,6 +143,7 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
         weight_max = max([e[1] for e in start_weights])
         self.types = list(e[0]for e in start_weights)
         self.weights = list(e[1] / weight_max for e in start_weights)
+        self.old_weights = self.weights.copy()
         self.adjust_index = 0
         self.adjust_by = -.2
         self.current_evaluation_quality = 0
@@ -165,11 +166,13 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
             self.adjust_by = self.adjust_by if self.adjust_by < 0 else self.adjust_by * -1
             self.adjust_index += 1
         elif old_quality > self.current_evaluation_quality:
+            self.weights = self.old_weights.copy()
             self.adjust_by = self.adjust_by * -1
             if self.adjust_by < 0:
                 self.adjust_index += 1
                 if self.adjust_index % len(self.weights) == 0:
                     self.adjust_by = self.adjust_by / 2.0
+        self.old_weights = self.weights.copy()
         self.weights[self.adjust_index % len(self.weights)] += self.adjust_by
 
     def __str__(self):
@@ -222,6 +225,14 @@ class CompoundCombiningMethod(GenericCombiningMethod):
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         return tuple(c.combine(program_element, event_container, similarity_coefficient) for c in self.sub_methods)
+
+    def __str__(self):
+        out = super().__str__() + "\n"
+        for m in self.sub_methods:
+            out += "* "
+            out += "\n* ".join(str(m).split("\n"))
+            out += "* \n* \n"
+        return out
 
 
 class SystematicCombiningMethod(GenericCombiningMethod):
