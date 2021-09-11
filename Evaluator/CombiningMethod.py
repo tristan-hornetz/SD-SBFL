@@ -61,6 +61,16 @@ class GenericCombiningMethod(CombiningMethod):
     def __init__(self, *methods: Callable[[Iterable[float]], float]):
         self.methods = methods
 
+    @staticmethod
+    def filter_single_absolute_returns(events: List[RankerEvent]):
+        absolute_returns = list(filter(lambda e: isinstance(e, AbsoluteReturnValueEvent), events))
+        locations = {e.location: 0 for e in absolute_returns}
+        for e in absolute_returns:
+            locations[e.location] += 1
+        duplicate_locations = list(p for p, _ in filter(lambda e: e[1] > 1, locations.items()))
+        return list(filter(lambda e: not isinstance(e, AbsoluteReturnValueEvent) or e.location in duplicate_locations, events))
+
+
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
         coefficients = []
@@ -92,7 +102,6 @@ class LinPredCombiningMethod(CombiningMethod):
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}"
         return out
-
 
 
 class FilteredCombiningMethod(CombiningMethod):
@@ -184,9 +193,12 @@ class TypeOrderCombiningMethod(GenericCombiningMethod):
     def __init__(self, types: List[type], *methods: Callable[[Iterable[float]], float]):
         super().__init__(*methods)
         self.types = types
+        self.include_single_absolute_returns = True
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
+        if not self.include_single_absolute_returns:
+            events = self.filter_single_absolute_returns(events)
         coefficients = {t: [] for t in self.types}
         for e in filter(lambda c: type(c) in self.types, events):
             c = similarity_coefficient.compute(e)

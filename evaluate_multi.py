@@ -246,12 +246,9 @@ if __name__ == "__main__":
     for c in event_type_weight_filters:
         task_weights_3.extend([(result_dir, OchiaiCoefficient, c)] * 50)
 
-    test_task_combiners = []
-    for ws in weights.values():
-        test_task_combiners.append(WeightedCombiningMethod(list(ws.items()), max))
-    for ws in weights.values():
-        test_task_combiners.append(WeightedCombiningMethod(list(ws.items()), avg))
-    task_test = [(result_dir, OchiaiCoefficient, CompoundCombiningMethod(test_task_combiners, max))]
+    test_c = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
+    test_c.include_single_absolute_returns = False
+    task_test = [(result_dir, OchiaiCoefficient, c)]
 
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
@@ -267,7 +264,7 @@ if __name__ == "__main__":
              #"aggregators_restricted": task_aggregators_restricted,
              #"event_type_orders2": task_event_type_orders2,
              #"weights_2": task_weights_2
-             "weights_3": task_weights_3
+             #"weights_3": task_weights_3
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
