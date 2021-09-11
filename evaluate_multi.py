@@ -248,7 +248,7 @@ if __name__ == "__main__":
 
     test_c = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
     test_c.include_single_absolute_returns = False
-    task_test = [(result_dir, OchiaiCoefficient, c)]
+    task_test = [(result_dir, OchiaiCoefficient, test_c)]
 
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
