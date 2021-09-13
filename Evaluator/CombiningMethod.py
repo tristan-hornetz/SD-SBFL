@@ -174,6 +174,8 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
         if nw > 1 or nw < 0:
             self.adjust_by = self.adjust_by if self.adjust_by < 0 else self.adjust_by * -1
             self.adjust_index += 1
+            if old_quality > self.current_evaluation_quality:
+                self.weights = self.old_weights.copy()
         elif old_quality > self.current_evaluation_quality:
             self.weights = self.old_weights.copy()
             self.adjust_by = self.adjust_by * -1
