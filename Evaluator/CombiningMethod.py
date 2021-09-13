@@ -172,8 +172,9 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
         self.current_evaluation_quality = sum(e.fraction_top_k_accurate[k] + e.avg_recall_at_k[k] + e.avg_precision_at_k[k]for k in [1, 3, 5, 10])
         nw = self.weights[self.adjust_index % len(self.weights)] + self.adjust_by
         if nw > 1 or nw < 0:
-            self.adjust_by = self.adjust_by if self.adjust_by < 0 else self.adjust_by * -1
-            self.adjust_index += 1
+            if self.adjust_by > 0:
+                self.adjust_index += 1
+            self.adjust_by = self.adjust_by * -1
             if old_quality > self.current_evaluation_quality:
                 self.weights = self.old_weights.copy()
         elif old_quality > self.current_evaluation_quality:
