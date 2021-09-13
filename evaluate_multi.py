@@ -246,6 +246,18 @@ if __name__ == "__main__":
     for c in event_type_weight_filters:
         task_weights_3.extend([(result_dir, OchiaiCoefficient, c)] * 50)
 
+    # WEIGHTS IV
+    weight_maps = [[1.0, .7, .5, .3, .2], [.5, .5, .5, .5, .5], [.2, .3, .5, .7, 1.0]]
+    weights = dict()
+    for i, weight_map in enumerate(weight_maps):
+        weights[i] = {w2_events[i]: weight_map[i] for i in range(len(w2_events))}
+    event_type_weight_filters = [AdjustingWeightedCombiningMethod(list(ws.items()), avg, max) for ws in
+                                 weights.values()]
+    task_weights_4 = []
+    for c in event_type_weight_filters:
+        task_weights_4.extend([(result_dir, OchiaiCoefficient, c)] * 50)
+
+
     test_c = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
     test_c.include_single_absolute_returns = False
     task_test = [(result_dir, OchiaiCoefficient, test_c)]
@@ -256,7 +268,7 @@ if __name__ == "__main__":
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
-             "test_task": task_test,
+             #"test_task": task_test,
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
              #"similarity_coefficients4": task_similarity_coefficients4,
@@ -265,6 +277,7 @@ if __name__ == "__main__":
              #"event_type_orders2": task_event_type_orders2,
              #"weights_2": task_weights_2
              #"weights_3": task_weights_3
+             "weights_4": task_weights_4
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)

@@ -4,6 +4,7 @@ from Evaluator.Ranking import EVENT_TYPES
 from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
 from Evaluator.CombiningMethod import *
+from Evaluator.SimilarityCoefficient import *
 from evaluate_multi import EvaluationRun
 from scipy.stats import rankdata
 import numpy as np
@@ -146,10 +147,10 @@ class EvaluationProfile:
             "Num unq. in t10": arr_unique_values_in_top_10,
             "App ID": arr_app_id,
         }
-        #for t in EVENT_TYPES:
-        #    datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
-        #for t in EVENT_TYPES:
-        #    datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
+        for t in EVENT_TYPES:
+            datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
+        for t in EVENT_TYPES:
+            datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
         #for i in range(3):
         #    for k in [1, 3, 5, 10]:
         #        datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
@@ -205,6 +206,5 @@ def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
         datasets[ev.combining_method.event_types[0].__name__.replace("Return", "Return-\n").replace("Scalar", "Scalar-\n")] = np.array(metric_avgs)
     #for m1, m2 in itertools.combinations(methods, 2):
     #    datasets[f"Diff. metrics  {m1.__name__} | {m2.__name__}"] = datasets[f"Avg. metrics only {m1.__name__}"] - datasets[f"Avg. metrics only {m2.__name__}"]
-
 
 
