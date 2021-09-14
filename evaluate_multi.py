@@ -255,7 +255,7 @@ if __name__ == "__main__":
                                  weights.values()]
     task_weights_4 = []
     for c in event_type_weight_filters:
-        task_weights_4.extend([(result_dir, OchiaiCoefficient, c)] * 50)
+        task_weights_4.extend([(result_dir, OchiaiCoefficient, c)] * 25)
 
 
     test_c = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)

@@ -156,6 +156,7 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
         self.adjust_index = 0
         self.adjust_by = -.2
         self.current_evaluation_quality = 0
+        self.processed_weights = set()
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
@@ -174,18 +175,28 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
             if self.adjust_index % len(self.weights) == 0:
                 self.adjust_by /= 2.0
 
+    def add_weights_to_processed(self):
+        self.processed_weights.add(tuple((round(w, 6).__int__() * 100000) for w in self.weights))
+
+    def next_weights_in_processed(self):
+        test_weights = self.weights.copy()
+        test_weights[self.adjust_index % len(self.weights)] += self.adjust_by
+        return tuple((round(w, 6).__int__() * 100000) for w in test_weights) in self.processed_weights
+
     def update_results(self, e, *args, **kwargs):
         old_quality = self.current_evaluation_quality
         self.current_evaluation_quality = sum(e.fraction_top_k_accurate[k] + e.avg_recall_at_k[k] + e.avg_precision_at_k[k]for k in [1, 3, 5, 10])
         nw = self.weights[self.adjust_index % len(self.weights)] + self.adjust_by
         if old_quality < self.current_evaluation_quality:
-            self.weights = self.old_weights
+            self.weights = self.old_weights.copy()
             self.get_next_adj_by()
             nw = self.weights[self.adjust_index % len(self.weights)] + self.adjust_by
-        while nw < 0 or nw > 1:
+        while nw < 0 or nw > 1 or self.next_weights_in_processed():
             self.get_next_adj_by()
             nw = self.weights[self.adjust_index % len(self.weights)] + self.adjust_by
+        self.old_weights = self.weights.copy()
         self.weights[self.adjust_index % len(self.weights)] += self.adjust_by
+        self.add_weights_to_processed()
 
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nWeighted event types:{str(tuple(f'{t.__name__}: {self.weights[self.types.index(t)]}' for t in self.types))}"
