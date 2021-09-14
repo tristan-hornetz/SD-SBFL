@@ -176,12 +176,12 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
                 self.adjust_by /= 2.0
 
     def add_weights_to_processed(self):
-        self.processed_weights.add(tuple((round(w, 6).__int__() * 100000) for w in self.weights))
+        self.processed_weights.add(tuple((round(w, 6)) for w in self.weights))
 
     def next_weights_in_processed(self):
         test_weights = self.weights.copy()
         test_weights[self.adjust_index % len(self.weights)] += self.adjust_by
-        return tuple((round(w, 6).__int__() * 100000) for w in test_weights) in self.processed_weights
+        return tuple((round(w, 6)) for w in test_weights) in self.processed_weights
 
     def update_results(self, e, *args, **kwargs):
         old_quality = self.current_evaluation_quality
