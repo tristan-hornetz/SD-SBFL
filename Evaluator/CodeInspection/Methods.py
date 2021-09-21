@@ -12,7 +12,7 @@ class DebuggerMethod:
     Represents a Method, as extracted from code
     """
 
-    def __init__(self, name: str, file: str, linenos=None):
+    def __init__(self, name: str, file: str, ast_node: ast.FunctionDef = None, linenos=None):
         if linenos is None:
             linenos = set()
         self.name = name
@@ -80,7 +80,7 @@ def getParentFunctionFromLineNo(source: ast.AST, lineno: int):
     return next(reversed(parents)).name, tuple(sorted(extractor.linenos))
 
 
-def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int]]) -> List[Tuple[str, Set[int]]]:
+def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int]]) -> List[Tuple[str, Set[int], ast.FunctionDef]]:
     """
     Extract the lines of methods from a specified file
     :param file: The name of the file
@@ -101,13 +101,13 @@ def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int
             extractor = LineNumberExtractor()
             extractor.visit(d)
             if len(methods[d.name].intersection(extractor.linenos)) > 0:
-                lines_per_method.append((d.name, extractor.linenos))
+                lines_per_method.append((d.name, extractor.linenos, d))
 
         return lines_per_method
     return list()
 
 
-def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file: bool) -> List[Tuple[str, Set[int]]]:
+def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file: bool) -> List[Tuple[str, Set[int], ast.FunctionDef]]:
     """
     Get a set of modified methods from a unidiff PatchedFile object
     :param project_root: The root directory of a Git repository containing the modified file
@@ -154,20 +154,20 @@ def getBuggyMethods(_results, info: BugInfo):
 
     for file in patch_set.modified_files:
         fixed_state_methods.update(
-            (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, True))
+            (file.path, method, tuple(linenos), node) for method, linenos, node in getBuggyMethodsFromFile(repo_dir, file, True))
 
     repo_dir = getValidProjectDir(_results, info, False, instrument=True)
     fixed_state_files = {m[0] for m in fixed_state_methods}
     buggy_state_methods = set()
     for f in fixed_state_files:
         methods = filter(lambda m: m[0] == f, fixed_state_methods)
-        buggy_state_methods.update((f, method, tuple(linenos)) for method, linenos in
+        buggy_state_methods.update((f, method, tuple(linenos), node) for method, linenos, node in
                                    extractMethodsFromFile(repo_dir, f, {m[1]: set(m[2]) for m in methods}))
 
     for file in patch_set.modified_files:
         buggy_state_methods.update(
-            (file.path, method, tuple(linenos)) for method, linenos in getBuggyMethodsFromFile(repo_dir, file, False))
-    return list(DebuggerMethod(name, path, set(linenos)) for path, name, linenos in buggy_state_methods)
+            (file.path, method, tuple(linenos), node) for method, linenos, node in getBuggyMethodsFromFile(repo_dir, file, False))
+    return list(DebuggerMethod(name, path, linenos=set(linenos), ast_node=node) for path, name, linenos, node in buggy_state_methods)
 
 
 def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int], DebuggerMethod]:
@@ -193,8 +193,8 @@ def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int]
     method_objects = dict()
     for file in methods_per_file.keys():
         lines_per_method = extractMethodsFromFile(directory, file, methods_per_file[file])
-        for method, linenos in lines_per_method:
-            method_object = DebuggerMethod(method, file, linenos)
+        for method, linenos, node in lines_per_method:
+            method_object = DebuggerMethod(method, file, node, linenos)
             for lineno in linenos:
                 method_objects[info.work_dir + "/" + file, method, lineno] = method_object
     return method_objects

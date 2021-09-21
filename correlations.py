@@ -10,6 +10,8 @@ from scipy.stats import rankdata
 import numpy as np
 import matplotlib.pyplot as plt
 
+selected_events = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent]
+
 LOC_BY_APP = {
     'ansible': 207300,
     'cookiecutter': 4700,
@@ -97,6 +99,7 @@ class EvaluationProfile:
             i in range(3)}
         arr_unique_lines_covered = np.array(list(p.unique_lines_covered for p in self.ranking_profiles))
         arr_num_tests = np.array(list(p.num_tests for p in self.ranking_profiles))
+        arr_buggy_methods = np.array(list(p.num_buggy_methods for p in self.ranking_profiles))
         arr_num_tests_passed = np.array(list(p.num_tests_passed for p in self.ranking_profiles))
         arr_num_tests_failed = np.array(list(p.num_tests_failed for p in self.ranking_profiles))
         arr_covered_lines_per_test = np.array(list(p.covered_lines_per_test for p in self.ranking_profiles))
@@ -121,44 +124,49 @@ class EvaluationProfile:
         arr_frac_covered_m = np.array(list((p.lines_covered_more_than_once / p.num_events_by_type[LineCoveredEvent]) for p in self.ranking_profiles))
         datasets = dict()
         datasets = {
-            "Num events": arr_num_events,
-            "Frac events once": arr_frac_evt_once,
+            #"Num events": arr_num_events,
+            #"Frac events once": arr_frac_evt_once,
             "Sum num events": arr_sum_num_events,
             "Sus events": arr_num_sus_events,
             "Sum num events passed": arr_sum_events_passed,
             "Sum num events failed": arr_sum_events_failed,
-            "L cov. m. t. once": arr_crs_cvg,
-            "Frac. L cov. m. t. once": arr_frac_covered_m,
-            "Unq events passed": arr_unq_events_passed,
+            #"L cov. m. t. once": arr_crs_cvg,
+            #"Frac. L cov. m. t. once": arr_frac_covered_m,
+            #"Unq events passed": arr_unq_events_passed,
             "Unq events failed": arr_unq_events_failed,
-            "Events ol. recd. once": arr_evt_once,
-            "Events ol. recd. once fail.": arr_evt_only_f,
-            "Num methods": arr_len_ranking,
-            "Num methods sus": arr_methods_sus,
-            "Num methods unsus": arr_methods_unsus,
-            "Num LOC Covered": arr_unique_lines_covered,
-            "Num LOC total": arr_loc,
-            "Coverage": arr_coverage_fraction,
+            #"Events ol. recd. once": arr_evt_once,
+            #"Events ol. recd. once fail.": arr_evt_only_f,
+            #"Num methods": arr_len_ranking,
+            #"Num methods sus": arr_methods_sus,
+            #"Num methods unsus": arr_methods_unsus,
+            #"Num LOC Covered": arr_unique_lines_covered,
+            #"Num LOC total": arr_loc,
+            #"Coverage": arr_coverage_fraction,
             "Num test": arr_num_tests,
-            "Num tests_p": arr_num_tests_passed,
-            "Num tests_f": arr_num_tests_failed,
-            "Num lc_per_test": arr_covered_lines_per_test,
-            "Num loc_per_test": arr_total_lines_per_test,
-            "Num unq. in t10": arr_unique_values_in_top_10,
+            #"Num tests_p": arr_num_tests_passed,
+            #"Num tests_f": arr_num_tests_failed,
+            #"Num lc_per_test": arr_covered_lines_per_test,
+            #"Num loc_per_test": arr_total_lines_per_test,
+            #"Num unq. in t10": arr_unique_values_in_top_10,
             "App ID": arr_app_id,
+            "Ratio buggy methods": arr_buggy_methods / arr_len_ranking,
+            #"Avg. method len": np.nan_to_num(arr_num_events_by_type[LineCoveredEvent]/arr_len_ranking, nan=0.0, posinf=0.0),
+            #f"Ratio {LineCoveredEvent.__name__}": np.nan_to_num(arr_num_events_by_type[LineCoveredEvent] / arr_num_events, nan=0.0, posinf=999999999)
         }
         for t in EVENT_TYPES:
-            datasets.update({f"Num {t.__name__}": arr_num_events_by_type[t]})
+            datasets.update({f"Ratio {t.__name__}": np.nan_to_num(arr_num_events_by_type[t] / arr_sum_num_events, nan=0.0, posinf=999999999)})
         for t in EVENT_TYPES:
-            datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
+            datasets.update({f"LOC ratio {t.__name__}": arr_num_events_by_type[t] / arr_loc})
+        #for t in EVENT_TYPES:
+        #    datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
         #for i in range(3):
         #    for k in [1, 3, 5, 10]:
         #        datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
-        #metric_avgs = []
-        #for p in self.ranking_profiles:
-        #    a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
-        #    metric_avgs.append(avg(list(a_1[i] for i in range(3))))
-        #datasets.update({'metric_avgs': np.array(metric_avgs)})
+        metric_avgs = []
+        for p in self.ranking_profiles:
+            a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
+            metric_avgs.append(avg(list(a_1[i] for i in range(3))))
+        datasets.update({'metric_avgs': np.array(metric_avgs)})
         return datasets
 
 
@@ -174,6 +182,18 @@ def get_best_ris_by_type(run: EvaluationRun):
         best_ris_by_type[best_e.combining_method.event_types[0]].append(best_e.ranking_infos[i])
 
 
+def extend_w_lc_best(datasets, run: EvaluationRun):
+    evs = list(filter(
+        lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
+        run.evaluations))
+    ri_to_avg = lambda ri: avg(list(avg(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
+    datasets['lc_best'] = []
+    for i in range(len(evs[0].ranking_infos)):
+        avgs = {e: ri_to_avg(sorted(e.ranking_infos, key=lambda ri: (ri.project_name, ri.bug_id))[i]) for e in evs}
+        best_e, _ = sorted(avgs.items(), key=lambda v: v[1], reverse=True)[0]
+        datasets['lc_best'].append(best_e.combining_method.event_types[0] == LineCoveredEvent)
+
+
 def extend_w_relative_performance(datasets, run: EvaluationRun):
     evs = list(filter(
         lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
@@ -186,10 +206,6 @@ def extend_w_relative_performance(datasets, run: EvaluationRun):
         for t in selected_events:
             avg_all = np.average(list(avgs.values()))
             datasets[f"Relative {t.__name__}"].append(avgs[t]/avg_all if avg_all > 0 else 1)
-    for t in selected_events:
-        print(datasets[f"Relative {t.__name__}"])
-
-
 
 
 def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
@@ -208,3 +224,9 @@ def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
     #    datasets[f"Diff. metrics  {m1.__name__} | {m2.__name__}"] = datasets[f"Avg. metrics only {m1.__name__}"] - datasets[f"Avg. metrics only {m2.__name__}"]
 
 
+if __name__ == '__main__':
+    evr = EvaluationRun.load("results_evaluation/event_type_combinations2_single.pickle.gz")
+    datasets = EvaluationProfile(evr.evaluations[0]).get_datasets()
+    extend_w_event_type_specific_results(datasets, evr)
+    extend_w_relative_performance(datasets, evr)
+    get_correlation_matrix(datasets, plot=True, rank_based=False)
