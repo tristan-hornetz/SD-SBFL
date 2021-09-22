@@ -150,7 +150,7 @@ class MetaRanking:
         self.events = events
         self.method_objects = method_objects
         self.buggy_methods = getBuggyMethods(_results, info)
-        self.code_statistics = CodeStatistics(self.method_objects, self.buggy_methods)
+        self.code_statistics = CodeStatistics(self.method_objects.values(), self.buggy_methods)
 
     def rank(self, similarity_coefficient, combining_method: CombiningMethod):
         return Ranking(self.events, self.method_objects, similarity_coefficient, combining_method, self.info,

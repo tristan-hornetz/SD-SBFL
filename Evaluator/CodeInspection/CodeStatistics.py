@@ -43,6 +43,6 @@ class StatisticsExtractor:
 
 class CodeStatistics:
     def __init__(self, all_methods, buggy_methods):
-        all_types = list(set.union(*(m.method_info.type_counts.keys() for m in all_methods)))
+        all_types = list(set.union(*(set(m.method_info.type_counts.keys()) for m in all_methods)))
         self.buggy = StatisticsExtractor(buggy_methods, all_types)
         self.all = StatisticsExtractor(all_methods, all_types)

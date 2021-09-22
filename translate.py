@@ -4,6 +4,7 @@ import os
 import pickle
 import sys
 import time
+import traceback
 
 from multiprocessing import Process
 
@@ -27,7 +28,9 @@ def translate_file(path, event_processor, output_dir):
         with gzip.open(output_file, "xb") as f:
             pickle.dump(mr, f)
         print("Succeeded " + path)
-    except:
+    except Exception as e:
+        print(type(e))
+        traceback.print_tb(e.__traceback__)
         print("Failed " + path)
 
 
