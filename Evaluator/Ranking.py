@@ -1,19 +1,23 @@
-from typing import Iterable, Dict, SupportsFloat
-from .RankerEvent import *
-from .CombiningMethod import CombiningMethod
-from .CodeInspection.utils import BugInfo
+from typing import Dict, SupportsFloat
+
+from .CodeInspection.CodeStatistics import CodeStatistics
 from .CodeInspection.Methods import getBuggyMethods, DebuggerMethod
+from .CodeInspection.utils import BugInfo
+from .CombiningMethod import CombiningMethod
+from .RankerEvent import *
 
 EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent,
                AbsoluteScalarValueEvent]
 
 
 class Ranking(Iterable):
-    def __init__(self, events: EventContainer, method_objects: Dict, similarity_coefficient, combining_method: CombiningMethod, info: BugInfo, buggy_methods):
+    def __init__(self, events: EventContainer, method_objects: Dict, similarity_coefficient,
+                 combining_method: CombiningMethod, info: BugInfo, buggy_methods, code_statistics: CodeStatistics):
         self.info = info
         self.events = events
         self.buggy_methods = buggy_methods
         self.similarity_coefficient = similarity_coefficient
+        self.code_statistics = code_statistics
         self.ranking = list()
         for element in set(method_objects.values()):
             self.ranking.append((element, combining_method.combine(element, events, similarity_coefficient)))
@@ -32,7 +36,7 @@ class Ranking(Iterable):
         if len(self.buggy_in_ranking) < 1:
             self.buggy_in_ranking = [(m, (0, 0)) for m in self.buggy_methods]
 
-        assert(len(self.ranking) > 0)
+        assert (len(self.ranking) > 0)
         for k in [1, 3, 5, 10]:
             self.set_evaluation_metrics(k)
 
@@ -64,26 +68,28 @@ class Ranking(Iterable):
 
 
 class RankingInfo:
-    def __init__(self, ranking: Ranking):
-        self.info = ranking.info
-        self.project_name = ranking.info.project_name
-        self.bug_id = ranking.info.bug_id
+    def store_generic_info(self, ranking: Ranking):
         self.len_events = len(ranking.events)
-        events_sus = set(filter(lambda e: ranking.similarity_coefficient.compute(e) > 0, ranking.events.events.values()))
+        events_sus = set(
+            filter(lambda e: ranking.similarity_coefficient.compute(e) > 0, ranking.events.events.values()))
         self.len_events_sus = len(events_sus)
         self.len_methods = len(ranking.ranking)
-        self.len_methods_susp = len(list(filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0]*len(e[1])), ranking.ranking)))
-        self.len_methods_unsusp = len(list(filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0]*len(e[1])), ranking.ranking)))
+        self.len_methods_susp = len(list(
+            filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0] * len(e[1])), ranking.ranking)))
+        self.len_methods_unsusp = len(list(
+            filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0] * len(e[1])), ranking.ranking)))
         self.buggy_in_ranking = len(ranking.buggy_in_ranking)
         self.num_buggy_methods = len(ranking.buggy_methods)
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.top_10_suspiciousness_values = list(s for e, s in ranking.ranking[:10])
-        self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(set(self.top_10_suspiciousness_values))
+        self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(
+            set(self.top_10_suspiciousness_values))
         self.num_events_by_type = {t: 0 for t in EVENT_TYPES}
         self.num_sus_events_by_type = {t: 0 for t in EVENT_TYPES}
         for t in self.num_events_by_type.keys():
             self.num_events_by_type[t] = len(list(filter(lambda e: type(e) == t, ranking.events.events.values())))
-            self.num_sus_events_by_type[t] = len(events_sus.intersection(filter(lambda e: type(e) == t, ranking.events.events.values())))
+            self.num_sus_events_by_type[t] = len(
+                events_sus.intersection(filter(lambda e: type(e) == t, ranking.events.events.values())))
         self.unique_lines_covered = self.num_events_by_type[LineCoveredEvent]
         self.num_sum_events_by_type = {t: 0 for t in EVENT_TYPES}
         self.sum_events_by_collector = dict()
@@ -117,7 +123,8 @@ class RankingInfo:
         self.sum_num_events = sum(self.sum_events_by_collector.values())
         self.sum_events_passed = sum(
             i for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
-        self.sum_events_failed = sum(i for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
+        self.sum_events_failed = sum(
+            i for _, i in filter(lambda e: e[0] in collectors_failed, self.sum_events_by_collector.items()))
         self.sum_unique_events_passed = 0
         self.sum_unique_events_failed = 0
         for e in ranking.events:
@@ -128,6 +135,13 @@ class RankingInfo:
         self.num_tests_failed = len(collectors_failed)
         self.covered_lines_per_test = self.unique_lines_covered / self.num_tests
 
+    def __init__(self, ranking: Ranking):
+        self.info = ranking.info
+        self.project_name = ranking.info.project_name
+        self.bug_id = ranking.info.bug_id
+        self.store_generic_info(ranking)
+        self.code_statistics = ranking.code_statistics
+
 
 class MetaRanking:
     def __init__(self, events: EventContainer, method_objects: Dict, info: BugInfo, _results):
@@ -136,7 +150,8 @@ class MetaRanking:
         self.events = events
         self.method_objects = method_objects
         self.buggy_methods = getBuggyMethods(_results, info)
+        self.code_statistics = CodeStatistics(self.method_objects, self.buggy_methods)
 
     def rank(self, similarity_coefficient, combining_method: CombiningMethod):
-        return Ranking(self.events, self.method_objects, similarity_coefficient, combining_method, self.info, self.buggy_methods)
-
+        return Ranking(self.events, self.method_objects, similarity_coefficient, combining_method, self.info,
+                       self.buggy_methods, self.code_statistics)

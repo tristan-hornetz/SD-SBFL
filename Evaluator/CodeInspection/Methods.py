@@ -4,6 +4,7 @@ from typing import Dict, Set, List, Tuple
 
 from unidiff import PatchedFile
 
+from .CodeStatistics import MethodInfoExtractor
 from .utils import BugInfo, getPatchSet, getValidProjectDir, LineNumberExtractor
 
 
@@ -18,6 +19,10 @@ class DebuggerMethod:
         self.name = name
         self.file = file
         self.linenos = linenos
+        self.min_lineno = min(linenos)
+        self.node = ast_node
+        self.method_info = MethodInfoExtractor()
+        self.method_info.visit(self.node)
         self.suspiciousness = []
 
     def add_lineno(self, lineno):
