@@ -1,12 +1,15 @@
+import gzip
 import math
+import pickle
 import traceback
 from abc import abstractmethod
-from typing import Tuple, Any, Iterable, Callable, List
-
-import numpy
+from typing import Tuple, Any, Iterable, Callable, List, Dict
+from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 
 from .RankerEvent import *
+from .Ranking import RankingInfo
+from correlations import EvaluationProfile
 
 SBFL_EVENTS = [LineCoveredEvent]
 SD_EVENTS = [SDScalarPairEvent, SDBranchEvent, SDReturnValueEvent]
@@ -35,7 +38,7 @@ def median(cs):
 
 
 def geometric_mean(cs):
-    return numpy.prod(cs) ** (1.0/len(cs))
+    return np.prod(cs) ** (1.0/len(cs))
 
 
 def harmonic_mean(cs):
@@ -308,4 +311,30 @@ class SystematicCombiningMethod(GenericCombiningMethod):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.types))}"
         return out
 
+
+class ClassifierCombiningMethod(CombiningMethod):
+    def __init__(self, datasets_train, labels, combiner_lc: CombiningMethod, combiner_nlc: CombiningMethod, ranking_infos: Dict[EventContainer, RankingInfo]):
+        self.classifier = RandomForestClassifier(n_estimators=25, max_depth=4, max_features=2, random_state=42)
+        self.classifier.fit(datasets_train, labels)
+        self.ranking_infos = ranking_infos
+        self.combiner_lc = combiner_lc
+        self.combiner_nlc = combiner_nlc
+        self.lc_best_buffer = dict()
+
+    class DummyEv:
+        def __init__(self, ri):
+            self.ranking_infos = [ri]
+            self.evaluation_metrics = None
+
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        if event_container not in self.lc_best_buffer.keys():
+            ev = self.DummyEv(self.ranking_infos[event_container])
+            data = EvaluationProfile(ev).get_datasets()
+            lc_best = self.classifier.predict(data)[0]
+            self.lc_best_buffer[event_container] = lc_best
+        else:
+            lc_best = self.lc_best_buffer[event_container]
+        if lc_best:
+            return self.combiner_lc.combine(program_element, event_container, similarity_coefficient)
+        return self.combiner_nlc.combine(program_element, event_container, similarity_coefficient)
 

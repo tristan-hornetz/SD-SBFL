@@ -8,6 +8,7 @@ import itertools
 import traceback
 from typing import Collection, Iterator
 
+import Evaluator.RankerEvent
 from evaluate_single import THREADS
 from translate import get_subdirs_recursive
 from Evaluator.CodeInspection.utils import mkdirRecursive
@@ -15,6 +16,7 @@ from Evaluator.CombiningMethod import *
 from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import *
+from correlations import extend_w_event_type_specific_results, extend_w_lc_best, extract_labels
 
 EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent,
                AbsoluteScalarValueEvent]#, SDScalarPairEvent]
@@ -262,6 +264,34 @@ if __name__ == "__main__":
     test_c.include_single_absolute_returns = False
     task_test = [(result_dir, OchiaiCoefficient, test_c)]
 
+    # CLASSIFIER
+
+    # EVENT TYPE COMBINATIONS TRAIN
+    event_type_combinations_single = EVENT_TYPES.copy()
+    event_type_combination_filters_single = [FilteredCombiningMethod([e], max, avg, make_tuple) for e in EVENT_TYPES]
+    task_train_set = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters_single)
+    training_run = EvaluationRun("train_dataset", "results_evaluation")
+    training_run.run_task(training_run)
+    training_run.save()
+    datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()
+    extend_w_event_type_specific_results(datasets, training_run)
+    extend_w_lc_best(datasets, training_run)
+    dimensions = list(datasets.keys())
+    X = np.array(list(datasets[k] for k in dimensions)).T
+    extract_labels(X.T, dimensions.index("App ID"))
+    x_train, labels = extract_labels(X.T, dimensions.index('lc_best'))
+    combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
+    combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
+    test_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient, combiner_lc, "results_evaluation/test_set_ev.pickle.gz", num_threads=8)
+    ris = {r.events: RankingInfo(r) for r in test_evaluation.rankings}
+    classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris)
+    print("Dumping classifier")
+    with gzip.open("./results_classifier_combiner", "xb") as f:
+        pickle.dump((classifier_c, test_evaluation, training_run), f)
+    print("Done.")
+    classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient, classifier_c,
+                                                              "results_evaluation/classifier_ev.pickle.gz", num_threads=8, print_results=True)
+
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
              #"event_type_combinations": task_event_type_combinations,
@@ -277,7 +307,7 @@ if __name__ == "__main__":
              #"event_type_orders2": task_event_type_orders2,
              #"weights_2": task_weights_2
              #"weights_3": task_weights_3
-             "weights_4": task_weights_4
+             #"weights_4": task_weights_4
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)

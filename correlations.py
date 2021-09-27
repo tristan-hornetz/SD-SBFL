@@ -5,7 +5,6 @@ from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
 from Evaluator.CombiningMethod import *
 from Evaluator.SimilarityCoefficient import *
-from evaluate_multi import EvaluationRun
 from scipy.stats import rankdata
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,6 +31,12 @@ LOC_BY_APP = {
     'youtube-dl': 124500,
 }
 
+def extract_labels(X, label_dimension_index: int):
+    labels = X[label_dimension_index]
+    training_data_rows = list(range(X.shape[0]))
+    training_data_rows.remove(label_dimension_index)
+    training_data = X[np.array(training_data_rows)]
+    return training_data, labels
 
 def scatter_plot(datasets, x_metric: str, y_metric: str, x_title: str, y_title: str):
     category_colors = plt.get_cmap('brg')(
@@ -56,6 +61,7 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
     to_print = np.tri(r.shape[0], k=-1).astype(np.bool)
     r = np.ma.array(r, mask=to_print)
     print(r)
+    print(r.shape)
     if plot:
         fig, ax = plt.subplots()
         im = ax.imshow(r)
@@ -65,7 +71,7 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
         plt.yticks(np.arange(len(datasets.items())), datasets.keys(), fontsize=8)
         for i in range(len(datasets)):
             for j in range(len(datasets)):
-                ax.text(j, i, '{:.2f}'.format(float(r[i, j])) if str(r[i, j]) != "--" else "", ha='center', va='center',
+                ax.text(j, i, '{:.2f}'.format(float(r[i, j])) if str(r[i, j]) != "--" and False else "", ha='center', va='center',
                         color='r', fontsize=12)
         cbar = ax.figure.colorbar(im, ax=ax, format='% .2f')
         plt.show()
@@ -87,6 +93,27 @@ class EvaluationProfile:
 
     def add_evaluation(self, ev: Evaluation):
         self.ranking_profiles.extend(ev.ranking_infos)
+
+    def get_statement_type_frequencies(self):
+        absolute_statement_type_counts = dict()
+        avg_statement_type_counts = dict()
+        absolute_statement_type_counts_buggy = dict()
+        avg_statement_type_counts_buggy = dict()
+        for ast_t in sorted(set.union(*(set(r.code_statistics.all.types) for r in self.ranking_profiles)),
+                            key=lambda t: t.__name__):
+            absolute_statement_type_counts[ast_t] = np.array(list(r.code_statistics.all.absolute_type_counts[ast_t]
+                                                             if ast_t in r.code_statistics.all.absolute_type_counts.keys()
+                                                             else 0 for r in self.ranking_profiles))
+            avg_statement_type_counts[ast_t] = np.array(list(r.code_statistics.all.average_type_counts[ast_t]
+                                                        if ast_t in r.code_statistics.all.absolute_type_counts.keys()
+                                                        else 0 for r in self.ranking_profiles))
+            absolute_statement_type_counts_buggy[ast_t] = np.array(list(r.code_statistics.buggy.absolute_type_counts[ast_t]
+                                                                   if ast_t in r.code_statistics.buggy.absolute_type_counts.keys()
+                                                                   else 0 for r in self.ranking_profiles))
+            avg_statement_type_counts_buggy[ast_t] = np.array(list(r.code_statistics.buggy.average_type_counts[ast_t]
+                                                              if ast_t in r.code_statistics.buggy.absolute_type_counts.keys()
+                                                              else 0 for r in self.ranking_profiles))
+        return absolute_statement_type_counts, avg_statement_type_counts, absolute_statement_type_counts_buggy, avg_statement_type_counts_buggy
 
     def get_datasets(self):
         arr_num_events = np.array(list(p.len_events for p in self.ranking_profiles))
@@ -122,6 +149,26 @@ class EvaluationProfile:
         arr_evt_only_f = np.array(list(p.num_events_only_covered_by_failed_tests for p in self.ranking_profiles))
         arr_crs_cvg = np.array(list(p.lines_covered_more_than_once for p in self.ranking_profiles))
         arr_frac_covered_m = np.array(list((p.lines_covered_more_than_once / p.num_events_by_type[LineCoveredEvent]) for p in self.ranking_profiles))
+        (absolute_statement_type_counts,
+         avg_statement_type_counts,
+         absolute_statement_type_counts_buggy,
+         avg_statement_type_counts_buggy) = self.get_statement_type_frequencies()
+        arr_avg_subnode_count = np.array(list(r.code_statistics.all.average_subnode_count for r in self.ranking_profiles))
+        arr_avg_subnode_count_buggy = np.array(list(r.code_statistics.buggy.average_subnode_count for r in self.ranking_profiles))
+        arr_avg_expression_count = np.array(list(r.code_statistics.all.average_expression_count for r in self.ranking_profiles))
+        arr_avg_expression_count_buggy = np.array(list(
+            r.code_statistics.buggy.average_expression_count for r in self.ranking_profiles))
+        arr_avg_statement_count = np.array(list(r.code_statistics.all.average_statement_count for r in self.ranking_profiles))
+        arr_avg_statement_count_buggy = np.array(list(
+            r.code_statistics.buggy.average_statement_count for r in self.ranking_profiles))
+        arr_unique_names_per_method = np.array(list(r.code_statistics.all.unique_names_per_method for r in self.ranking_profiles))
+        arr_unique_names_per_method_buggy = np.array(list(
+            r.code_statistics.buggy.unique_names_per_method for r in self.ranking_profiles))
+        arr_name_references_per_method = np.array(list(
+            r.code_statistics.all.name_references_per_method for r in self.ranking_profiles))
+        arr_name_references_per_method_buggy = np.array(list(
+            r.code_statistics.buggy.name_references_per_method for r in self.ranking_profiles))
+
         datasets = dict()
         datasets = {
             #"Num events": arr_num_events,
@@ -150,27 +197,43 @@ class EvaluationProfile:
             #"Num unq. in t10": arr_unique_values_in_top_10,
             "App ID": arr_app_id,
             "Ratio buggy methods": arr_buggy_methods / arr_len_ranking,
-            #"Avg. method len": np.nan_to_num(arr_num_events_by_type[LineCoveredEvent]/arr_len_ranking, nan=0.0, posinf=0.0),
+            "Avg. method len": np.nan_to_num(arr_num_events_by_type[LineCoveredEvent]/arr_len_ranking, nan=0.0, posinf=0.0),
+            "Subnode Count": arr_avg_subnode_count,
+            "Statement Count": arr_avg_statement_count,
+            "Expression Count": arr_avg_expression_count,
+            "Unq. Variable Count": arr_unique_names_per_method,
+            "Name ref Count": arr_name_references_per_method,
+            #"Subnode Count b": arr_avg_subnode_count_buggy,
+            #"Statement Count b": arr_avg_statement_count_buggy,
+            #"Expression Count b": arr_avg_expression_count_buggy,
+            #"Unq. Variable Count b": arr_unique_names_per_method_buggy,
+            #"Name ref Count b": arr_name_references_per_method_buggy,
             #f"Ratio {LineCoveredEvent.__name__}": np.nan_to_num(arr_num_events_by_type[LineCoveredEvent] / arr_num_events, nan=0.0, posinf=999999999)
         }
         for t in EVENT_TYPES:
             datasets.update({f"Ratio {t.__name__}": np.nan_to_num(arr_num_events_by_type[t] / arr_sum_num_events, nan=0.0, posinf=999999999)})
-        for t in EVENT_TYPES:
-            datasets.update({f"LOC ratio {t.__name__}": arr_num_events_by_type[t] / arr_loc})
         #for t in EVENT_TYPES:
-        #    datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
+        #    datasets.update({f"LOC ratio {t.__name__}": arr_num_events_by_type[t] / arr_loc})
+
+        for ast_t in absolute_statement_type_counts.keys():
+            datasets[f"Avg. freq {ast_t.__name__}"] = np.nan_to_num(avg_statement_type_counts_buggy[ast_t] / avg_statement_type_counts[ast_t], nan=0.0, posinf=0)
+        #for ast_t in absolute_statement_type_counts.keys():
+        #    datasets[f"Avg. freq {ast_t.__name__} buggy"] = avg_statement_type_counts[ast_t]
+
+        for t in EVENT_TYPES:
+            datasets.update({f"frac sus {t.__name__}": np.array(list(p.num_sus_events_by_type[t]/(p.len_events_sus if p.len_events_sus > 0 else 999999999999) for p in self.ranking_profiles))})
         #for i in range(3):
         #    for k in [1, 3, 5, 10]:
         #        datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
-        metric_avgs = []
-        for p in self.ranking_profiles:
-            a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
-            metric_avgs.append(avg(list(a_1[i] for i in range(3))))
-        datasets.update({'metric_avgs': np.array(metric_avgs)})
+        #metric_avgs = []
+        #for p in self.ranking_profiles:
+        #    a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
+        #    metric_avgs.append(avg(list(a_1[i] for i in range(3))))
+        #datasets.update({'metric_avgs': np.array(metric_avgs)})
         return datasets
 
 
-def get_best_ris_by_type(run: EvaluationRun):
+def get_best_ris_by_type(run):
     evs = list(filter(
         lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
         run.evaluations))
@@ -182,7 +245,7 @@ def get_best_ris_by_type(run: EvaluationRun):
         best_ris_by_type[best_e.combining_method.event_types[0]].append(best_e.ranking_infos[i])
 
 
-def extend_w_lc_best(datasets, run: EvaluationRun):
+def extend_w_lc_best(datasets, run):
     evs = list(filter(
         lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
         run.evaluations))
@@ -194,7 +257,7 @@ def extend_w_lc_best(datasets, run: EvaluationRun):
         datasets['lc_best'].append(best_e.combining_method.event_types[0] == LineCoveredEvent)
 
 
-def extend_w_relative_performance(datasets, run: EvaluationRun):
+def extend_w_relative_performance(datasets, run):
     evs = list(filter(
         lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
         run.evaluations))
@@ -208,7 +271,7 @@ def extend_w_relative_performance(datasets, run: EvaluationRun):
             datasets[f"Relative {t.__name__}"].append(avgs[t]/avg_all if avg_all > 0 else 1)
 
 
-def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
+def extend_w_event_type_specific_results(datasets, evs):
     methods = {ev.combining_method.event_types[0] for ev in evs.evaluations}
     for ev in evs.evaluations:
         if not isinstance(ev.combining_method, FilteredCombiningMethod):
@@ -225,7 +288,8 @@ def extend_w_event_type_specific_results(datasets, evs: EvaluationRun):
 
 
 if __name__ == '__main__':
-    evr = EvaluationRun.load("results_evaluation/event_type_combinations2_single.pickle.gz")
+    with gzip.open("results_evaluation/event_type_combinations2_single.pickle.gz", "rb") as f:
+        evr = pickle.load(f)
     datasets = EvaluationProfile(evr.evaluations[0]).get_datasets()
     extend_w_event_type_specific_results(datasets, evr)
     extend_w_relative_performance(datasets, evr)
