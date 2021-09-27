@@ -8,7 +8,6 @@ from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 
 from .RankerEvent import *
-from .Ranking import RankingInfo
 from correlations import EvaluationProfile
 
 SBFL_EVENTS = [LineCoveredEvent]
@@ -313,7 +312,7 @@ class SystematicCombiningMethod(GenericCombiningMethod):
 
 
 class ClassifierCombiningMethod(CombiningMethod):
-    def __init__(self, datasets_train, labels, combiner_lc: CombiningMethod, combiner_nlc: CombiningMethod, ranking_infos: Dict[EventContainer, RankingInfo]):
+    def __init__(self, datasets_train, labels, combiner_lc: CombiningMethod, combiner_nlc: CombiningMethod, ranking_infos: Dict[EventContainer, Any]):
         self.classifier = RandomForestClassifier(n_estimators=25, max_depth=4, max_features=2, random_state=42)
         self.classifier.fit(datasets_train, labels)
         self.ranking_infos = ranking_infos

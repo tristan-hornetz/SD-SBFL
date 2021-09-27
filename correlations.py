@@ -1,13 +1,10 @@
-import itertools
-
-from Evaluator.Ranking import EVENT_TYPES
-from Evaluator.Evaluation import Evaluation
-from Evaluator.RankerEvent import *
 from Evaluator.CombiningMethod import *
-from Evaluator.SimilarityCoefficient import *
 from scipy.stats import rankdata
 import numpy as np
 import matplotlib.pyplot as plt
+
+EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent,
+               AbsoluteScalarValueEvent]
 
 selected_events = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent]
 
@@ -78,7 +75,7 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
     return r
 
 class EvaluationProfile:
-    def __init__(self, ev: Evaluation):
+    def __init__(self, ev):
         self.ranking_profiles = list(sorted(ev.ranking_infos.copy(), key=lambda ri: (ri.project_name, ri.bug_id)))
         self.num_rankings = len(self.ranking_profiles)
         self.avg_num_events = avg(list(p.len_events for p in self.ranking_profiles))
@@ -91,7 +88,7 @@ class EvaluationProfile:
         self.avg_num_tests_failed = avg(list(p.num_tests_failed for p in self.ranking_profiles))
         self.avg_covered_lines_per_test = avg(list(p.covered_lines_per_test for p in self.ranking_profiles))
 
-    def add_evaluation(self, ev: Evaluation):
+    def add_evaluation(self, ev):
         self.ranking_profiles.extend(ev.ranking_infos)
 
     def get_statement_type_frequencies(self):
