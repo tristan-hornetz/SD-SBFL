@@ -9,6 +9,7 @@ import traceback
 from typing import Collection, Iterator
 
 import Evaluator.RankerEvent
+from Evaluator.Ranking import RankingInfo
 from evaluate_single import THREADS
 from translate import get_subdirs_recursive
 from Evaluator.CodeInspection.utils import mkdirRecursive
@@ -269,7 +270,7 @@ if __name__ == "__main__":
     # EVENT TYPE COMBINATIONS TRAIN
     event_type_combinations_single = EVENT_TYPES.copy()
     event_type_combination_filters_single = [FilteredCombiningMethod([e], max, avg, make_tuple) for e in EVENT_TYPES]
-    task_train_set = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters_single)
+    task_train_set = list(("_results_train", OchiaiCoefficient, c) for c in event_type_combination_filters_single)
     training_run = EvaluationRun("train_dataset", "results_evaluation")
     training_run.run_task(task_train_set)
     training_run.save()
