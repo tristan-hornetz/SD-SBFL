@@ -78,15 +78,6 @@ class EvaluationProfile:
     def __init__(self, ev):
         self.ranking_profiles = list(sorted(ev.ranking_infos.copy(), key=lambda ri: (ri.project_name, ri.bug_id)))
         self.num_rankings = len(self.ranking_profiles)
-        self.avg_num_events = avg(list(p.len_events for p in self.ranking_profiles))
-        self.avg_num_events_by_type = {t: avg(list(p.num_events_by_type[t] for p in self.ranking_profiles)) for t in EVENT_TYPES}
-        self.avg_len_ranking = avg(list(p.len_methods for p in self.ranking_profiles))
-        self.avg_evaluation_metrics = ev.evaluation_metrics
-        self.avg_unique_lines_covered = avg(list(p.unique_lines_covered for p in self.ranking_profiles))
-        self.avg_num_tests = avg(list(p.num_tests for p in self.ranking_profiles))
-        self.avg_num_tests_passed = avg(list(p.num_tests_passed for p in self.ranking_profiles))
-        self.avg_num_tests_failed = avg(list(p.num_tests_failed for p in self.ranking_profiles))
-        self.avg_covered_lines_per_test = avg(list(p.covered_lines_per_test for p in self.ranking_profiles))
 
     def add_evaluation(self, ev):
         self.ranking_profiles.extend(ev.ranking_infos)

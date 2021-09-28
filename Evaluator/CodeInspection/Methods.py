@@ -172,7 +172,9 @@ def getBuggyMethods(_results, info: BugInfo):
     for file in patch_set.modified_files:
         buggy_state_methods.update(
             (file.path, method, tuple(linenos), node) for method, linenos, node in getBuggyMethodsFromFile(repo_dir, file, False))
-    return list(DebuggerMethod(name, path, linenos=set(linenos), ast_node=node) for path, name, linenos, node in buggy_state_methods)
+    ret = list(set(DebuggerMethod(name, path, linenos=set(linenos), ast_node=node) for path, name, linenos, node in buggy_state_methods))
+    assert(len(set(str(m) for m in ret)) == len(ret))
+    return ret
 
 
 def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int], DebuggerMethod]:
@@ -202,4 +204,5 @@ def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int]
             method_object = DebuggerMethod(method, file, node, linenos)
             for lineno in linenos:
                 method_objects[info.work_dir + "/" + file, method, lineno] = method_object
+    assert (len(set(str(m) for m in method_objects)) == len(method_objects))
     return method_objects

@@ -270,8 +270,8 @@ if __name__ == "__main__":
     # EVENT TYPE COMBINATIONS TRAIN
     event_type_combinations_single = EVENT_TYPES.copy()
     event_type_combination_filters_single = [FilteredCombiningMethod([e], max, avg, make_tuple) for e in EVENT_TYPES]
-    task_train_set = list(("_results_train", OchiaiCoefficient, c) for c in event_type_combination_filters_single)
-    training_run = EvaluationRun("train_dataset", "results_evaluation")
+    task_train_set = list(("results_reduced", OchiaiCoefficient, c) for c in event_type_combination_filters_single)
+    training_run = EvaluationRun("train_dataset", ".")
     training_run.run_task(task_train_set)
     training_run.save()
     datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()

@@ -3,7 +3,9 @@ import os
 import pickle
 import queue
 import time
+import numpy as np
 from multiprocessing import Process, Queue
+from typing import List
 
 from .CombiningMethod import CombiningMethod
 from .Ranking import RankingInfo
@@ -16,28 +18,24 @@ class Evaluation:
         self.ks = ks
 
         self.rankings = list()
-        self.ranking_infos = list()
+        self.ranking_infos: List[RankingInfo] = list()
         self.similarity_coefficient = similarity_coefficient
         self.combining_method = combining_method
 
-        self.evaluation_metrics = {k: [] for k in self.ks}
         self.fraction_top_k_accurate = {k: 0.0 for k in
                                         self.ks}
         self.avg_recall_at_k = {k: 0.0 for k in self.ks}
         self.avg_precision_at_k = {k: 0.0 for k in self.ks}
 
     def update_averages(self):
-        self.fraction_top_k_accurate = {k: sum(e[0] for e in self.evaluation_metrics[k]) / len(self.rankings) for k in
-                                        self.ks}
-        self.avg_recall_at_k = {k: sum(e[1] for e in self.evaluation_metrics[k]) / len(self.rankings) for k in self.ks}
-        self.avg_precision_at_k = {k: sum(e[2] for e in self.evaluation_metrics[k]) / len(self.rankings) for k in
-                                   self.ks}
+        self.fraction_top_k_accurate = {k: np.average(list(ri.evaluation_metrics[k][0] for ri in self.ranking_infos)) for k in self.ks}
+        self.avg_recall_at_k = {k: np.average(list(ri.evaluation_metrics[k][1] for ri in self.ranking_infos)) for k in self.ks}
+        self.avg_precision_at_k = {k: np.average(list(ri.evaluation_metrics[k][2] for ri in self.ranking_infos)) for k in self.ks}
 
     def merge(self, other):
         assert set(self.rankings).isdisjoint(other.rankings)
         self.rankings.extend(other.rankings)
         self.ranking_infos.extend(other.ranking_infos)
-        self.evaluation_metrics.update(other.evaluation_metrics)
         self.update_averages()
 
     @staticmethod
@@ -101,8 +99,6 @@ class Evaluation:
         assert (len(processes) == 0)
 
         for m in metrics.items():
-            for k in self.ks:
-                self.evaluation_metrics[k].append(m[1][0][k])
             self.rankings.append(m[0])
             self.ranking_infos.append(m[1][1])
 
@@ -115,6 +111,7 @@ class Evaluation:
             print(f"{len(metrics.values())} of {len(os.listdir(dir_path))} objects in {dir_path} were added.")
 
     def __str__(self):
+        self.update_averages()
         out = f"Similarity Coefficient: {self.similarity_coefficient.__name__}\n"
         out += f"Combining Method: {type(self.combining_method).__name__}\n    {(os.linesep + '    ').join(str(self.combining_method).split(os.linesep))}\n\n"
         out += f"Top-k accuracy: {' | '.join(f'{k}: {v}' for k, v in sorted(self.fraction_top_k_accurate.items()))}\n"

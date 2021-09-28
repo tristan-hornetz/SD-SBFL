@@ -51,8 +51,7 @@ class Ranking(Iterable):
         :param k: k
         :return: TopK-Accurate?, Recall@k, Precision@k
         """
-        if k not in self.buggy_in_top_k.keys():
-            self.set_evaluation_metrics(k)
+        self.set_evaluation_metrics(k)
         return self.buggy_in_top_k[k] > 0, self.buggy_in_top_k[k] / len(self.buggy_methods), self.buggy_in_top_k[k] / k
 
     def set_evaluation_metrics(self, k: int):
@@ -65,6 +64,7 @@ class Ranking(Iterable):
             for m in self.buggy_methods:
                 if self.are_methods_equal(program_element, m):
                     self.buggy_in_top_k[k] += 1.0
+                    break
 
 
 class RankingInfo:
@@ -80,7 +80,6 @@ class RankingInfo:
             filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0] * len(e[1])), ranking.ranking)))
         self.buggy_in_ranking = len(ranking.buggy_in_ranking)
         self.num_buggy_methods = len(ranking.buggy_methods)
-        self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.top_10_suspiciousness_values = list(s for e, s in ranking.ranking[:10])
         self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(
             set(self.top_10_suspiciousness_values))
@@ -139,6 +138,7 @@ class RankingInfo:
         self.info = ranking.info
         self.project_name = ranking.info.project_name
         self.bug_id = ranking.info.bug_id
+        self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.store_generic_info(ranking)
         self.code_statistics = ranking.code_statistics
 
