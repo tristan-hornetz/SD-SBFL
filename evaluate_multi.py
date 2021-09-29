@@ -5,10 +5,9 @@ import signal
 import subprocess
 import sys
 import itertools
-import traceback
 from typing import Collection, Iterator
-
-import Evaluator.RankerEvent
+from sklearn.model_selection import StratifiedShuffleSplit
+from shutil import rmtree
 from Evaluator.Ranking import RankingInfo
 from evaluate_single import THREADS
 from translate import get_subdirs_recursive
@@ -132,6 +131,39 @@ class EvaluationRun(Collection):
         avgs = {k: v/len for k, v in _sum.items()}
         out += f"\n\nRecall upper bound: {avgs}\n"
         return out
+
+
+def get_training_data(base_results_file: str, results_translated_folder: str) -> Tuple[EvaluationRun, str]:
+    # prepare data
+    base_run = EvaluationRun.load(base_results_file)
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=.2)
+    ris = np.array(base_run.evaluations[0].ranking_infos)
+    groups = np.array(list(ri.project_name for ri in ris))
+    train_index, test_index = next(splitter.split(ris, groups))
+
+    # build training evaluation run
+    train_ris = ris[train_index]
+    training_r_ids = set(f"{ri.project_name}-{ri.bug_id}" for ri in train_ris)
+    n_evs = [Evaluation(ev.similarity_coefficient, ev.combining_method) for ev in base_run.evaluations]
+    for n_ev, o_ev in zip(n_evs, base_run.evaluations):
+        #.rankings = list(sorted(filter(lambda r: f"{r.info.project_name}-{r.info.bug_id}" in training_r_ids, o_ev.rankings), key=lambda ri: f"{ri.project_name}-{ri.bug_id}"))
+        n_ev.ranking_infos = list(sorted(train_ris, key=lambda ri: f"{ri.project_name}-{ri.bug_id}"))
+        n_ev.update_averages()
+    training_run = EvaluationRun("training_run", "results_evaluation")
+    training_run.evaluations = n_evs
+    # build testing folder
+    temp_folder_name = "_results_test"
+    test_ris = ris[test_index]
+    if os.path.exists(temp_folder_name):
+        rmtree(temp_folder_name)
+    for ri in test_ris:
+        new_link = f"{os.path.dirname(os.path.abspath(sys.argv[0]))}/{temp_folder_name}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
+        old_link = f"{os.path.dirname(os.path.realpath(sys.argv[0]))}/{results_translated_folder}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
+        if not os.path.exists(os.path.dirname(new_link)):
+            mkdirRecursive(os.path.dirname(new_link))
+        os.symlink(old_link, new_link)
+
+    return training_run, temp_folder_name
 
 
 if __name__ == "__main__":
@@ -267,13 +299,8 @@ if __name__ == "__main__":
 
     # CLASSIFIER
 
-    # EVENT TYPE COMBINATIONS TRAIN
-    event_type_combinations_single = EVENT_TYPES.copy()
-    event_type_combination_filters_single = [FilteredCombiningMethod([e], max, avg, make_tuple) for e in EVENT_TYPES]
-    task_train_set = list(("_results_train", OchiaiCoefficient, c) for c in event_type_combination_filters_single)
-    training_run = EvaluationRun("train_dataset", ".")
-    training_run.run_task(task_train_set)
-    training_run.save()
+    pre_run_file = "results_evaluation/event_type_combinations2_single.pickle.gz"
+    training_run, test_dir = get_training_data(pre_run_file, "results_translated")
     datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()
     extend_w_event_type_specific_results(datasets, training_run)
     extend_w_lc_best(datasets, training_run)
@@ -283,7 +310,7 @@ if __name__ == "__main__":
     x_train, labels = extract_labels(X.T, dimensions.index('lc_best'))
     combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
     combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
-    test_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient, combiner_lc, "results_evaluation/test_set_ev.pickle.gz", num_threads=8)
+    test_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient, combiner_lc, "results_evaluation/test_set_ev.pickle.gz", num_threads=8)
     ris = {r.events: RankingInfo(r) for r in test_evaluation.rankings}
     classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris)
     print("Dumping classifier")
