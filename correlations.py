@@ -262,8 +262,6 @@ def extend_w_relative_performance(datasets, run):
 def extend_w_event_type_specific_results(datasets, evs):
     methods = {ev.combining_method.event_types[0] for ev in evs.evaluations}
     for ev in evs.evaluations:
-        if not isinstance(ev.combining_method, FilteredCombiningMethod):
-            continue
         if len(ev.combining_method.event_types) > 1:
             continue
         metric_avgs = []
