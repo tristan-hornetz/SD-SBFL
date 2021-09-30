@@ -321,6 +321,14 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.lc_best_buffer = dict()
         self.dimensions = dimensions.copy()
 
+    @staticmethod
+    def extract_labels(X, label_dimension_index: int):
+        labels = X[label_dimension_index]
+        training_data_rows = list(range(X.shape[0]))
+        training_data_rows.remove(label_dimension_index)
+        training_data = X[np.array(training_data_rows)]
+        return training_data, labels
+
     class DummyEv:
         def __init__(self, ri):
             self.ranking_infos = [ri]
@@ -331,6 +339,8 @@ class ClassifierCombiningMethod(CombiningMethod):
             ev = self.DummyEv(self.ranking_infos[(event_container.project_name, event_container.bug_id)])
             data = EvaluationProfile(ev).get_datasets()
             X = np.array(list(data[k] for k in self.dimensions))
+            print(list(zip(self.dimensions, data.keys())))
+            self.extract_labels(X, self.dimensions.index("App ID"))
             lc_best = self.classifier.predict(X)[0]
             self.lc_best_buffer[event_container] = lc_best
         else:

@@ -302,7 +302,6 @@ if __name__ == "__main__":
     pre_run_file = "results_evaluation/event_type_combinations2_single.pickle.gz"
     training_run, test_dir, test_ris = get_training_data(pre_run_file, result_dir)
     datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()
-    extend_w_event_type_specific_results(datasets, training_run)
     extend_w_lc_best(datasets, training_run)
     dimensions = list(datasets.keys())
     X = np.array(list(datasets[k] for k in dimensions)).T
