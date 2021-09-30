@@ -215,8 +215,8 @@ class EvaluationProfile:
         #        datasets.update({f"res_t{i}_k{k}": arr_evaluation_metrics[i][k]})
         #metric_avgs = []
         #for p in self.ranking_profiles:
-        #    a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
-        #    metric_avgs.append(avg(list(a_1[i] for i in range(3))))
+        #    a_1 = {i: np.average(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
+        #    metric_avgs.append(np.average(list(a_1[i] for i in range(3))))
         #datasets.update({'metric_avgs': np.array(metric_avgs)})
         return datasets
 
@@ -226,7 +226,7 @@ def get_best_ris_by_type(run):
         lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
         run.evaluations))
     best_ris_by_type = {t: [] for t in selected_events}
-    ri_to_avg = lambda ri: avg(list(avg(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
+    ri_to_avg = lambda ri: np.average(list(np.average(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
     for i in range(len(evs[0].ranking_infos)):
         avgs = {e: ri_to_avg(e.ranking_infos[i]) for e in evs}
         best_e, _ = sorted(avgs.items(), key=lambda v: v[1], reverse=True)[0]
@@ -237,7 +237,7 @@ def extend_w_lc_best(datasets, run):
     evs = list(filter(
         lambda e: len(e.combining_method.event_types) == 1 and e.combining_method.event_types[0] in selected_events,
         run.evaluations))
-    ri_to_avg = lambda ri: avg(list(avg(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
+    ri_to_avg = lambda ri: np.average(list(np.average(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
     datasets['lc_best'] = []
     for i in range(len(evs[0].ranking_infos)):
         avgs = {e: ri_to_avg(sorted(e.ranking_infos, key=lambda ri: (ri.project_name, ri.bug_id))[i]) for e in evs}
@@ -251,7 +251,7 @@ def extend_w_relative_performance(datasets, run):
         run.evaluations))
     for t in selected_events:
         datasets[f"Relative {t.__name__}"] = []
-    ri_to_avg = lambda ri: avg(list(avg(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
+    ri_to_avg = lambda ri: np.average(list(np.average(list(ri.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)))
     for i in range(len(evs[0].ranking_infos)):
         avgs = {e.combining_method.event_types[0]: ri_to_avg(sorted(e.ranking_infos, key=lambda ri: (ri.project_name, ri.bug_id))[i]) for e in evs}
         for t in selected_events:
@@ -266,8 +266,8 @@ def extend_w_event_type_specific_results(datasets, evs):
             continue
         metric_avgs = []
         for p in list(sorted(ev.ranking_infos.copy(), key=lambda ri: (ri.project_name, ri.bug_id))):
-            a_1 = {i: avg(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
-            metric_avgs.append(avg(list(a_1[i] for i in range(3))))
+            a_1 = {i: np.average(list(p.evaluation_metrics[k][i] for k in [1, 3, 5, 10])) for i in range(3)}
+            metric_avgs.append(np.average(list(a_1[i] for i in range(3))))
         datasets[ev.combining_method.event_types[0].__name__.replace("Return", "Return-\n").replace("Scalar", "Scalar-\n")] = np.array(metric_avgs)
     #for m1, m2 in itertools.combinations(methods, 2):
     #    datasets[f"Diff. metrics  {m1.__name__} | {m2.__name__}"] = datasets[f"Avg. metrics only {m1.__name__}"] - datasets[f"Avg. metrics only {m2.__name__}"]
