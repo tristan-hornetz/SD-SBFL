@@ -341,9 +341,8 @@ class ClassifierCombiningMethod(CombiningMethod):
             for k in set(self.dimensions).difference(data.keys()):
                 data[k] = 0
             X = np.array(list(data[k] for k in self.dimensions))
-            X = X.reshape(1, -1)
             self.extract_labels(X, self.dimensions.index("App ID"))
-            lc_best = self.classifier.predict(X)[0]
+            lc_best = self.classifier.predict(X.reshape(-1, 1))[0]
             self.lc_best_buffer[event_container] = lc_best
         else:
             lc_best = self.lc_best_buffer[event_container]
