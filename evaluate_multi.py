@@ -312,7 +312,7 @@ if __name__ == "__main__":
     combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
     combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
     ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
-    classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris)
+    classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris, dimensions)
     classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient, classifier_c,
                                                               "results_evaluation/classifier_ev.pickle.gz", num_threads=8, print_results=True)
 
