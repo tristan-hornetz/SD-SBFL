@@ -338,7 +338,8 @@ class ClassifierCombiningMethod(CombiningMethod):
         if event_container not in self.lc_best_buffer.keys():
             ev = self.DummyEv(self.ranking_infos[(event_container.project_name, event_container.bug_id)])
             data = EvaluationProfile(ev).get_datasets()
-            print(list(zip(sorted(self.dimensions), sorted(data.keys()))))
+            for k in set(self.dimensions).difference(data.keys()):
+                data[k] = 0
             X = np.array(list(data[k] for k in self.dimensions))
             self.extract_labels(X, self.dimensions.index("App ID"))
             lc_best = self.classifier.predict(X)[0]
