@@ -17,6 +17,7 @@ class Ranking(Iterable):
         self.events = events
         self.buggy_methods = buggy_methods
         self.similarity_coefficient = similarity_coefficient
+        self.combining_method = combining_method
         self.code_statistics = code_statistics
         self.ranking = list()
         for element in set(method_objects.values()):
@@ -24,13 +25,16 @@ class Ranking(Iterable):
         self.ranking.sort(key=lambda v: (v[1], element.name, element.file, min(element.linenos)), reverse=True)
         self.buggy_in_top_k = dict()
         self.buggy_in_ranking = list()
+        self.buggy_method_index = dict()
         assert len(buggy_methods) > 0
         assert len(method_objects) > 0
 
         for buggy_method in self.buggy_methods:
-            for program_element, sus in self.ranking:
+            self.buggy_method_index[buggy_method] = len(self.ranking)
+            for i, (program_element, sus) in enumerate(self.ranking):
                 if self.are_methods_equal(buggy_method, program_element):
                     self.buggy_in_ranking.append((program_element, sus))
+                    self.buggy_method_index[buggy_method] = i
                     break
 
         if len(self.buggy_in_ranking) < 1:
@@ -134,10 +138,21 @@ class RankingInfo:
         self.num_tests_failed = len(collectors_failed)
         self.covered_lines_per_test = self.unique_lines_covered / self.num_tests
 
+    def store_buggy_method_sus_values(self, ranking: Ranking):
+        self.buggy_method_suspiciousness_values = dict()
+        self.buggy_method_ranking_index = dict()
+        for m in self.buggy_methods:
+            self.buggy_method_suspiciousness_values[m] = self.combining_method.combine(m, ranking.events, self.similarity_coefficient)
+            self.buggy_method_ranking_index[m] = ranking.buggy_method_index[m]
+
     def __init__(self, ranking: Ranking):
         self.info = ranking.info
         self.project_name = ranking.info.project_name
         self.bug_id = ranking.info.bug_id
+        self.combining_method = ranking.combining_method
+        self.similarity_coefficient = ranking.similarity_coefficient
+        self.buggy_methods = ranking.buggy_methods.copy()
+        self.store_buggy_method_sus_values(ranking)
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.store_generic_info(ranking)
         self.code_statistics = ranking.code_statistics

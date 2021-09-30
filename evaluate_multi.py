@@ -316,6 +316,15 @@ if __name__ == "__main__":
     test_c.include_single_absolute_returns = False
     task_test = [(result_dir, OchiaiCoefficient, test_c)]
 
+    # AGGREGATORS SINGLE
+    task_aggregators_single = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
+    task_aggregators_single.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
+
+    test_c = TypeOrderCombiningMethod(
+        [LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
+    test_c.include_single_absolute_returns = False
+    task_test = [(result_dir, OchiaiCoefficient, test_c)]
+
     # CLASSIFIER
     RUN_CLASSIFIER_TEST = False # Enable / Disable classifier test. !!! RUN EVENT TYPE COMBINATIONS 2 FIRST !!!
     if RUN_CLASSIFIER_TEST:
@@ -351,7 +360,8 @@ if __name__ == "__main__":
              #"weights_2": task_weights_2
              #"weights_3": task_weights_3
              #"weights_4": task_weights_4
-             "aggregators3": task_aggregators3
+             #"aggregators3": task_aggregators3,
+             "aggregators_single": task_aggregators_single,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
