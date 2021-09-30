@@ -30,8 +30,8 @@ AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median]
 
 def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
                                 save_destination="",
-                                print_results=False, num_threads=-1):
-    evaluation = Evaluation(similarity_coefficient, combining_method)
+                                print_results=False, num_threads=-1, save_full_rankings=False):
+    evaluation = Evaluation(similarity_coefficient, combining_method, save_full_rankings=save_full_rankings)
     dirs = get_subdirs_recursive(result_dir)
     for dir in dirs:
         evaluation.add_directory(dir, THREADS if num_threads < 1 else num_threads)
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     x_train, labels = extract_labels(X.T, dimensions.index('lc_best'))
     combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
     combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
-    test_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient, combiner_lc, "results_evaluation/test_set_ev.pickle.gz", num_threads=8)
+    test_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient, combiner_lc, "results_evaluation/test_set_ev.pickle.gz", num_threads=8, save_full_rankings=True)
     ris = {r.events: RankingInfo(r) for r in test_evaluation.rankings}
     classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris)
     print("Dumping classifier")

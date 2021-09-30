@@ -12,11 +12,11 @@ from .Ranking import RankingInfo
 
 
 class Evaluation:
-    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None):
+    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None, save_full_rankings=False):
         if ks is None:
             ks = [1, 3, 5, 10]
         self.ks = ks
-
+        self.save_full_rankings = save_full_rankings
         self.rankings = list()
         self.ranking_infos: List[RankingInfo] = list()
         self.similarity_coefficient = similarity_coefficient
@@ -39,7 +39,7 @@ class Evaluation:
         self.update_averages()
 
     @staticmethod
-    def add_meta_ranking(self, mr_path: str, rqueue: Queue):
+    def add_meta_ranking(self, mr_path: str, rqueue: Queue, save_full_rankings=False):
         try:
             with gzip.open(mr_path, "rb") as f:
                 mr = pickle.load(f)
@@ -56,13 +56,13 @@ class Evaluation:
         metrics = dict()
         for k in self.ks:
             metrics[k] = ranking.get_evaluation_metrics(k)
-        rqueue.put((ranking_id, metrics, RankingInfo(ranking)))
+        rqueue.put((ranking if save_full_rankings else ranking_id, metrics, RankingInfo(ranking)))
 
     def add_directory(self, dir_path, num_threads=-1):
         if num_threads < 1:
             num_threads = max(os.cpu_count() - 2, 1)
         rqueue = Queue(maxsize=num_threads)
-        processes = [Process(target=Evaluation.add_meta_ranking, name=file_path, args=(self, file_path, rqueue))
+        processes = [Process(target=Evaluation.add_meta_ranking, name=file_path, args=(self, file_path, rqueue, self.save_full_rankings))
                      for file_path in filter(lambda p: not os.path.isdir(p),
                                              list(os.path.realpath(f"{dir_path}/{f}") for f in os.listdir(dir_path)))]
         active_processes = []
