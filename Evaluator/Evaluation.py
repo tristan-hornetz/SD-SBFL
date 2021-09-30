@@ -77,7 +77,7 @@ class Evaluation:
                 t.start()
                 active_processes.append(t)
             try:
-                res = rqueue.get(timeout=30.0)
+                res = rqueue.get(timeout=10.0)
                 metrics[res[0]] = (res[1], res[2])
             except queue.Empty:
                 pass

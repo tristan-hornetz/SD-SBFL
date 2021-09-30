@@ -1,5 +1,3 @@
-import pickle
-import gzip
 import os
 import signal
 import subprocess
@@ -18,6 +16,8 @@ from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import *
 from correlations import extend_w_event_type_specific_results, extend_w_lc_best, extract_labels
 
+TEMP_SYMLINK_DIR = "./.temp_evaluation"
+
 EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent,
                AbsoluteScalarValueEvent]#, SDScalarPairEvent]
 
@@ -28,14 +28,29 @@ SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, Anderber
 AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median]
 AGGREGATORS_ALTERNATE = [max, avg, median, len, sum]
 
+
+def get_files_recursive(dir, files: List[str]):
+    for f in os.listdir(dir):
+        p = f"{dir}/{f}"
+        if os.path.isdir(p):
+            get_files_recursive(p, files)
+        else:
+            files.append(p)
+    return files
+
+
 def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
                                 save_destination="",
                                 print_results=False, num_threads=-1, save_full_rankings=False):
     evaluation = Evaluation(similarity_coefficient, combining_method, save_full_rankings=save_full_rankings)
-    dirs = get_subdirs_recursive(result_dir)
-    for dir in dirs:
-        evaluation.add_directory(dir, THREADS if num_threads < 1 else num_threads)
-
+    files = list(set(get_files_recursive(result_dir, [])))
+    if os.path.exists(TEMP_SYMLINK_DIR):
+        rmtree(TEMP_SYMLINK_DIR)
+    mkdirRecursive(TEMP_SYMLINK_DIR)
+    for f in files:
+        os.symlink(os.path.realpath(f), f"{TEMP_SYMLINK_DIR}/{os.path.basename(f)}")
+    evaluation.add_directory(TEMP_SYMLINK_DIR, THREADS if num_threads < 1 else num_threads)
+    rmtree(TEMP_SYMLINK_DIR)
     if save_destination != "":
         if not os.path.exists(os.path.dirname(save_destination)):
             mkdirRecursive(os.path.abspath(os.path.dirname(save_destination)))
