@@ -26,7 +26,7 @@ SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, Anderber
                            RusselRaoCoefficient, TarantulaCoefficient]
 
 AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median]
-
+AGGREGATORS_ALTERNATE = [max, avg, median, len, sum]
 
 def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
                                 save_destination="",
@@ -292,28 +292,33 @@ if __name__ == "__main__":
     for c in event_type_weight_filters:
         task_weights_4.extend([(result_dir, OchiaiCoefficient, c)] * 25)
 
+    # AGGREGATORS 3
+    perms3 = itertools.permutations(AGGREGATORS_ALTERNATE, 2)
+    task_aggregators3 = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms3)
+    task_aggregators3.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms3)
 
     test_c = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
     test_c.include_single_absolute_returns = False
     task_test = [(result_dir, OchiaiCoefficient, test_c)]
 
     # CLASSIFIER
-
-    pre_run_file = "results_evaluation/event_type_combinations2_single.pickle.gz"
-    training_run, test_dir, test_ris = get_training_data(pre_run_file, result_dir)
-    datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()
-    extend_w_lc_best(datasets, training_run)
-    dimensions = list(datasets.keys())
-    X = np.array(list(datasets[k] for k in dimensions)).T
-    extract_labels(X.T, dimensions.index("App ID"))
-    x_train, labels = extract_labels(X.T, dimensions.index('lc_best'))
-    x_train = x_train.T
-    combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
-    combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
-    ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
-    classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris, dimensions)
-    classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient, classifier_c,
-                                                              "results_evaluation/classifier_ev.pickle.gz", num_threads=8, print_results=True)
+    RUN_CLASSIFIER_TEST = False # Enable / Disable classifier test. !!! RUN EVENT TYPE COMBINATIONS 2 FIRST !!!
+    if RUN_CLASSIFIER_TEST:
+        pre_run_file = "results_evaluation/event_type_combinations2_single.pickle.gz"
+        training_run, test_dir, test_ris = get_training_data(pre_run_file, result_dir)
+        datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()
+        extend_w_lc_best(datasets, training_run)
+        dimensions = list(datasets.keys())
+        X = np.array(list(datasets[k] for k in dimensions)).T
+        extract_labels(X.T, dimensions.index("App ID"))
+        x_train, labels = extract_labels(X.T, dimensions.index('lc_best'))
+        x_train = x_train.T
+        combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
+        combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
+        ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
+        classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris, dimensions)
+        classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient, classifier_c,
+                                                                  "results_evaluation/classifier_ev.pickle.gz", num_threads=8, print_results=True)
 
 
     TASKS = {#"basic_combining_methods": task_basic_combining_methods,
@@ -331,6 +336,7 @@ if __name__ == "__main__":
              #"weights_2": task_weights_2
              #"weights_3": task_weights_3
              #"weights_4": task_weights_4
+             "aggregators3": task_aggregators3
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
