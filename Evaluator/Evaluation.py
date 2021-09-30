@@ -8,6 +8,7 @@ import traceback
 import numpy as np
 from multiprocessing import Process, Queue
 from typing import List
+from tqdm import tqdm
 
 from .CombiningMethod import CombiningMethod
 from .Ranking import RankingInfo
@@ -71,6 +72,7 @@ class Evaluation:
                                              list(os.path.abspath(f"{dir_path}/{f}") for f in os.listdir(dir_path)))]
         active_processes = []
         metrics = dict()
+        progress_bar = tqdm(total=len(processes))
         while len(processes) > 0:
             while len(active_processes) < num_threads and len(processes) > 0:
                 t = processes.pop()
@@ -84,6 +86,7 @@ class Evaluation:
             for t in active_processes:
                 if not t.is_alive():
                     active_processes.remove(t)
+                    progress_bar.update(1)
 
         while len(active_processes) > 0:
             if not rqueue.empty():
@@ -92,6 +95,7 @@ class Evaluation:
             for t in active_processes:
                 if not t.is_alive():
                     active_processes.remove(t)
+                    progress_bar.update(1)
 
         while not rqueue.empty():
             res = rqueue.get()
