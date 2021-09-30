@@ -111,9 +111,10 @@ class AbsoluteScalarValueEvent(RankerEvent):
 
 
 class EventContainer(Iterable):
-    def __init__(self):
+    def __init__(self, bug: Tuple[str, int] = ("-", 0)):
         self.events = dict()
         self.events_by_program_element = dict()
+        self.project_name, self.bug_id = bug
 
     def add(self, event: RankerEvent):
         h = hash(event)

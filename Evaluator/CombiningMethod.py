@@ -312,7 +312,7 @@ class SystematicCombiningMethod(GenericCombiningMethod):
 
 
 class ClassifierCombiningMethod(CombiningMethod):
-    def __init__(self, datasets_train, labels, combiner_lc: CombiningMethod, combiner_nlc: CombiningMethod, ranking_infos: Dict[EventContainer, Any]):
+    def __init__(self, datasets_train, labels, combiner_lc: CombiningMethod, combiner_nlc: CombiningMethod, ranking_infos: Dict):
         self.classifier = RandomForestClassifier(n_estimators=25, max_depth=4, max_features=2, random_state=42)
         self.classifier.fit(datasets_train, labels)
         self.ranking_infos = ranking_infos
@@ -327,7 +327,7 @@ class ClassifierCombiningMethod(CombiningMethod):
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         if event_container not in self.lc_best_buffer.keys():
-            ev = self.DummyEv(self.ranking_infos[event_container])
+            ev = self.DummyEv(self.ranking_infos[(event_container.project_name, event_container.bug_id)])
             data = EvaluationProfile(ev).get_datasets()
             lc_best = self.classifier.predict(data)[0]
             self.lc_best_buffer[event_container] = lc_best

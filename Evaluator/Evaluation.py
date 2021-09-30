@@ -3,6 +3,8 @@ import os
 import pickle
 import queue
 import time
+import traceback
+
 import numpy as np
 from multiprocessing import Process, Queue
 from typing import List
@@ -43,7 +45,9 @@ class Evaluation:
         try:
             with gzip.open(mr_path, "rb") as f:
                 mr = pickle.load(f)
-        except:
+        except Exception as e:
+            print(type(e))
+            traceback.print_tb(e.__traceback__)
             print(f"Could not load {mr_path}")
             return
         ranking_id = f"{mr._results.project_name}_{mr._results.bug_id}"
@@ -64,7 +68,7 @@ class Evaluation:
         rqueue = Queue(maxsize=num_threads)
         processes = [Process(target=Evaluation.add_meta_ranking, name=file_path, args=(self, file_path, rqueue, self.save_full_rankings))
                      for file_path in filter(lambda p: not os.path.isdir(p),
-                                             list(os.path.realpath(f"{dir_path}/{f}") for f in os.listdir(dir_path)))]
+                                             list(os.path.abspath(f"{dir_path}/{f}") for f in os.listdir(dir_path)))]
         active_processes = []
         metrics = dict()
         while len(processes) > 0:

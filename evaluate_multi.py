@@ -158,7 +158,7 @@ def get_training_data(base_results_file: str, results_translated_folder: str) ->
         rmtree(temp_folder_name)
     for ri in test_ris:
         new_link = f"{os.path.dirname(os.path.abspath(sys.argv[0]))}/{temp_folder_name}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
-        old_link = f"{os.path.dirname(os.path.realpath(sys.argv[0]))}/{results_translated_folder}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
+        old_link = f"{os.path.dirname(os.path.realpath(sys.argv[0]))}/{os.path.basename(results_translated_folder)}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
         if not os.path.exists(os.path.dirname(new_link)):
             mkdirRecursive(os.path.dirname(new_link))
         os.symlink(old_link, new_link)
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     # CLASSIFIER
 
     pre_run_file = "results_evaluation/event_type_combinations2_single.pickle.gz"
-    training_run, test_dir = get_training_data(pre_run_file, "results_translated")
+    training_run, test_dir = get_training_data(pre_run_file, result_dir)
     datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()
     extend_w_event_type_specific_results(datasets, training_run)
     extend_w_lc_best(datasets, training_run)
@@ -310,8 +310,8 @@ if __name__ == "__main__":
     x_train, labels = extract_labels(X.T, dimensions.index('lc_best'))
     combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
     combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
-    test_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient, combiner_lc, "results_evaluation/test_set_ev.pickle.gz", num_threads=8, save_full_rankings=True)
-    ris = {r.events: RankingInfo(r) for r in test_evaluation.rankings}
+    test_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient, combiner_lc, "results_evaluation/test_set_ev.pickle.gz", num_threads=8)
+    ris = {(ri.project_name, ri.bug_id): ri for ri in test_evaluation.ranking_infos}
     classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris)
     print("Dumping classifier")
     with gzip.open("./results_classifier_combiner", "xb") as f:
