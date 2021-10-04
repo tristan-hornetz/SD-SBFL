@@ -11,7 +11,7 @@ from evaluate_single import THREADS
 from translate import get_subdirs_recursive
 from Evaluator.CodeInspection.utils import mkdirRecursive
 from Evaluator.CombiningMethod import *
-from Evaluator.Evaluation import Evaluation, ResultBuffer
+from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import *
 from correlations import extend_w_event_type_specific_results, extend_w_lc_best, extract_labels
