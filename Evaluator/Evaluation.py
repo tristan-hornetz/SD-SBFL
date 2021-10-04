@@ -14,11 +14,21 @@ from .CombiningMethod import CombiningMethod
 from .Ranking import RankingInfo
 
 
+class ResultBuffer:
+    def __init__(self):
+        self.loaded_results = dict()
+
+    def add_entry(self, file: str, content):
+        if file not in self.loaded_results.keys():
+            self.loaded_results[file] = content
+
+
 class Evaluation:
-    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None, save_full_rankings=False):
+    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None, save_full_rankings=False, result_buffer: ResultBuffer = None):
         if ks is None:
             ks = [1, 3, 5, 10]
         self.ks = ks
+        self.result_buffer = result_buffer if result_buffer is not None else ResultBuffer()
         self.save_full_rankings = save_full_rankings
         self.rankings = list()
         self.ranking_infos: List[RankingInfo] = list()
@@ -43,14 +53,18 @@ class Evaluation:
 
     @staticmethod
     def add_meta_ranking(self, mr_path: str, rqueue: Queue, save_full_rankings=False):
-        try:
-            with gzip.open(mr_path, "rb") as f:
-                mr = pickle.load(f)
-        except Exception as e:
-            print(type(e))
-            traceback.print_tb(e.__traceback__)
-            print(f"Could not load {mr_path}")
-            return
+        if mr_path not in self.result_buffer.loaded_results.keys():
+            try:
+                with gzip.open(mr_path, "rb") as f:
+                    mr = pickle.load(f)
+            except Exception as e:
+                print(type(e))
+                traceback.print_tb(e.__traceback__)
+                print(f"Could not load {mr_path}")
+                return
+            self.result_buffer.add_entry(mr_path, mr)
+        else:
+            mr = self.result_buffer.loaded_results[mr_path]
         ranking_id = f"{mr._results.project_name}_{mr._results.bug_id}"
         if ranking_id in self.rankings:
             return
