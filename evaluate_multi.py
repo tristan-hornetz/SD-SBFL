@@ -382,8 +382,8 @@ if __name__ == "__main__":
 
     # AVERAGING COMBINER
     averager_aggregators = [(max, avg), (max, median), (max, stddev), (avg, median), (avg, stddev), (median, stddev)]
-    task_averaging_combiner = list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(GenericCombiningMethod(a))) for a in averager_aggregators)
-    task_averaging_combiner.extend(list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a))) for a in averager_aggregators))
+    task_averaging_combiner = list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(GenericCombiningMethod(*a))) for a in averager_aggregators)
+    task_averaging_combiner.extend(list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *a))) for a in averager_aggregators))
 
     test_c = TypeOrderCombiningMethod(
         [LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)

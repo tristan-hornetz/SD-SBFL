@@ -47,6 +47,12 @@ class Ranking(Iterable):
     def __iter__(self):
         return iter(self.ranking)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
     def are_methods_equal(self, m1: DebuggerMethod, m2: DebuggerMethod):
         return m1.name == m2.name and m1.file == m2.file and len(m1.linenos.intersection(m2.linenos)) > 0
 

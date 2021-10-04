@@ -49,7 +49,7 @@ def quadratic_mean(cs):
 
 
 def stddev(cs):
-    np.std(cs)
+    return np.std(cs)
 
 
 def make_tuple(cs):
