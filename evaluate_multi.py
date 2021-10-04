@@ -25,8 +25,8 @@ SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, Anderber
                            SimpleMatchingCoefficient, RogersTanimotoCoefficient, OchiaiIICoefficient,
                            RusselRaoCoefficient, TarantulaCoefficient]
 
-AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median]
-AGGREGATORS_ALTERNATE = [max, avg, median, len, sum]
+AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median, len, sum]
+AGGREGATORS_ALTERNATE = []
 
 
 def get_files_recursive(dir, files: List[str]):
@@ -320,6 +320,12 @@ if __name__ == "__main__":
     task_aggregators_single = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
     task_aggregators_single.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
 
+    # AGGREGATORS SP
+    task_aggregators_sp = task_aggregators_single.copy()
+    task_aggregators_sp.extend(list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in [(max, avg), (max, sum), (max, len), (avg, sum)]))
+    task_aggregators_sp.extend(list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in
+                                    [(max, avg), (max, sum), (max, len), (avg, sum)]))
+
     test_c = TypeOrderCombiningMethod(
         [LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
     test_c.include_single_absolute_returns = False
@@ -361,7 +367,8 @@ if __name__ == "__main__":
              #"weights_3": task_weights_3
              #"weights_4": task_weights_4
              #"aggregators3": task_aggregators3,
-             "aggregators_single": task_aggregators_single,
+             #"aggregators_single": task_aggregators_single,
+             "aggregators_sp": task_aggregators_single,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)

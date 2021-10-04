@@ -144,6 +144,7 @@ class RankingInfo:
         for m in self.buggy_methods:
             self.buggy_method_suspiciousness_values[m] = self.combining_method.combine(m, ranking.events, self.similarity_coefficient)
             self.buggy_method_ranking_index[m] = ranking.buggy_method_index[m]
+        self.all_sus_values = list(s for m, s in filter(lambda e: e[1] > tuple([0] * (len(e[1]) if hasattr(e[1], '__len__') else 1)), ranking.ranking))
 
     def __init__(self, ranking: Ranking):
         self.info = ranking.info
