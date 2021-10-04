@@ -96,17 +96,20 @@ class Evaluation:
         active_processes = list()
         num_processes = len(processes)
         progress_bar = tqdm(total=num_processes, desc=task_name)
+        ret = list()
         while len(processes) > 0 or len(active_processes) > 0:
             while len(active_processes) < num_threads and len(processes) > 0:
                 t = processes.pop()
                 t.start()
                 active_processes.append(t)
+            try:
+                ret.append(out_queue.get(timeout=1.0))
+            except queue.Empty:
+                pass
             for t in active_processes:
                 if not t.is_alive():
                     active_processes.remove(t)
                     progress_bar.update(1)
-            time.sleep(.01)
-        ret = list()
         while not out_queue.empty():
             ret.append(out_queue.get())
         assert(len(ret) <= num_processes)
