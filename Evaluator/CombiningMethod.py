@@ -33,7 +33,7 @@ def inv_avg(cs):
 
 
 def median(cs):
-    return sorted(cs)[len(cs)//2] if len(cs) % 2 == 1 else sum(sorted(cs)[len(cs)//2-1:len(cs)//2+1])/2
+    return np.median(cs)
 
 
 def geometric_mean(cs):
@@ -49,10 +49,7 @@ def quadratic_mean(cs):
 
 
 def stddev(cs):
-    if len(cs) < 1:
-        return 0
-    m = avg(cs)
-    return math.sqrt(sum((c-m)**2 for c in cs) / len(cs))
+    np.std(cs)
 
 
 def make_tuple(cs):
@@ -71,7 +68,6 @@ class GenericCombiningMethod(CombiningMethod):
             locations[e.location] += 1
         duplicate_locations = list(p for p, _ in filter(lambda e: e[1] > 1, locations.items()))
         return list(filter(lambda e: not isinstance(e, AbsoluteReturnValueEvent) or e.location in duplicate_locations, events))
-
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
@@ -123,6 +119,14 @@ class FilteredCombiningMethod(CombiningMethod):
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.event_types))}"
         return out
+
+
+class AveragingCombiningMethod(CombiningMethod):
+    def __init__(self, pre_combiner: CombiningMethod, *args):
+        self.pre_combiner = pre_combiner
+
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        return np.average(self.pre_combiner.combine(program_element, event_container, similarity_coefficient)),
 
 
 class WeightedCombiningMethod(CombiningMethod):
