@@ -1,14 +1,15 @@
 import os
+import queue
 import signal
-import subprocess
 import sys
 import itertools
+from multiprocessing import Queue, Process
 from typing import Collection, Iterator
 from sklearn.model_selection import StratifiedShuffleSplit
 from shutil import rmtree
-from Evaluator.Ranking import RankingInfo
+from Evaluator.Ranking import RankingInfo, MetaRanking
 from evaluate_single import THREADS
-from translate import get_subdirs_recursive
+from tqdm import tqdm
 from Evaluator.CodeInspection.utils import mkdirRecursive
 from Evaluator.CombiningMethod import *
 from Evaluator.Evaluation import Evaluation
@@ -70,6 +71,42 @@ def create_evaluation_recursive(result_dir, similarity_coefficient, combining_me
     return evaluation
 
 
+def run_process_list(processes, out_queue: Queue, task_name:str="", num_threads=-1):
+    num_threads = num_threads if num_threads > 0 else os.cpu_count()
+    active_processes = list()
+    num_processes = len(processes)
+    progress_bar = tqdm(total=num_processes, desc=task_name)
+    ret = list()
+    while len(processes) > 0 or len(active_processes) > 0:
+        while len(active_processes) < num_threads and len(processes) > 0:
+            t = processes.pop()
+            t.start()
+            active_processes.append(t)
+        try:
+            ret.append(out_queue.get(timeout=1.0))
+        except queue.Empty:
+            pass
+        for t in active_processes:
+            if not t.is_alive():
+                active_processes.remove(t)
+                progress_bar.update(1)
+    while not out_queue.empty():
+        ret.append(out_queue.get())
+    assert(len(ret) <= num_processes)
+    assert(out_queue.empty())
+    return ret
+
+
+def make_tmp_folder(result_dir):
+    files = list(set(get_files_recursive(result_dir, [])))
+    if os.path.exists(TEMP_SYMLINK_DIR):
+        rmtree(TEMP_SYMLINK_DIR)
+    mkdirRecursive(TEMP_SYMLINK_DIR)
+    for f in files:
+        os.symlink(os.path.realpath(f), f"{TEMP_SYMLINK_DIR}/{os.path.basename(f)}")
+    return TEMP_SYMLINK_DIR
+
+
 def interrupt_handler(*args, **kwargs):
     raise EvaluationRun.SigIntException
 
@@ -98,24 +135,40 @@ class EvaluationRun(Collection):
         combining_method.update_results(evaluation)
         self.evaluations.append(evaluation)
 
-    def run_task(self, task: Iterable[Tuple[str, Any, CombiningMethod]]):
-        i = 0
-        meta_rankings = None
-        for result_dir, similarity_coefficient, combining_method in task:
-            i += 1
-            print(f"{self.name}, {i}: {str(similarity_coefficient)} \n{str(combining_method)}")
-            try:
-                meta_rankings = self.create_evaluation(result_dir, similarity_coefficient, combining_method, meta_rankings=meta_rankings)
-            except EvaluationRun.SigIntException as e:
-                sp = subprocess.Popen(['ps', '-opid', '--no-headers', '--ppid', str(os.getpid())], encoding='utf8',
-                                      stdout=subprocess.PIPE)
-                child_process_ids = [int(line) for line in sp.stdout.read().splitlines()]
-                for child in child_process_ids:
-                    os.kill(child, signal.SIGTERM)
-                print("\nINTERRUPTED")
-                traceback.print_tb(e.__traceback__)
-            if i % 10 == 0:
-                self.save()
+    @staticmethod
+    def process_mr_file(path: str, evaluations: List[Evaluation], out_queue: Queue):
+        try:
+            with gzip.open(path, "rb") as f:
+                mr: MetaRanking = pickle.load(f)
+        except Exception as e:
+            print(type(e))
+            traceback.print_tb(e.__traceback__)
+            print(f"Could not load {path}")
+            return
+        out = dict()
+        for ev in evaluations:
+            ranking_id = f"{mr._results.project_name}_{mr._results.bug_id}"
+            with mr.rank(ev.similarity_coefficient, ev.combining_method) as ranking:
+                out[ev] = (ranking_id, RankingInfo(ranking))
+        out_queue.put(out)
+
+    def run_task(self, task: List[Tuple[str, Any, CombiningMethod]]):
+        evaluations = [Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task]
+        tmp_dir = make_tmp_folder(task[0][0])
+        out_queue = Queue()
+        processes = [Process(target=self.process_mr_file, name=filename, args=(filename, evaluations, out_queue))
+                     for filename in filter(lambda p: not os.path.isdir(p),
+                                             list(os.path.abspath(f"{tmp_dir}/{f}") for f in os.listdir(tmp_dir)))
+                     ]
+        rankings = run_process_list(processes, out_queue, task_name="Processing Meta Rankings for task")
+        for d in rankings:
+            for ev, (id, ri) in d.items():
+                assert(ev in evaluations)
+                ev.rankings.append(id)
+                ev.ranking_infos.append(ri)
+        for ev in evaluations:
+            if len(ev.rankings) > 0:
+                ev.update_averages()
 
     def save(self):
         filename = self.destination + f"/{self.name}.pickle.gz"
