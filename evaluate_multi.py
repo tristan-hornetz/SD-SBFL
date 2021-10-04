@@ -41,15 +41,15 @@ def get_files_recursive(dir, files: List[str]):
 
 def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
                                 save_destination="",
-                                print_results=False, num_threads=-1, save_full_rankings=False, result_buffer=None):
-    evaluation = Evaluation(similarity_coefficient, combining_method, save_full_rankings=save_full_rankings, result_buffer=result_buffer)
+                                print_results=False, num_threads=-1, save_full_rankings=False, meta_rankings=None):
+    evaluation = Evaluation(similarity_coefficient, combining_method, save_full_rankings=save_full_rankings)
     files = list(set(get_files_recursive(result_dir, [])))
     if os.path.exists(TEMP_SYMLINK_DIR):
         rmtree(TEMP_SYMLINK_DIR)
     mkdirRecursive(TEMP_SYMLINK_DIR)
     for f in files:
         os.symlink(os.path.realpath(f), f"{TEMP_SYMLINK_DIR}/{os.path.basename(f)}")
-    evaluation.add_directory(TEMP_SYMLINK_DIR, THREADS if num_threads < 1 else num_threads)
+    evaluation.add_directory(TEMP_SYMLINK_DIR, THREADS if num_threads < 1 else num_threads, meta_rankings=meta_rankings)
     rmtree(TEMP_SYMLINK_DIR)
     if save_destination != "":
         if not os.path.exists(os.path.dirname(save_destination)):
@@ -92,20 +92,20 @@ class EvaluationRun(Collection):
         self.destination = os.path.realpath(destination)
         self.name = name
 
-    def create_evaluation(self, result_dir, similarity_coefficient, combining_method, result_buffer=None):
+    def create_evaluation(self, result_dir, similarity_coefficient, combining_method, meta_rankings=None):
         evaluation = create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
-                                                            print_results=True, result_buffer=result_buffer)
+                                                            print_results=True, meta_rankings=meta_rankings)
         combining_method.update_results(evaluation)
         self.evaluations.append(evaluation)
 
     def run_task(self, task: Iterable[Tuple[str, Any, CombiningMethod]]):
         i = 0
-        result_buffer = ResultBuffer()
+        meta_rankings = None
         for result_dir, similarity_coefficient, combining_method in task:
             i += 1
             print(f"{self.name}, {i}: {str(similarity_coefficient)} \n{str(combining_method)}")
             try:
-                self.create_evaluation(result_dir, similarity_coefficient, combining_method, result_buffer=result_buffer)
+                meta_rankings = self.create_evaluation(result_dir, similarity_coefficient, combining_method, meta_rankings=meta_rankings)
             except EvaluationRun.SigIntException as e:
                 sp = subprocess.Popen(['ps', '-opid', '--no-headers', '--ppid', str(os.getpid())], encoding='utf8',
                                       stdout=subprocess.PIPE)

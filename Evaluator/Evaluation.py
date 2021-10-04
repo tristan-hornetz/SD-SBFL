@@ -12,23 +12,14 @@ from tqdm import tqdm
 
 from .CombiningMethod import CombiningMethod
 from .Ranking import RankingInfo
-
-
-class ResultBuffer:
-    def __init__(self):
-        self.loaded_results = dict()
-
-    def add_entry(self, file: str, content):
-        if file not in self.loaded_results.keys():
-            self.loaded_results[file] = content
+from copy import deepcopy
 
 
 class Evaluation:
-    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None, save_full_rankings=False, result_buffer: ResultBuffer = None):
+    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None, save_full_rankings=False):
         if ks is None:
             ks = [1, 3, 5, 10]
         self.ks = ks
-        self.result_buffer = result_buffer if result_buffer is not None else ResultBuffer()
         self.save_full_rankings = save_full_rankings
         self.rankings = list()
         self.ranking_infos: List[RankingInfo] = list()
@@ -53,18 +44,14 @@ class Evaluation:
 
     @staticmethod
     def add_meta_ranking(self, mr_path: str, rqueue: Queue, save_full_rankings=False):
-        if mr_path not in self.result_buffer.loaded_results.keys():
-            try:
-                with gzip.open(mr_path, "rb") as f:
-                    mr = pickle.load(f)
-            except Exception as e:
-                print(type(e))
-                traceback.print_tb(e.__traceback__)
-                print(f"Could not load {mr_path}")
-                return
-            self.result_buffer.add_entry(mr_path, mr)
-        else:
-            mr = self.result_buffer.loaded_results[mr_path]
+        try:
+            with gzip.open(mr_path, "rb") as f:
+                mr = pickle.load(f)
+        except Exception as e:
+            print(type(e))
+            traceback.print_tb(e.__traceback__)
+            print(f"Could not load {mr_path}")
+            return
         ranking_id = f"{mr._results.project_name}_{mr._results.bug_id}"
         if ranking_id in self.rankings:
             return
@@ -77,7 +64,81 @@ class Evaluation:
             metrics[k] = ranking.get_evaluation_metrics(k)
         rqueue.put((ranking if save_full_rankings else ranking_id, metrics, RankingInfo(ranking)))
 
-    def add_directory(self, dir_path, num_threads=-1):
+    @staticmethod
+    def load_meta_ranking(path: str, out: Queue):
+        try:
+            with gzip.open(path, "rb") as f:
+                mr = pickle.load(f)
+        except Exception as e:
+            print(type(e))
+            traceback.print_tb(e.__traceback__)
+            print(f"Could not load {path}")
+            return
+        out.put(mr)
+
+    @staticmethod
+    def eval_from_meta_ranking(mr, processed_rankings, similarity_coefficient, combining_method, rqueue: Queue, ks):
+        mr = deepcopy(mr)
+        ranking_id = f"{mr._results.project_name}_{mr._results.bug_id}"
+        if ranking_id in processed_rankings:
+            return
+        try:
+            ranking = mr.rank(similarity_coefficient, combining_method)
+        except:
+            return
+        metrics = dict()
+        for k in ks:
+            metrics[k] = ranking.get_evaluation_metrics(k)
+        rqueue.put((ranking_id, metrics, RankingInfo(ranking)))
+
+    @staticmethod
+    def run_process_list(processes, num_threads, out_queue: Queue, task_name:str=""):
+        active_processes = list()
+        num_processes = len(processes)
+        progress_bar = tqdm(total=num_processes, desc=task_name)
+        while len(processes) > 0 or len(active_processes) > 0:
+            while len(active_processes) < num_threads and len(processes) > 0:
+                t = processes.pop()
+                t.start()
+                active_processes.append(t)
+            for t in active_processes:
+                if not t.is_alive():
+                    active_processes.remove(t)
+                    progress_bar.update(1)
+            time.sleep(.01)
+        ret = list()
+        while not out_queue.empty():
+            ret.append(out_queue.get())
+        assert(len(ret) <= num_processes)
+        assert(out_queue.empty())
+        return ret
+
+    def add_directory(self, dir_path, num_threads=-1, meta_rankings=None):
+        if meta_rankings is None:
+            mr_queue = Queue()
+            ranking_loaders = [Process(target=Evaluation.load_meta_ranking, name=file_path, args=(file_path, mr_queue))
+                         for file_path in filter(lambda p: not os.path.isdir(p),
+                                                 list(os.path.abspath(f"{dir_path}/{f}") for f in os.listdir(dir_path)))]
+
+            meta_rankings = self.run_process_list(ranking_loaders, os.cpu_count() if num_threads < 1 else num_threads, mr_queue, task_name="Loading Translated Events")
+        r_queue = Queue()
+        evaluation_threads = [Process(target=Evaluation.eval_from_meta_ranking, name=str(mr), args=(mr, self.rankings, self.similarity_coefficient, self.combining_method, r_queue, self.ks)) for mr in meta_rankings]
+        metrics = self.run_process_list(evaluation_threads, os.cpu_count() if num_threads < 1 else num_threads, r_queue, task_name="Generating Rankings")
+        for id, _, ri in metrics:
+            self.rankings.append(id)
+            self.ranking_infos.append(ri)
+
+        if len(self.rankings) > 0:
+            self.update_averages()
+
+        if len(metrics) == len(os.listdir(dir_path)):
+            print(f"All objects in {dir_path} were added.")
+        else:
+            print(f"{len(metrics)} of {len(os.listdir(dir_path))} objects in {dir_path} were added.")
+        return meta_rankings
+
+
+    """def add_directory(self, dir_path, num_threads=-1):
         if num_threads < 1:
             num_threads = max(os.cpu_count() - 2, 1)
         rqueue = Queue(maxsize=num_threads)
@@ -131,7 +192,7 @@ class Evaluation:
             print(f"All objects in {dir_path} were added.")
         else:
             print(f"{len(metrics.values())} of {len(os.listdir(dir_path))} objects in {dir_path} were added.")
-
+"""
     def __str__(self):
         self.update_averages()
         out = f"Similarity Coefficient: {self.similarity_coefficient.__name__}\n"
