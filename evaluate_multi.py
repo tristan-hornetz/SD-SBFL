@@ -155,7 +155,7 @@ class EvaluationRun(Collection):
     @staticmethod
     def get_ev(ref_ev: Evaluation, evs: List[Evaluation]):
         for ev in evs:
-            if ref_ev.similarity_coefficient == ev.similarity_coefficient and str(ref_ev.combining_method) == str(ref_ev.combining_method):
+            if ref_ev.similarity_coefficient == ev.similarity_coefficient and str(ref_ev.combining_method) == str(ev.combining_method):
                 return ev
         raise(LookupError("Ev not found"))
 
