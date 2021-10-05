@@ -25,6 +25,7 @@ class Evaluation:
         self.ranking_infos: List[RankingInfo] = list()
         self.similarity_coefficient = similarity_coefficient
         self.combining_method = combining_method
+        self.id = hash(str(self.combining_method) + self.similarity_coefficient.__name__)
 
         self.fraction_top_k_accurate = {k: 0.0 for k in
                                         self.ks}

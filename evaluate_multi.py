@@ -149,18 +149,13 @@ class EvaluationRun(Collection):
         for ev in evaluations:
             ranking_id = f"{mr._results.project_name}_{mr._results.bug_id}"
             with mr.rank(ev.similarity_coefficient, ev.combining_method) as ranking:
-                out[ev] = (ranking_id, RankingInfo(ranking))
+                out[ev.id] = (ranking_id, RankingInfo(ranking))
         out_queue.put(out)
 
-    @staticmethod
-    def get_ev(ref_ev: Evaluation, evs: List[Evaluation]):
-        for ev in evs:
-            if ref_ev.similarity_coefficient == ev.similarity_coefficient and str(ref_ev.combining_method) == str(ev.combining_method):
-                return ev
-        raise(LookupError("Ev not found"))
 
     def run_task(self, task: List[Tuple[str, Any, CombiningMethod]]):
         evaluations = [Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task]
+        ev_lookup = {ev.id: ev for ev in evaluations}
         tmp_dir = make_tmp_folder(task[0][0])
         out_queue = Queue()
         processes = [Process(target=self.process_mr_file, name=filename, args=(filename, evaluations, out_queue))
@@ -169,8 +164,8 @@ class EvaluationRun(Collection):
                      ]
         rankings = run_process_list(processes, out_queue, task_name="Processing Meta Rankings for task")
         for d in rankings:
-            for ev, (id, ri) in d.items():
-                local_ev = self.get_ev(ev, evaluations)
+            for ev_id, (id, ri) in d.items():
+                local_ev = ev_lookup[ev_id]
                 local_ev.rankings.append(id)
                 local_ev.ranking_infos.append(ri)
         for ev in evaluations:
