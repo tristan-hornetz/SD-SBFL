@@ -1,5 +1,6 @@
 import gzip
 import math
+import os
 import pickle
 import traceback
 from abc import abstractmethod
@@ -127,6 +128,11 @@ class AveragingCombiningMethod(CombiningMethod):
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         return np.average(self.pre_combiner.combine(program_element, event_container, similarity_coefficient)),
+
+    def __str__(self):
+        out = f"{type(self).__name__}\nAveraged Method:\n    {(os.linesep + '    ').join(str(self.pre_combiner).split(os.linesep))}\n"
+        return out
+
 
 
 class WeightedCombiningMethod(CombiningMethod):
