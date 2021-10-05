@@ -50,7 +50,7 @@ def create_evaluation_recursive(result_dir, similarity_coefficient, combining_me
     mkdirRecursive(TEMP_SYMLINK_DIR)
     for f in files:
         os.symlink(os.path.realpath(f), f"{TEMP_SYMLINK_DIR}/{os.path.basename(f)}")
-    evaluation.add_directory(TEMP_SYMLINK_DIR, THREADS if num_threads < 1 else num_threads, meta_rankings=meta_rankings)
+    evaluation.add_directory(TEMP_SYMLINK_DIR, THREADS if num_threads < 1 else num_threads)
     rmtree(TEMP_SYMLINK_DIR)
     if save_destination != "":
         if not os.path.exists(os.path.dirname(save_destination)):
@@ -152,6 +152,13 @@ class EvaluationRun(Collection):
                 out[ev] = (ranking_id, RankingInfo(ranking))
         out_queue.put(out)
 
+    @staticmethod
+    def get_ev(ref_ev: Evaluation, evs: List[Evaluation]):
+        for ev in evs:
+            if ref_ev.similarity_coefficient == ev.similarity_coefficient and str(ref_ev.combining_method) == str(ref_ev.combining_method):
+                return ev
+        raise(LookupError("Ev not found"))
+
     def run_task(self, task: List[Tuple[str, Any, CombiningMethod]]):
         evaluations = [Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task]
         tmp_dir = make_tmp_folder(task[0][0])
@@ -163,12 +170,14 @@ class EvaluationRun(Collection):
         rankings = run_process_list(processes, out_queue, task_name="Processing Meta Rankings for task")
         for d in rankings:
             for ev, (id, ri) in d.items():
-                assert(ev in evaluations)
-                ev.rankings.append(id)
-                ev.ranking_infos.append(ri)
+                local_ev = self.get_ev(ev, evaluations)
+                local_ev.rankings.append(id)
+                local_ev.ranking_infos.append(ri)
         for ev in evaluations:
             if len(ev.rankings) > 0:
                 ev.update_averages()
+        self.evaluations = evaluations
+        rmtree(tmp_dir)
 
     def save(self):
         filename = self.destination + f"/{self.name}.pickle.gz"
