@@ -390,7 +390,7 @@ if __name__ == "__main__":
     task_averaging_combiner.extend(list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *a))) for a in averager_aggregators))
 
     # EVENT TYPES SINGLE
-    task_event_types_single = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([e], max, avg) for e in EVENT_TYPES)]
+    task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
 
     test_c = TypeOrderCombiningMethod(
         [LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
