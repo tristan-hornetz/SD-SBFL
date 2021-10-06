@@ -376,7 +376,7 @@ if __name__ == "__main__":
 
     # AGGREGATORS SINGLE
     task_aggregators_single = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
-    task_aggregators_single.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
+    #task_aggregators_single.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
 
     # AGGREGATORS SP
     task_aggregators_sp = task_aggregators_single.copy()
@@ -433,10 +433,10 @@ if __name__ == "__main__":
              #"weights_3": task_weights_3
              #"weights_4": task_weights_4
              #"aggregators3": task_aggregators3,
-             #"aggregators_single": task_aggregators_single,
+             "aggregators_single": task_aggregators_single,
              #"aggregators_sp": task_aggregators_single,
              #"averaging_combiner": task_averaging_combiner,
-             "event_types_single": task_event_types_single,
+             #"event_types_single": task_event_types_single,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)

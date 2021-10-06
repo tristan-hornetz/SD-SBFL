@@ -74,10 +74,17 @@ class GenericCombiningMethod(CombiningMethod):
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
         coefficients = []
+        if len(coefficients) == 0:
+            for l in event_container.events_by_program_element.keys():
+                if l.name == program_element.name:
+                    if l.file == program_element.file:
+                        if len(l.linenos.intersection(program_element.linenos)):
+                            events = list(event_container.get_from_program_element(l))
+                            break
+            if len(coefficients) == 0:
+                return *(m([0]) for m in self.methods),
         for e in events:
             coefficients.append(similarity_coefficient.compute(e))
-        if len(coefficients) == 0:
-            return *(m([0]) for m in self.methods),
         return *(m(coefficients) for m in self.methods),
 
     def __str__(self):
@@ -109,13 +116,13 @@ class FilteredCombiningMethod(CombiningMethod):
         self.methods = methods
         self.event_types = event_types
 
-    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+    def combine(self, program_element: DebuggerMethod, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
         coefficients = []
-        for e in filter(lambda c: type(c) in self.event_types, events):
-            coefficients.append(similarity_coefficient.compute(e))
         if len(coefficients) == 0:
             return *(m([0]) for m in self.methods),
+        for e in filter(lambda c: type(c) in self.event_types, events):
+            coefficients.append(similarity_coefficient.compute(e))
         return *(m(coefficients) for m in self.methods),
 
     def __str__(self):
