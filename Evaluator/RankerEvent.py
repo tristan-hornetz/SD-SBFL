@@ -112,15 +112,10 @@ class AbsoluteScalarValueEvent(RankerEvent):
 
 
 class EventContainer(Iterable):
-    @staticmethod
-    def method_alt_hash(m: DebuggerMethod):
-        return hash(m.name + "~" + m.file)
-
     def __init__(self, bug: Tuple[str, int] = ("-", 0)):
         self.events = dict()
         self.events_by_program_element = dict()
         self.project_name, self.bug_id = bug
-        self.encountered_program_elements = dict()
 
     def add(self, event: RankerEvent):
         h = hash(event)
@@ -129,12 +124,7 @@ class EventContainer(Iterable):
             self.events[h].failed_with_event.update(event.failed_with_event)
         else:
             self.events[h] = event
-            method_hash = self.method_alt_hash(event.program_element)
-            if method_hash not in self.encountered_program_elements.keys():
-                self.encountered_program_elements[method_hash] = {event.program_element}
-            else:
-                self.encountered_program_elements[method_hash].add(event.program_element)
-            if event.program_element not in self.events_by_program_element.keys():
+            if event.program_element not in self.events_by_program_element:
                 self.events_by_program_element[event.program_element] = {event}
             else:
                 self.events_by_program_element[event.program_element].add(event)
@@ -149,11 +139,7 @@ class EventContainer(Iterable):
         return iter(self.events.values())
 
     def get_from_program_element(self, program_element) -> Set[RankerEvent]:
-        m_hash = self.method_alt_hash(program_element)
-        if m_hash not in self.encountered_program_elements.keys():
+        if program_element not in self.events_by_program_element.keys():
             return set()
-        candidates = self.encountered_program_elements[m_hash]
-        for c in candidates:
-            if c.__eq__(program_element):
-                return self.events_by_program_element[c]
-        return set()
+        return self.events_by_program_element[program_element]
+
