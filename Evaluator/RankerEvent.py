@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from typing import Any, Tuple, Set, Iterable
-from CodeInspection.Methods import DebuggerMethod
+from .CodeInspection.Methods import DebuggerMethod
 
 
 class RankerEvent:
