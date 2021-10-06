@@ -57,7 +57,7 @@ def make_tuple(cs):
     return *sorted(cs, reverse=True),
 
 
-def get_events_from_program_element(evc: EventContainer, program_element: DebuggerMethod):
+def get_from_program_element(evc: EventContainer, program_element: DebuggerMethod):
     m_hash = evc.method_alt_hash(program_element)
     if m_hash not in evc.encountered_program_elements.keys():
         raise(AssertionError("m_hash should be encountered"))
@@ -120,7 +120,7 @@ class FilteredCombiningMethod(CombiningMethod):
         self.event_types = event_types
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
-        events = list(event_container.get_from_program_element(program_element))
+        events = list(get_from_program_element(event_container, program_element))
         coefficients = []
         for e in filter(lambda c: type(c) in self.event_types, events):
             coefficients.append(similarity_coefficient.compute(e))
