@@ -360,3 +360,43 @@ class ClassifierCombiningMethod(CombiningMethod):
             return self.combiner_lc.combine(program_element, event_container, similarity_coefficient)
         return self.combiner_nlc.combine(program_element, event_container, similarity_coefficient)
 
+
+"""
+Indicators:
+
+- All lc 1 -> executed only in failed -> 1
+- All lc 0 -> drop -> 0
+- Return 1 -> either cause or in chain of cause, top frame or bottom frame?, strong indicator
+- Single Branch 1 -> likely high in chain
+- Multiple Branches 1 -> either cause or bottom of chain -> 1
+- assignments 1 where lc<1 -> strong indicator, either cause or lower
+"""
+class IDKCombiningMethod(CombiningMethod):
+    def __init__(self):
+        self.event_types = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
+
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        all_sus_events: List[Tuple[RankerEvent, float]] = list(filter(lambda e: e[1] > 0, ((ev, similarity_coefficient.compute(ev)) for ev in event_container.get_from_program_element(program_element))))
+        if len(all_sus_events) < 1:
+            return 0,
+        ev_by_location = dict()
+        for e, s in all_sus_events:
+            if e.location not in ev_by_location.keys():
+                ev_by_location[e.location] = {(e, s)}
+            else:
+                ev_by_location[e.location].add((e, s))
+        sus_values = list()
+        for location, events in ev_by_location.items():
+            lc_events = list(s for _, s in filter(lambda e: type(e[0]) == LineCoveredEvent, events))
+            mlc = max(lc_events)
+            if mlc >= 1.0:
+                sus_values.append(1.0)
+                continue
+            if len(lc_events) == len(events):
+                sus_values.append(mlc)
+
+
+
+
+
+

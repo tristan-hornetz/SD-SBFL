@@ -39,7 +39,9 @@ class DebuggerMethod:
     def __eq__(self, other):
         if not isinstance(other, DebuggerMethod):
             return False
-        return str(self) == str(other)
+        if not (self.name == other.name and self.file == other.file):
+            return False
+        return len(self.linenos.intersection(other.linenos)) > 0
 
 
 def getNodeParents(node: ast.AST, parent_dict: dict, parents: list, line_nodes: list, lineno: int):
