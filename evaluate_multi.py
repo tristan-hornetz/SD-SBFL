@@ -389,6 +389,9 @@ if __name__ == "__main__":
     task_averaging_combiner = list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(GenericCombiningMethod(*a))) for a in averager_aggregators)
     task_averaging_combiner.extend(list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *a))) for a in averager_aggregators))
 
+    # EVENT TYPES SINGLE
+    task_event_types_single = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([e], max, avg) for e in EVENT_TYPES)]
+
     test_c = TypeOrderCombiningMethod(
         [LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
     test_c.include_single_absolute_returns = False
@@ -432,7 +435,8 @@ if __name__ == "__main__":
              #"aggregators3": task_aggregators3,
              #"aggregators_single": task_aggregators_single,
              #"aggregators_sp": task_aggregators_single,
-             "averaging_combiner": task_averaging_combiner,
+             #"averaging_combiner": task_averaging_combiner,
+             "event_types_single": task_event_types_single,
              }
 
     signal.signal(signal.SIGINT, interrupt_handler)
