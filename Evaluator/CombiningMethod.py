@@ -57,6 +57,17 @@ def make_tuple(cs):
     return *sorted(cs, reverse=True),
 
 
+def get_events_from_program_element(evc: EventContainer, program_element: DebuggerMethod):
+    m_hash = evc.method_alt_hash(program_element)
+    if m_hash not in evc.encountered_program_elements.keys():
+        raise(AssertionError("m_hash should be encountered"))
+    candidates = evc.encountered_program_elements[m_hash]
+    for c in candidates:
+        if c.__eq__(program_element):
+            return evc.events_by_program_element[c]
+    raise(AssertionError("program_element should be a candidate"))
+
+
 class GenericCombiningMethod(CombiningMethod):
     def __init__(self, *methods: Callable[[Iterable[float]], float]):
         self.methods = methods
