@@ -283,18 +283,18 @@ class CompoundCombiningMethod(GenericCombiningMethod):
 
 class TwoStageCombiningMethod(CombiningMethod):
     def __init__(self, first_stage: CombiningMethod, second_stage: CombiningMethod):
-        self.current_event_container = None
+        self.current_event_container = ""
         self.current_ranking = list()
         self.first_stage = first_stage
         self.second_stage = second_stage
         self.first_stage_threshold = 20
 
     def update_event_container(self, event_container: EventContainer, similarity_coefficient):
-        if event_container == self.current_event_container:
+        if f"{event_container.project_name}{event_container.bug_id}" == self.current_event_container:
             return
-        self.current_event_container = event_container
+        self.current_event_container = f"{event_container.project_name}{event_container.bug_id}"
         try:
-            self.current_ranking = list(p for p, _ in sorted(filter(lambda e: e[1][0] > 0, ((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in self.current_event_container.events_by_program_element.keys())), key=lambda e: e[1], reverse=True)[:self.first_stage_threshold])
+            self.current_ranking = list(p for p, _ in sorted(filter(lambda e: e[1][0] > 0, ((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in event_container.events_by_program_element.keys())), key=lambda e: e[1], reverse=True)[:self.first_stage_threshold])
         except Exception as e:
             print(e)
             traceback.print_tb(e.__traceback__)
