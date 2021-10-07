@@ -392,9 +392,9 @@ if __name__ == "__main__":
     # EVENT TYPES SINGLE
     task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
 
-    test_c = TypeOrderCombiningMethod(
-        [LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
-    test_c.include_single_absolute_returns = False
+    first_stage = FilteredCombiningMethod([LineCoveredEvent], max, avg)
+    second_stage = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, SDBranchEvent, AbsoluteScalarValueEvent], max)
+    test_c = TwoStageCombiningMethod(first_stage, second_stage)
     task_test = [(result_dir, OchiaiCoefficient, test_c)]
 
     # CLASSIFIER
@@ -422,7 +422,7 @@ if __name__ == "__main__":
              #"event_type_orders": task_event_type_orders,
              #"similarity_coefficients2": task_similarity_coefficients2,
              #"aggregators": task_aggregators,#
-             #"test_task": task_test,
+             "test_task": task_test,
              #"aggregators2": task_aggregators2,
              #"similarity_coefficients3": task_similarity_coefficients3,
              #"similarity_coefficients4": task_similarity_coefficients4,
@@ -433,7 +433,7 @@ if __name__ == "__main__":
              #"weights_3": task_weights_3
              #"weights_4": task_weights_4
              #"aggregators3": task_aggregators3,
-             "aggregators_single": task_aggregators_single,
+             #"aggregators_single": task_aggregators_single,
              #"aggregators_sp": task_aggregators_single,
              #"averaging_combiner": task_averaging_combiner,
              #"event_types_single": task_event_types_single,
