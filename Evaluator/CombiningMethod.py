@@ -369,22 +369,13 @@ class ClassifierCombiningMethod(CombiningMethod):
         return self.combiner_nlc.combine(program_element, event_container, similarity_coefficient)
 
 
-"""
-Indicators:
-
-- All lc 1 -> executed only in failed -> 1
-- All lc 0 -> drop -> 0
-- Return 1 -> either cause or in chain of cause, top frame or bottom frame?, strong indicator
-- Single Branch 1 -> likely high in chain
-- Multiple Branches 1 -> either cause or bottom of chain -> 1
-- assignments 1 where lc<1 -> strong indicator, either cause or lower
-"""
 class IDKCombiningMethod(CombiningMethod):
     def __init__(self):
         self.event_types = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
-        all_sus_events: List[Tuple[RankerEvent, float]] = list(filter(lambda e: e[1] > 0, ((ev, similarity_coefficient.compute(ev)) for ev in event_container.get_from_program_element(program_element))))
+        all_events = list((ev, similarity_coefficient.compute(ev)) for ev in event_container.get_from_program_element(program_element))
+        all_sus_events: List[Tuple[RankerEvent, float]] = list(filter(lambda e: e[1] > 0, all_events))
         if len(all_sus_events) < 1:
             return 0,
         ev_by_location = dict()

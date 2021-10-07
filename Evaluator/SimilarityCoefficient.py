@@ -9,7 +9,7 @@ class SimilarityCoefficient:
     def get_values(event):
         failed = len(event.failed_with_event)
         passed = len(event.passed_with_event)
-        total_failed = event.total_failed
+        total_failed = max(event.total_failed, failed)
         total_passed = event.total_passed
         not_in_failed = total_failed - failed
         not_in_passed = total_passed - passed
