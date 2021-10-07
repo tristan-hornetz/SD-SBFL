@@ -229,7 +229,7 @@ class TypeOrderCombiningMethod(GenericCombiningMethod):
         self.types = types
         self.include_single_absolute_returns = True
 
-    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+    def get_coefficients(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
         if not self.include_single_absolute_returns:
             events = self.filter_single_absolute_returns(events)
@@ -237,12 +237,25 @@ class TypeOrderCombiningMethod(GenericCombiningMethod):
         for e in filter(lambda c: type(c) in self.types, events):
             c = similarity_coefficient.compute(e)
             coefficients[type(e)].append(c)
+        return coefficients
 
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        coefficients = self.get_coefficients(program_element, event_container, similarity_coefficient)
         return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)), ) for t, cs in coefficients.items()),
 
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.types))}"
         return out
+
+
+class CompensatingTypeOrderCombiningMethod(TypeOrderCombiningMethod):
+    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        coefficients = self.get_coefficients(program_element, event_container, similarity_coefficient)
+        for t in self.types:
+            if len(coefficients[t]) == 0:
+                coefficients[t] = coefficients[self.types[0]].copy()
+        return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)), ) for t, cs in coefficients.items()),
+
 
 
 class GroupedTypeOrderCombiningMethod(GenericCombiningMethod):
@@ -304,7 +317,7 @@ class TwoStageCombiningMethod(CombiningMethod):
         if program_element not in self.current_ranking:
             ret = (0, )
             return ret
-        return tuple(e for e, *_ in self.second_stage.combine(program_element, event_container, similarity_coefficient))
+        return self.second_stage.combine(program_element, event_container, similarity_coefficient)
 
 
 class ClassifierCombiningMethod(CombiningMethod):

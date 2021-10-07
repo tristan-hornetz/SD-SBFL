@@ -370,10 +370,6 @@ if __name__ == "__main__":
     task_aggregators3 = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms3)
     task_aggregators3.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms3)
 
-    test_c = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDBranchEvent], max)
-    test_c.include_single_absolute_returns = False
-    task_test = [(result_dir, OchiaiCoefficient, test_c)]
-
     # AGGREGATORS SINGLE
     task_aggregators_single = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
     #task_aggregators_single.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
@@ -393,7 +389,7 @@ if __name__ == "__main__":
     task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
 
     first_stage = FilteredCombiningMethod([LineCoveredEvent], max, avg)
-    second_stage = TypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, SDBranchEvent, AbsoluteScalarValueEvent], max)
+    second_stage = CompensatingTypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, SDBranchEvent, AbsoluteScalarValueEvent], max)
     test_c = TwoStageCombiningMethod(first_stage, second_stage)
     task_test = [(result_dir, OchiaiCoefficient, test_c)]
 
