@@ -294,7 +294,7 @@ class TwoStageCombiningMethod(CombiningMethod):
             return
         self.current_event_container = event_container
         try:
-            self.current_ranking = list(sorted(((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in self.current_event_container.events_by_program_element.keys()), key=lambda e: e[1], reverse=True)[:self.first_stage_threshold])
+            self.current_ranking = list(p for p, _ in sorted(filter(lambda e: e[1][0] > 0, ((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in self.current_event_container.events_by_program_element.keys())), key=lambda e: e[1], reverse=True)[:self.first_stage_threshold])
         except Exception as e:
             print(e)
             traceback.print_tb(e.__traceback__)
@@ -302,8 +302,9 @@ class TwoStageCombiningMethod(CombiningMethod):
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         self.update_event_container(event_container, similarity_coefficient)
         if program_element not in self.current_ranking:
-            return 0,
-        return self.second_stage.combine(program_element, event_container, similarity_coefficient)
+            ret = (0, )
+            return ret
+        return tuple(e for e, *_ in self.second_stage.combine(program_element, event_container, similarity_coefficient))
 
 
 class ClassifierCombiningMethod(CombiningMethod):
