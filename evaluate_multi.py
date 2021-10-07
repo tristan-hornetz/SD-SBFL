@@ -20,7 +20,7 @@ from correlations import extend_w_event_type_specific_results, extend_w_lc_best,
 TEMP_SYMLINK_DIR = "./.temp_evaluation"
 
 EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent,
-               AbsoluteScalarValueEvent]#, SDScalarPairEvent]
+               AbsoluteScalarValueEvent]  # , SDScalarPairEvent]
 
 SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, AnderbergCoefficient, OchiaiCoefficient,
                            SimpleMatchingCoefficient, RogersTanimotoCoefficient, OchiaiIICoefficient,
@@ -71,7 +71,7 @@ def create_evaluation_recursive(result_dir, similarity_coefficient, combining_me
     return evaluation
 
 
-def run_process_list(processes, out_queue: Queue, task_name:str="", num_threads=-1):
+def run_process_list(processes, out_queue: Queue, task_name: str = "", num_threads=-1):
     num_threads = num_threads if num_threads > 0 else os.cpu_count()
     active_processes = list()
     num_processes = len(processes)
@@ -92,8 +92,8 @@ def run_process_list(processes, out_queue: Queue, task_name:str="", num_threads=
                 progress_bar.update(1)
     while not out_queue.empty():
         ret.append(out_queue.get())
-    assert(len(ret) <= num_processes)
-    assert(out_queue.empty())
+    assert (len(ret) <= num_processes)
+    assert (out_queue.empty())
     return ret
 
 
@@ -131,7 +131,7 @@ class EvaluationRun(Collection):
 
     def create_evaluation(self, result_dir, similarity_coefficient, combining_method, meta_rankings=None):
         evaluation = create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
-                                                            print_results=True, meta_rankings=meta_rankings)
+                                                 print_results=True, meta_rankings=meta_rankings)
         combining_method.update_results(evaluation)
         self.evaluations.append(evaluation)
 
@@ -152,7 +152,6 @@ class EvaluationRun(Collection):
                 out[ev.id] = (ranking_id, RankingInfo(ranking))
         out_queue.put(out)
 
-
     def run_task(self, task: List[Tuple[str, Any, CombiningMethod]]):
         evaluations = [Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task]
         ev_lookup = {ev.id: ev for ev in evaluations}
@@ -160,7 +159,7 @@ class EvaluationRun(Collection):
         out_queue = Queue()
         processes = [Process(target=self.process_mr_file, name=filename, args=(filename, evaluations, out_queue))
                      for filename in filter(lambda p: not os.path.isdir(p),
-                                             list(os.path.abspath(f"{tmp_dir}/{f}") for f in os.listdir(tmp_dir)))
+                                            list(os.path.abspath(f"{tmp_dir}/{f}") for f in os.listdir(tmp_dir)))
                      ]
         rankings = run_process_list(processes, out_queue, task_name="Processing Meta Rankings for task")
         for d in rankings:
@@ -192,7 +191,11 @@ class EvaluationRun(Collection):
     def __str__(self):
         out = f"EVALUATION RUN - {self.name}\n\n"
         out += "\n--------------------------\n".join(str(e) for e in sorted(self.evaluations,
-                                                                            key=lambda e: sum(e.fraction_top_k_accurate[k] + e.avg_recall_at_k[k] + e.avg_precision_at_k[k]for k in [1, 3, 5, 10]),
+                                                                            key=lambda e: sum(
+                                                                                e.fraction_top_k_accurate[k] +
+                                                                                e.avg_recall_at_k[k] +
+                                                                                e.avg_precision_at_k[k] for k in
+                                                                                [1, 3, 5, 10]),
                                                                             reverse=True))
         len = 0
         _sum = {k: 0 for k in [1, 3, 5, 10]}
@@ -201,12 +204,13 @@ class EvaluationRun(Collection):
                 len += 1
                 for k in _sum.keys():
                     _sum[k] += (ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods
-        avgs = {k: v/len for k, v in _sum.items()}
+        avgs = {k: v / len for k, v in _sum.items()}
         out += f"\n\nRecall upper bound: {avgs}\n"
         return out
 
 
-def get_training_data(base_results_file: str, results_translated_folder: str) -> Tuple[EvaluationRun, str, List[RankingInfo]]:
+def get_training_data(base_results_file: str, results_translated_folder: str) -> Tuple[
+    EvaluationRun, str, List[RankingInfo]]:
     # prepare data
     base_run = EvaluationRun.load(base_results_file)
     splitter = StratifiedShuffleSplit(n_splits=1, test_size=.2)
@@ -219,7 +223,7 @@ def get_training_data(base_results_file: str, results_translated_folder: str) ->
     training_r_ids = set(f"{ri.project_name}-{ri.bug_id}" for ri in train_ris)
     n_evs = [Evaluation(ev.similarity_coefficient, ev.combining_method) for ev in base_run.evaluations]
     for n_ev, o_ev in zip(n_evs, base_run.evaluations):
-        #.rankings = list(sorted(filter(lambda r: f"{r.info.project_name}-{r.info.bug_id}" in training_r_ids, o_ev.rankings), key=lambda ri: f"{ri.project_name}-{ri.bug_id}"))
+        # .rankings = list(sorted(filter(lambda r: f"{r.info.project_name}-{r.info.bug_id}" in training_r_ids, o_ev.rankings), key=lambda ri: f"{ri.project_name}-{ri.bug_id}"))
         n_ev.ranking_infos = list(sorted(train_ris, key=lambda ri: f"{ri.project_name}-{ri.bug_id}"))
         n_ev.update_averages()
     training_run = EvaluationRun("training_run", "results_evaluation")
@@ -286,41 +290,49 @@ if __name__ == "__main__":
     task_weights_1 = list((result_dir, OchiaiCoefficient, c) for c in event_type_weight_filters)
 
     # SIMILARITY COEFFICIENTS
-    task_similarity_coefficients = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
+    task_similarity_coefficients = list(
+        (result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
 
     # SIMILARITY COEFFICIENTS II
     task_similarity_coefficients2 = list(
-        (result_dir, s, FilteredCombiningMethod([e], max, avg)) for s, e in itertools.product(SIMILARITY_COEFFICIENTS, EVENT_TYPES))
+        (result_dir, s, FilteredCombiningMethod([e], max, avg)) for s, e in
+        itertools.product(SIMILARITY_COEFFICIENTS, EVENT_TYPES))
 
     # AGGREGATORS
     perms = itertools.permutations(AGGREGATORS, 3)
     task_aggregators = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms)
 
     # AGGREGATORS 2
-    perms = list(set(map(lambda l: l[:l.index(make_tuple) + 1], filter(lambda l: make_tuple in l, itertools.permutations(AGGREGATORS + [make_tuple], 3)))))
+    perms = list(set(map(lambda l: l[:l.index(make_tuple) + 1],
+                         filter(lambda l: make_tuple in l, itertools.permutations(AGGREGATORS + [make_tuple], 3)))))
     task_aggregators2 = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms)
 
     # SIMILARITY COEFFICIENTS III
     task_similarity_coefficients3 = list(
-        (result_dir, s, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg, make_tuple)) for s in SIMILARITY_COEFFICIENTS)
+        (result_dir, s, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg, make_tuple)) for s in
+        SIMILARITY_COEFFICIENTS)
 
     # SIMILARITY COEFFICIENTS IV
     task_similarity_coefficients4 = list(
-        (result_dir, s,  GenericCombiningMethod(max, avg, make_tuple)) for s in
+        (result_dir, s, GenericCombiningMethod(max, avg, make_tuple)) for s in
         SIMILARITY_COEFFICIENTS)
 
     # EVENT TYPE COMBINATIONS II
     event_type_combinations2 = list()
     for i in range(len(EVENT_TYPES)):
         event_type_combinations2.extend(itertools.combinations(EVENT_TYPES, i + 1))
-    event_type_combination_filters2 = [FilteredCombiningMethod(es, max, avg, make_tuple) for es in sorted(event_type_combinations2, key=lambda l: len(l))]
+    event_type_combination_filters2 = [FilteredCombiningMethod(es, max, avg, make_tuple) for es in
+                                       sorted(event_type_combinations2, key=lambda l: len(l))]
     task_event_type_combinations2 = list((result_dir, OchiaiCoefficient, c) for c in event_type_combination_filters2)
 
     # AGGREGATORS RESTRICTED
     perms_r = []
     for i in range(3):
-        perms_r.extend(filter(lambda p: (i < 2 and make_tuple not in p) or (i == 2 and list(p).pop() == make_tuple), itertools.permutations([avg, max, make_tuple], i + 1)))
-    task_aggregators_restricted = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms_r)
+        perms_r.extend(filter(lambda p: (i < 2 and make_tuple not in p) or (i == 2 and list(p).pop() == make_tuple),
+                              itertools.permutations([avg, max, make_tuple], i + 1)))
+    task_aggregators_restricted = list(
+        (result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in
+        perms_r)
 
     # TASK 2 - EVENT TYPE ORDERS II
     event_type_combinations = list()
@@ -334,7 +346,8 @@ if __name__ == "__main__":
     weights = dict()
     for i, weight_map in enumerate(weight_maps):
         weights[i] = {w2_events[i]: weight_map[i] for i in range(len(w2_events))}
-    event_type_weight_filters = [AdjustingWeightedCombiningMethod(list(ws.items()), max, avg) for ws in weights.values()]
+    event_type_weight_filters = [AdjustingWeightedCombiningMethod(list(ws.items()), max, avg) for ws in
+                                 weights.values()]
     task_weights_2 = []
     for c in event_type_weight_filters:
         task_weights_2.extend([(result_dir, OchiaiCoefficient, c)] * 50)
@@ -368,33 +381,38 @@ if __name__ == "__main__":
     # AGGREGATORS 3
     perms3 = itertools.permutations(AGGREGATORS_ALTERNATE, 2)
     task_aggregators3 = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*p)) for p in perms3)
-    task_aggregators3.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms3)
+    task_aggregators3.extend(
+        (result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *p)) for p in perms3)
 
     # AGGREGATORS SINGLE
-    task_aggregators_single = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
-    #task_aggregators_single.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
+    task_aggregators_single = list(
+        (result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
+    # task_aggregators_single.extend((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in set(AGGREGATORS + AGGREGATORS_ALTERNATE))
 
     # AGGREGATORS SP
     task_aggregators_sp = task_aggregators_single.copy()
-    task_aggregators_sp.extend(list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in [(max, avg), (max, sum), (max, len), (avg, sum)]))
-    task_aggregators_sp.extend(list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in
+    task_aggregators_sp.extend(list((result_dir, OchiaiCoefficient, GenericCombiningMethod(a)) for a in
                                     [(max, avg), (max, sum), (max, len), (avg, sum)]))
+    task_aggregators_sp.extend(
+        list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], a)) for a in
+             [(max, avg), (max, sum), (max, len), (avg, sum)]))
 
     # AVERAGING COMBINER
     averager_aggregators = [(max, avg), (max, median), (max, stddev), (avg, median), (avg, stddev), (median, stddev)]
-    task_averaging_combiner = list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(GenericCombiningMethod(*a))) for a in averager_aggregators)
-    task_averaging_combiner.extend(list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *a))) for a in averager_aggregators))
+    task_averaging_combiner = list(
+        (result_dir, OchiaiCoefficient, AveragingCombiningMethod(GenericCombiningMethod(*a))) for a in
+        averager_aggregators)
+    task_averaging_combiner.extend(list((result_dir, OchiaiCoefficient, AveragingCombiningMethod(
+        FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], *a))) for a in averager_aggregators))
 
     # EVENT TYPES SINGLE
-    task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
+    task_event_types_single = list(
+        (result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
 
-    first_stage = FilteredCombiningMethod([LineCoveredEvent], max, avg)
-    second_stage = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, AbsoluteScalarValueEvent], avg)
-    test_c = TwoStageCombiningMethod(first_stage, second_stage)
-    task_test = [(result_dir, OchiaiCoefficient, test_c)]
+    task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
 
     # CLASSIFIER
-    RUN_CLASSIFIER_TEST = False # Enable / Disable classifier test. !!! RUN EVENT TYPE COMBINATIONS 2 FIRST !!!
+    RUN_CLASSIFIER_TEST = False  # Enable / Disable classifier test. !!! RUN EVENT TYPE COMBINATIONS 2 FIRST !!!
     if RUN_CLASSIFIER_TEST:
         pre_run_file = "results_evaluation/event_type_combinations2_single.pickle.gz"
         training_run, test_dir, test_ris = get_training_data(pre_run_file, result_dir)
@@ -409,31 +427,32 @@ if __name__ == "__main__":
         combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
         ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
         classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris, dimensions)
-        classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient, classifier_c,
-                                                                  "results_evaluation/classifier_ev.pickle.gz", num_threads=8, print_results=True)
+        classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient,
+                                                                        classifier_c,
+                                                                        "results_evaluation/classifier_ev.pickle.gz",
+                                                                        num_threads=8, print_results=True)
 
-
-    TASKS = {#"basic_combining_methods": task_basic_combining_methods,
-             #"event_type_combinations": task_event_type_combinations,
-             #"event_type_orders": task_event_type_orders,
-             #"similarity_coefficients2": task_similarity_coefficients2,
-             #"aggregators": task_aggregators,#
-             "test_task": task_test,
-             #"aggregators2": task_aggregators2,
-             #"similarity_coefficients3": task_similarity_coefficients3,
-             #"similarity_coefficients4": task_similarity_coefficients4,
-             #"event_type_combinations2": task_event_type_combinations2,
-             #"aggregators_restricted": task_aggregators_restricted,
-             #"event_type_orders2": task_event_type_orders2,
-             #"weights_2": task_weights_2
-             #"weights_3": task_weights_3
-             #"weights_4": task_weights_4
-             #"aggregators3": task_aggregators3,
-             #"aggregators_single": task_aggregators_single,
-             #"aggregators_sp": task_aggregators_single,
-             #"averaging_combiner": task_averaging_combiner,
-             #"event_types_single": task_event_types_single,
-             }
+    TASKS = {  # "basic_combining_methods": task_basic_combining_methods,
+        # "event_type_combinations": task_event_type_combinations,
+        # "event_type_orders": task_event_type_orders,
+        # "similarity_coefficients2": task_similarity_coefficients2,
+        # "aggregators": task_aggregators,#
+        "test_task": task_test,
+        # "aggregators2": task_aggregators2,
+        # "similarity_coefficients3": task_similarity_coefficients3,
+        # "similarity_coefficients4": task_similarity_coefficients4,
+        # "event_type_combinations2": task_event_type_combinations2,
+        # "aggregators_restricted": task_aggregators_restricted,
+        # "event_type_orders2": task_event_type_orders2,
+        # "weights_2": task_weights_2
+        # "weights_3": task_weights_3
+        # "weights_4": task_weights_4
+        # "aggregators3": task_aggregators3,
+        # "aggregators_single": task_aggregators_single,
+        # "aggregators_sp": task_aggregators_single,
+        # "averaging_combiner": task_averaging_combiner,
+        # "event_types_single": task_event_types_single,
+    }
 
     signal.signal(signal.SIGINT, interrupt_handler)
 
