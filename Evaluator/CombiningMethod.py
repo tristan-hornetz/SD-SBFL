@@ -300,7 +300,7 @@ class TwoStageCombiningMethod(CombiningMethod):
         self.current_ranking = list()
         self.first_stage = first_stage
         self.second_stage = second_stage
-        self.first_stage_threshold = 20
+        self.first_stage_threshold = 10
 
     def update_event_container(self, event_container: EventContainer, similarity_coefficient):
         if f"{event_container.project_name}{event_container.bug_id}" == self.current_event_container:

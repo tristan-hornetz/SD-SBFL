@@ -389,7 +389,7 @@ if __name__ == "__main__":
     task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
 
     first_stage = FilteredCombiningMethod([LineCoveredEvent], max, avg)
-    second_stage = CompensatingTypeOrderCombiningMethod([LineCoveredEvent, AbsoluteReturnValueEvent, SDBranchEvent, AbsoluteScalarValueEvent], max)
+    second_stage = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, AbsoluteScalarValueEvent], avg)
     test_c = TwoStageCombiningMethod(first_stage, second_stage)
     task_test = [(result_dir, OchiaiCoefficient, test_c)]
 
