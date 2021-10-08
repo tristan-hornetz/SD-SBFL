@@ -327,7 +327,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.first_stage = first_stage
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
         self.result_stats = {False: 1, True: 1, "Correctness": 0, "True Positives": 0, "False Positives": 0, "False Negatives": 0}
-        self.ris = {str(ri.project_name, str(ri.bug_id)): ri for ri in test_ris}
+        self.ris = {str((ri.project_name, str(ri.bug_id))): ri for ri in test_ris}
 
     @staticmethod
     def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
@@ -367,8 +367,8 @@ class ClassifierCombiningMethod(CombiningMethod):
         print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
         self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
         print(self.result_stats[True]/self.result_stats[False])
-        if str(event_container.project_name, str(event_container.bug_id)) in self.ris.keys():
-            ri = self.ris[str(event_container.project_name, str(event_container.bug_id))]
+        if str((event_container.project_name, str(event_container.bug_id))) in self.ris.keys():
+            ri = self.ris[str((event_container.project_name, str(event_container.bug_id)))]
             expected_result = False
             for bm in ri.buggy_methods:
                 if program_element.__eq__(bm):
