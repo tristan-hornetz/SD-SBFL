@@ -321,12 +321,13 @@ class TwoStageCombiningMethod(CombiningMethod):
 
 
 class ClassifierCombiningMethod(CombiningMethod):
-    def __init__(self, datasets_train, labels, first_stage: CombiningMethod):
+    def __init__(self, datasets_train, labels, first_stage: CombiningMethod, test_ris):
         self.classifier = MLPClassifier(hidden_layer_sizes=32, random_state=42, max_iter=500)
         self.classifier.fit(datasets_train, labels)
         self.first_stage = first_stage
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
-        self.result_stats = {False: 1, True: 1}
+        self.result_stats = {False: 1, True: 1, "Correctness": 0, "True Positives": 0, "False Positives": 0, "False Negatives": 0}
+        self.ris = {(ri.project_name, str(ri.bug_id)): ri for ri in test_ris}
 
     @staticmethod
     def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
@@ -366,6 +367,23 @@ class ClassifierCombiningMethod(CombiningMethod):
         print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
         self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
         print(self.result_stats[True]/self.result_stats[False])
+        ri = self.ris[(event_container.project_name, str(event_container.bug_id))]
+        expected_result = False
+        for bm in ri.buggy_methods:
+            if program_element.__eq__(bm):
+                expected_result = True
+                break
+        if expected_result == pred_proba[0][1] > self.threshold:
+            self.result_stats["Correctness"] += 1
+            if expected_result:
+                self.result_stats["True Positives"] += 1
+        else:
+            if expected_result:
+                self.result_stats["False Negatives"] += 1
+            else:
+                self.result_stats["False Positives"] += 1
+        print(f"Recall: {self.result_stats['True Positives']/(self.result_stats['False Negatives'] + self.result_stats['True Positives'])}")
+        print(f"Precision: {self.result_stats['True Positives'] / (self.result_stats['False Positives'] + self.result_stats['True Positives'])}")
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
         r_list = [int(pred_proba[0][1] > self.threshold)] + self.lin_rec(fs_result, [])
         return tuple(r_list)
