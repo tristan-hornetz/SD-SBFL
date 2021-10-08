@@ -481,7 +481,7 @@ if __name__ == "__main__":
         x_train = x_train.T
         combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
         ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
-        classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, linearize_method)
+        classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc)
         compound_c = TwoStageCombiningMethod(combiner_lc, classifier_c)
         classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient,
                                                                         compound_c,
