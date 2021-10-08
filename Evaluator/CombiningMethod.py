@@ -326,7 +326,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.classifier.fit(datasets_train, labels)
         self.first_stage = first_stage
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
-        self.result_stats = {0: 0, 1:0}
+        self.result_stats = {False: 0, True: 0}
 
     @staticmethod
     def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
@@ -364,8 +364,8 @@ class ClassifierCombiningMethod(CombiningMethod):
         X = X.T.reshape(1, -1)
         pred_proba = self.classifier.predict_proba(X)
         print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
-        self.result_stats[[0][1] > self.threshold] += 1
-        print(self.result_stats[1]/self.result_stats[0])
+        self.result_stats[bool([0][1] > self.threshold)] += 1
+        print(self.result_stats[True]/self.result_stats[False])
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
         r_list = [int(pred_proba[0][1] > self.threshold)] + self.lin_rec(fs_result, [])
         return tuple(r_list)
