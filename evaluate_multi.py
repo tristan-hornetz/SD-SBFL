@@ -485,7 +485,7 @@ if __name__ == "__main__":
         classifier_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient,
                                                                         compound_c,
                                                                         "results_evaluation/classifier_ev.pickle.gz",
-                                                                        num_threads=8, print_results=True)
+                                                                        num_threads=1, print_results=True)
 
     TASKS = {  # "basic_combining_methods": task_basic_combining_methods,
         # "event_type_combinations": task_event_type_combinations,

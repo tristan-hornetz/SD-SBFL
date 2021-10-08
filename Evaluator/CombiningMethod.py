@@ -326,7 +326,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.classifier.fit(datasets_train, labels)
         self.first_stage = first_stage
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
-        self.result_stats = {False: 0, True: 0}
+        self.result_stats = {False: 1, True: 1}
 
     @staticmethod
     def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
