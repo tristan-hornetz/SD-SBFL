@@ -272,7 +272,7 @@ def get_methods_from_ris(ris: Iterable[RankingInfo]) -> Tuple[List[Tuple[Debugge
     non_buggy_methods = list()
     for ri in ris:
         bm = ri.buggy_methods
-        for m, scores in ri.top_20.items()[:10]:
+        for m, scores in list(ri.top_20.items())[:10]:
             check = False
             for b in bm:
                 if m.__eq__(b):
