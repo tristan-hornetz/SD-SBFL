@@ -364,7 +364,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         X = X.T.reshape(1, -1)
         pred_proba = self.classifier.predict_proba(X)
         print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
-        self.result_stats[bool([0][1] > self.threshold)] += 1
+        self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
         print(self.result_stats[True]/self.result_stats[False])
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
         r_list = [int(pred_proba[0][1] > self.threshold)] + self.lin_rec(fs_result, [])
