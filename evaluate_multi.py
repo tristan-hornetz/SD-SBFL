@@ -475,12 +475,12 @@ if __name__ == "__main__":
     RUN_CLASSIFIER_TEST = True  # Enable / Disable classifier test. !!! RUN TEST TASK FIRST !!!
     if RUN_CLASSIFIER_TEST:
         pre_run_file = "results_evaluation/test_task.pickle.gz"
-        training_ris, test_dir, _ = get_split_training_ris(pre_run_file, result_dir)
+        training_ris, test_dir, test_ris = get_split_training_ris(pre_run_file, result_dir)
         X = get_linearized_method_data(training_ris)
         x_train, labels = extract_labels(X.T, 0)
         x_train = x_train.T
         combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max)
-        classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc)
+        classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, test_ris)
         compound_c = TwoStageCombiningMethod(combiner_lc, classifier_c)
         classifier_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient,
                                                                         compound_c,
