@@ -377,22 +377,19 @@ class ClassifierCombiningMethod(CombiningMethod):
             if expected_result == pred_proba[0][1] > self.threshold:
                 self.result_stats["Correctness"] += 1
                 if expected_result:
-                    self.result_stats["True Positives"] += 1
+                    print("True Positive")
+                else:
+                    print("True Nagative")
             else:
                 if expected_result:
-                    self.result_stats["False Negatives"] += 1
+                    print("False Nagetive")
                 else:
-                    self.result_stats["False Positives"] += 1
+                    print("False Positive")
         elif pred_proba[0][1] > self.threshold:
-            self.result_stats["False Positives"] += 1
+            print("False Positive - nf")
         else:
-            self.result_stats["Correctness"] += 1
-        try:
-            print(f"Accuracy: {self.result_stats['Correctness']/(self.result_stats[True]+self.result_stats[False])}")
-            print(f"Recall: {self.result_stats['True Positives']/(self.result_stats['False Negatives'] + self.result_stats['True Positives'])}")
-            print(f"Precision: {self.result_stats['True Positives'] / (self.result_stats['False Positives'] + self.result_stats['True Positives'])}")
-        except ZeroDivisionError:
-            pass
+            print("True Negative - nf")
+
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
         r_list = [int(pred_proba[0][1] > self.threshold)] + self.lin_rec(fs_result, [])
         return tuple(r_list)
