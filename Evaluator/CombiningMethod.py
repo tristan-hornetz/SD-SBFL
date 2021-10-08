@@ -385,8 +385,11 @@ class ClassifierCombiningMethod(CombiningMethod):
                     self.result_stats["False Positives"] += 1
         elif pred_proba[0][1] > self.threshold:
             self.result_stats["False Positives"] += 1
-        print(f"Recall: {self.result_stats['True Positives']/(self.result_stats['False Negatives'] + self.result_stats['True Positives'])}")
-        print(f"Precision: {self.result_stats['True Positives'] / (self.result_stats['False Positives'] + self.result_stats['True Positives'])}")
+        try:
+            print(f"Recall: {self.result_stats['True Positives']/(self.result_stats['False Negatives'] + self.result_stats['True Positives'])}")
+            print(f"Precision: {self.result_stats['True Positives'] / (self.result_stats['False Positives'] + self.result_stats['True Positives'])}")
+        except ZeroDivisionError:
+            pass
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
         r_list = [int(pred_proba[0][1] > self.threshold)] + self.lin_rec(fs_result, [])
         return tuple(r_list)
