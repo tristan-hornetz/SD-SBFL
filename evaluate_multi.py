@@ -224,11 +224,11 @@ def build_temp_folder(temp_folder_name:str,  results_translated_folder: str, ris
     return temp_folder_name
 
 
-def get_split_training_ris(base_results_file: str, results_translated_folder: str) -> Tuple[
+def get_split_training_ris(base_results_file: str, results_translated_folder: str, random_state=42) -> Tuple[
     List[RankingInfo], str, List[RankingInfo]]:
     # prepare data
     base_run = EvaluationRun.load(base_results_file)
-    splitter = StratifiedShuffleSplit(n_splits=1, test_size=.2)
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=.2, random_state=random_state)
     ris = np.array(base_run.evaluations[0].ranking_infos)
     groups = np.array(list(ri.project_name for ri in ris))
     train_index, test_index = next(splitter.split(ris, groups))
@@ -475,15 +475,14 @@ if __name__ == "__main__":
     RUN_CLASSIFIER_TEST = True  # Enable / Disable classifier test. !!! RUN TEST TASK FIRST !!!
     if RUN_CLASSIFIER_TEST:
         pre_run_file = "results_evaluation/test_task.pickle.gz"
-        training_ris, test_dir, test_ris = get_split_training_ris(pre_run_file, result_dir)
+        training_ris, test_dir, _ = get_split_training_ris(pre_run_file, result_dir)
         X = get_linearized_method_data(training_ris)
         x_train, labels = extract_labels(X.T, 0)
         x_train = x_train.T
         combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max)
-        ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
         classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc)
         compound_c = TwoStageCombiningMethod(combiner_lc, classifier_c)
-        classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient,
+        classifier_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient,
                                                                         compound_c,
                                                                         "results_evaluation/classifier_ev.pickle.gz",
                                                                         num_threads=8, print_results=True)
