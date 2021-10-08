@@ -367,21 +367,24 @@ class ClassifierCombiningMethod(CombiningMethod):
         print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
         self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
         print(self.result_stats[True]/self.result_stats[False])
-        ri = self.ris[(event_container.project_name, str(event_container.bug_id))]
-        expected_result = False
-        for bm in ri.buggy_methods:
-            if program_element.__eq__(bm):
-                expected_result = True
-                break
-        if expected_result == pred_proba[0][1] > self.threshold:
-            self.result_stats["Correctness"] += 1
-            if expected_result:
-                self.result_stats["True Positives"] += 1
-        else:
-            if expected_result:
-                self.result_stats["False Negatives"] += 1
+        if (event_container.project_name, str(event_container.bug_id)) in self.ris.keys():
+            ri = self.ris[(event_container.project_name, str(event_container.bug_id))]
+            expected_result = False
+            for bm in ri.buggy_methods:
+                if program_element.__eq__(bm):
+                    expected_result = True
+                    break
+            if expected_result == pred_proba[0][1] > self.threshold:
+                self.result_stats["Correctness"] += 1
+                if expected_result:
+                    self.result_stats["True Positives"] += 1
             else:
-                self.result_stats["False Positives"] += 1
+                if expected_result:
+                    self.result_stats["False Negatives"] += 1
+                else:
+                    self.result_stats["False Positives"] += 1
+        elif pred_proba[0][1] > self.threshold:
+            self.result_stats["False Positives"] += 1
         print(f"Recall: {self.result_stats['True Positives']/(self.result_stats['False Negatives'] + self.result_stats['True Positives'])}")
         print(f"Precision: {self.result_stats['True Positives'] / (self.result_stats['False Positives'] + self.result_stats['True Positives'])}")
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
