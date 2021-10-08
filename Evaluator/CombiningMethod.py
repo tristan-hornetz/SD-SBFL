@@ -14,7 +14,7 @@ from correlations import EvaluationProfile
 SBFL_EVENTS = [LineCoveredEvent]
 SD_EVENTS = [SDScalarPairEvent, SDBranchEvent, SDReturnValueEvent]
 VALUE_EVENTS = [AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
-
+ALL_EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDScalarPairEvent, SDReturnValueEvent]
 
 class CombiningMethod:
     @abstractmethod
@@ -321,12 +321,24 @@ class TwoStageCombiningMethod(CombiningMethod):
 
 
 class ClassifierCombiningMethod(CombiningMethod):
-    def __init__(self, datasets_train, labels, first_stage: CombiningMethod, linearizer):
+    def __init__(self, datasets_train, labels, first_stage: CombiningMethod):
         self.classifier = MLPClassifier(hidden_layer_sizes=32, random_state=42, max_iter=500)
         self.classifier.fit(datasets_train, labels)
         self.first_stage = first_stage
-        self.linearizer = linearizer
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
+        print("Init")
+
+    @staticmethod
+    def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
+        typed_scores = {t: [] for t in ALL_EVENT_TYPES}
+        for score, t in scores:
+            typed_scores[t].append(score)
+        all_scores = np.array([s for s, _ in scores])
+        ret = [buggy, len(method.linenos), np.max(all_scores), np.average(all_scores), np.std(all_scores)]
+        for t in ALL_EVENT_TYPES:
+            ret.append(max(typed_scores[t] + [0]))
+            ret.append(np.average(typed_scores[t]))
+        return np.nan_to_num(np.array(ret), nan=0, posinf=0)
 
     @staticmethod
     def extract_labels(X, label_dimension_index: int):
@@ -336,12 +348,8 @@ class ClassifierCombiningMethod(CombiningMethod):
         training_data = X[np.array(training_data_rows)]
         return training_data, labels
 
-    class DummyEv:
-        def __init__(self, ri):
-            self.ranking_infos = [ri]
-            self.evaluation_metrics = None
-
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
+        print("Hi")
         scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.events_by_program_element(program_element)]
         linearized = self.linearizer(program_element, scores, False)
         X, _ = self.extract_labels(linearized, 0)
