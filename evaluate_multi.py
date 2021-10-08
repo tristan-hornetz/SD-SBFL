@@ -272,7 +272,7 @@ def get_methods_from_ris(ris: Iterable[RankingInfo]) -> Tuple[List[Tuple[Debugge
     non_buggy_methods = list()
     for ri in ris:
         bm = ri.buggy_methods
-        for m, scores in ri.top_20.items():
+        for m, scores in ri.top_20.items()[:10]:
             check = False
             for b in bm:
                 if m.__eq__(b):
@@ -482,6 +482,7 @@ if __name__ == "__main__":
         combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
         ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
         classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, linearize_method)
+        compound_c = TwoStageCombiningMethod(combiner_lc, classifier_c)
         classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient,
                                                                         classifier_c,
                                                                         "results_evaluation/classifier_ev.pickle.gz",

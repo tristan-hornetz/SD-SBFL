@@ -347,6 +347,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         X, _ = self.extract_labels(linearized, 0)
         X = X.T
         pred_proba = self.classifier.predict_proba(X)
+        print(f"{pred_proba[1] > self.threshold}-{pred_proba[1]}")
         return pred_proba[1] > self.threshold, *self.first_stage.combine(program_element, event_container, similarity_coefficient)
 
 
