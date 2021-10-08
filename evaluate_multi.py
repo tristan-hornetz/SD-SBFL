@@ -479,7 +479,7 @@ if __name__ == "__main__":
         X = get_linearized_method_data(training_ris)
         x_train, labels = extract_labels(X.T, 0)
         x_train = x_train.T
-        combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
+        combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max)
         ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
         classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc)
         compound_c = TwoStageCombiningMethod(combiner_lc, classifier_c)

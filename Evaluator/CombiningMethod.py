@@ -347,6 +347,15 @@ class ClassifierCombiningMethod(CombiningMethod):
         training_data = X[np.array(training_data_rows)]
         return training_data, labels
 
+    @staticmethod
+    def lin_rec(c: Iterable, l: List):
+        for e in c:
+            if isinstance(e, Iterable):
+                ClassifierCombiningMethod.lin_rec(e, l)
+            else:
+                l.append(e)
+        return l
+
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.get_from_program_element(program_element)]
         linearized = self.linearizer(program_element, scores, False)
@@ -354,9 +363,9 @@ class ClassifierCombiningMethod(CombiningMethod):
         X = X.T.reshape(1, -1)
         pred_proba = self.classifier.predict_proba(X)
         print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
-        ret = (int(pred_proba[0][1] > self.threshold), *self.first_stage.combine(program_element, event_container, similarity_coefficient))
-        print(ret)
-        return ret
+        fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
+        r_list = [int(pred_proba[0][1] > self.threshold)] + self.lin_rec(fs_result, [])
+        return tuple(r_list)
 
 
 
