@@ -4,7 +4,7 @@ import os
 import pickle
 import traceback
 from abc import abstractmethod
-from typing import Tuple, Any, Iterable, Callable, List, Dict
+from typing import Tuple, Any, Iterable, Callable, List, Dict, SupportsFloat
 from sklearn.neural_network import MLPClassifier
 import numpy as np
 
@@ -307,7 +307,7 @@ class TwoStageCombiningMethod(CombiningMethod):
             return
         self.current_event_container = f"{event_container.project_name}{event_container.bug_id}"
         try:
-            self.current_ranking = list(p for p, _ in sorted(filter(lambda e: e[1][0] > 0, ((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in event_container.events_by_program_element.keys())), key=lambda e: e[1], reverse=True)[:self.first_stage_threshold])
+            self.current_ranking = list(p for p, _ in sorted(filter(lambda e: e[1][0] > 0 if isinstance(e[1][0], SupportsFloat) else e[1][0] > tuple([0] * len(e[1][0])), ((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in event_container.events_by_program_element.keys())), key=lambda e: e[1], reverse=True)[:self.first_stage_threshold])
         except Exception as e:
             print(e)
             traceback.print_tb(e.__traceback__)
