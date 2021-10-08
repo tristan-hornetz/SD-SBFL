@@ -326,7 +326,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.classifier.fit(datasets_train, labels)
         self.first_stage = first_stage
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
-        self.result_stats = {False: 1, True: 1, "Correctness": 0, "True Positives": 0, "False Positives": 0, "False Negatives": 0}
+        self.result_stats = {False: 1, True: 1, "a": 0, "tp": 0, "fp": 0, "fn": 0, "sum": 0}
         self.ris = {str((ri.project_name, str(ri.bug_id))): ri for ri in test_ris}
 
     @staticmethod
@@ -366,6 +366,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         pred_proba = self.classifier.predict_proba(X)
         print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
         self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
+        self.result_stats["sum"] += 1
         print(self.result_stats[True]/self.result_stats[False])
         if str((event_container.project_name, str(event_container.bug_id))) in self.ris.keys():
             ri = self.ris[str((event_container.project_name, str(event_container.bug_id)))]
@@ -375,20 +376,30 @@ class ClassifierCombiningMethod(CombiningMethod):
                     expected_result = True
                     break
             if expected_result == bool(pred_proba[0][1] > self.threshold):
-                self.result_stats["Correctness"] += 1
+                self.result_stats["a"] += 1
                 if expected_result:
                     print("True Positive")
+                    self.result_stats["tp"] += 1
                 else:
                     print("True Nagative")
             else:
                 if expected_result:
                     print("False Nagetive")
+                    self.result_stats["fn"] += 1
                 else:
                     print("False Positive")
+                    self.result_stats["fp"] += 1
         elif pred_proba[0][1] > self.threshold:
             print("False Positive - nf")
         else:
             print("True Negative - nf")
+
+        try:
+            print(f"Accuracy {self.result_stats['a']/self.result_stats['sum']}")
+            print(f"Recall {self.result_stats['tp'] / (self.result_stats['tp'] + self.result_stats['fn'])}")
+            print(f"Precision {self.result_stats['tp'] / (self.result_stats['tp'] + self.result_stats['fp'])}")
+        except ZeroDivisionError:
+            pass
 
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
         r_list = [int(pred_proba[0][1] > self.threshold)] + self.lin_rec(fs_result, [])
