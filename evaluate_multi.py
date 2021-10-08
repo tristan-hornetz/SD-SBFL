@@ -22,6 +22,8 @@ TEMP_SYMLINK_DIR = "./.temp_evaluation"
 EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent,
                AbsoluteScalarValueEvent]  # , SDScalarPairEvent]
 
+ALL_EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDScalarPairEvent, SDReturnValueEvent]
+
 SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, AnderbergCoefficient, OchiaiCoefficient,
                            SimpleMatchingCoefficient, RogersTanimotoCoefficient, OchiaiIICoefficient,
                            RusselRaoCoefficient, TarantulaCoefficient]
@@ -209,6 +211,35 @@ class EvaluationRun(Collection):
         return out
 
 
+def build_temp_folder(temp_folder_name:str,  results_translated_folder: str, ris, test_index):
+    test_ris = ris[test_index]
+    if os.path.exists(temp_folder_name):
+        rmtree(temp_folder_name)
+    for ri in test_ris:
+        new_link = f"{os.path.dirname(os.path.abspath(sys.argv[0]))}/{temp_folder_name}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
+        old_link = f"{os.path.dirname(os.path.realpath(sys.argv[0]))}/{os.path.basename(results_translated_folder)}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
+        if not os.path.exists(os.path.dirname(new_link)):
+            mkdirRecursive(os.path.dirname(new_link))
+        os.symlink(old_link, new_link)
+    return temp_folder_name
+
+
+def get_split_training_ris(base_results_file: str, results_translated_folder: str) -> Tuple[
+    List[RankingInfo], str, List[RankingInfo]]:
+    # prepare data
+    base_run = EvaluationRun.load(base_results_file)
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=.2)
+    ris = np.array(base_run.evaluations[0].ranking_infos)
+    groups = np.array(list(ri.project_name for ri in ris))
+    train_index, test_index = next(splitter.split(ris, groups))
+    train_ris = ris[train_index]
+    test_ris = ris[test_index]
+    # build testing folder
+    temp_folder_name = "_results_test"
+
+    return train_ris, build_temp_folder(temp_folder_name, results_translated_folder, ris, test_index), list(test_ris)
+
+
 def get_training_data(base_results_file: str, results_translated_folder: str) -> Tuple[
     EvaluationRun, str, List[RankingInfo]]:
     # prepare data
@@ -231,16 +262,45 @@ def get_training_data(base_results_file: str, results_translated_folder: str) ->
     # build testing folder
     temp_folder_name = "_results_test"
     test_ris = ris[test_index]
-    if os.path.exists(temp_folder_name):
-        rmtree(temp_folder_name)
-    for ri in test_ris:
-        new_link = f"{os.path.dirname(os.path.abspath(sys.argv[0]))}/{temp_folder_name}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
-        old_link = f"{os.path.dirname(os.path.realpath(sys.argv[0]))}/{os.path.basename(results_translated_folder)}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
-        if not os.path.exists(os.path.dirname(new_link)):
-            mkdirRecursive(os.path.dirname(new_link))
-        os.symlink(old_link, new_link)
 
-    return training_run, temp_folder_name, list(test_ris)
+    return training_run, build_temp_folder(temp_folder_name, results_translated_folder, ris, test_index), list(test_ris)
+
+
+def get_methods_from_ris(ris: Iterable[RankingInfo]) -> Tuple[List[Tuple[DebuggerMethod, List[Tuple[float, type]]]],
+                                                              List[Tuple[DebuggerMethod, List[Tuple[float, type]]]]]:
+    buggy_methods = list()
+    non_buggy_methods = list()
+    for ri in ris:
+        bm = ri.buggy_methods
+        for m, scores in ri.top_20.items():
+            check = False
+            for b in bm:
+                if m.__eq__(b):
+                    check = True
+                    buggy_methods.append((m, scores))
+            if not check:
+                non_buggy_methods.append((m, scores))
+    return buggy_methods, non_buggy_methods
+
+
+def linearize_method(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
+    typed_scores = {t: [] for t in ALL_EVENT_TYPES}
+    for score, t in scores:
+        typed_scores[t].append(score)
+    all_scores = np.array([s for s, _ in scores])
+    ret = [buggy, len(method.linenos), np.max(all_scores), np.average(all_scores), np.std(all_scores)]
+    for t in ALL_EVENT_TYPES:
+        ret.append(max(typed_scores[t] + [0]))
+        ret.append(np.average(typed_scores[t]))
+    return np.nan_to_num(np.array(ret), nan=0, posinf=0)
+
+
+def get_linearized_method_data(ris: Iterable[RankingInfo]):
+    buggy_methods, non_buggy_methods = get_methods_from_ris(ris)
+    linearized = list()
+    linearized.extend(linearize_method(method, scores, True) for method, scores in buggy_methods)
+    linearized.extend(linearize_method(method, scores, False) for method, scores in non_buggy_methods)
+    return np.array(linearized)
 
 
 if __name__ == "__main__":
@@ -412,21 +472,16 @@ if __name__ == "__main__":
     task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
 
     # CLASSIFIER
-    RUN_CLASSIFIER_TEST = False  # Enable / Disable classifier test. !!! RUN EVENT TYPE COMBINATIONS 2 FIRST !!!
+    RUN_CLASSIFIER_TEST = True  # Enable / Disable classifier test. !!! RUN TEST TASK FIRST !!!
     if RUN_CLASSIFIER_TEST:
-        pre_run_file = "results_evaluation/event_type_combinations2_single.pickle.gz"
-        training_run, test_dir, test_ris = get_training_data(pre_run_file, result_dir)
-        datasets = EvaluationProfile(training_run.evaluations[0]).get_datasets()
-        extend_w_lc_best(datasets, training_run)
-        dimensions = list(datasets.keys())
-        X = np.array(list(datasets[k] for k in dimensions)).T
-        extract_labels(X.T, dimensions.index("App ID"))
-        x_train, labels = extract_labels(X.T, dimensions.index('lc_best'))
+        pre_run_file = "results_evaluation/test_task.pickle.gz"
+        training_ris, test_dir, test_ris = get_split_training_ris(pre_run_file, result_dir)
+        X = get_linearized_method_data(training_ris)
+        x_train, labels = extract_labels(X.T, 0)
         x_train = x_train.T
         combiner_lc = TypeOrderCombiningMethod([LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent], max, avg)
-        combiner_nlc = FilteredCombiningMethod([AbsoluteReturnValueEvent, SDBranchEvent, SDScalarPairEvent], max, avg)
         ris = {(ri.project_name, ri.bug_id): ri for ri in test_ris}
-        classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, combiner_nlc, ris, dimensions)
+        classifier_c = ClassifierCombiningMethod(x_train, labels, combiner_lc, linearize_method)
         classifier_evaluation: Evaluation = create_evaluation_recursive("_results_test", OchiaiCoefficient,
                                                                         classifier_c,
                                                                         "results_evaluation/classifier_ev.pickle.gz",

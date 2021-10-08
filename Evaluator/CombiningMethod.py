@@ -5,7 +5,7 @@ import pickle
 import traceback
 from abc import abstractmethod
 from typing import Tuple, Any, Iterable, Callable, List, Dict
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 import numpy as np
 
 from .RankerEvent import *
@@ -321,14 +321,12 @@ class TwoStageCombiningMethod(CombiningMethod):
 
 
 class ClassifierCombiningMethod(CombiningMethod):
-    def __init__(self, datasets_train, labels, combiner_lc: CombiningMethod, combiner_nlc: CombiningMethod, ranking_infos: Dict, dimensions):
-        self.classifier = RandomForestClassifier(n_estimators=25, max_depth=4, max_features=2, random_state=42)
+    def __init__(self, datasets_train, labels, first_stage: CombiningMethod, linearizer):
+        self.classifier = MLPClassifier(hidden_layer_sizes=32, random_state=42, max_iter=500)
         self.classifier.fit(datasets_train, labels)
-        self.ranking_infos = ranking_infos
-        self.combiner_lc = combiner_lc
-        self.combiner_nlc = combiner_nlc
-        self.lc_best_buffer = dict()
-        self.dimensions = dimensions.copy()
+        self.first_stage = first_stage
+        self.linearizer = linearizer
+        self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
 
     @staticmethod
     def extract_labels(X, label_dimension_index: int):
@@ -344,20 +342,12 @@ class ClassifierCombiningMethod(CombiningMethod):
             self.evaluation_metrics = None
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
-        if event_container not in self.lc_best_buffer.keys():
-            ev = self.DummyEv(self.ranking_infos[(event_container.project_name, event_container.bug_id)])
-            data = EvaluationProfile(ev).get_datasets()
-            for k in set(self.dimensions).difference(data.keys()):
-                data[k] = (0, )
-            X = np.array(list(data[k][0] for k in self.dimensions))
-            X, _ = self.extract_labels(X, self.dimensions.index("App ID"))
-            lc_best = self.classifier.predict(X.reshape(1, -1))[0]
-            self.lc_best_buffer[event_container] = lc_best
-        else:
-            lc_best = self.lc_best_buffer[event_container]
-        if lc_best:
-            return self.combiner_lc.combine(program_element, event_container, similarity_coefficient)
-        return self.combiner_nlc.combine(program_element, event_container, similarity_coefficient)
+        scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.events_by_program_element(program_element)]
+        linearized = self.linearizer(program_element, scores, False)
+        X, _ = self.extract_labels(linearized, 0)
+        X = X.T
+        pred_proba = self.classifier.predict_proba(X)
+        return pred_proba[1] > self.threshold, *self.first_stage.combine(program_element, event_container, similarity_coefficient)
 
 
 
