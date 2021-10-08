@@ -374,7 +374,7 @@ class ClassifierCombiningMethod(CombiningMethod):
                 if program_element.__eq__(bm):
                     expected_result = True
                     break
-            if expected_result == pred_proba[0][1] > self.threshold:
+            if expected_result == bool(pred_proba[0][1] > self.threshold):
                 self.result_stats["Correctness"] += 1
                 if expected_result:
                     print("True Positive")
