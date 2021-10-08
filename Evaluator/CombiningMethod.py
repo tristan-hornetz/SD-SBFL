@@ -323,8 +323,8 @@ class TwoStageCombiningMethod(CombiningMethod):
 
 
 class ClassifierCombiningMethod(CombiningMethod):
-    def __init__(self, datasets_train, labels, first_stage: CombiningMethod, test_ris):
-        self.classifier = MLPClassifier(hidden_layer_sizes=32, random_state=42, max_iter=500)
+    def __init__(self, datasets_train, labels, first_stage: CombiningMethod, test_ris, random_state=42):
+        self.classifier = MLPClassifier(hidden_layer_sizes=32, random_state=random_state, max_iter=500)
         self.classifier.fit(datasets_train, labels)
         self.first_stage = first_stage
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 85)
