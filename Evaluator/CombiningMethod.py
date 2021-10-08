@@ -311,6 +311,8 @@ class TwoStageCombiningMethod(CombiningMethod):
         except Exception as e:
             print(e)
             traceback.print_tb(e.__traceback__)
+        if hasattr(self.second_stage, "update_top_10"):
+            self.second_stage.update_top_10(self.current_ranking, event_container, similarity_coefficient)
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         self.update_event_container(event_container, similarity_coefficient)
@@ -328,6 +330,18 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 85)
         self.result_stats = {False: 1, True: 1, "a": 0, "tp": 0, "fp": 0, "fn": 0, "sum": 0}
         self.ris = {str((ri.project_name, str(ri.bug_id))): ri for ri in test_ris}
+        self.preds = dict()
+
+    def update_top_10(self, top_10: List[DebuggerMethod], event_container, similarity_coefficient):
+        self.preds = dict()
+        for program_element in top_10:
+            scores = [(similarity_coefficient.compute(e), type(e)) for e in
+                      event_container.get_from_program_element(program_element)]
+            linearized = self.linearizer(program_element, scores, False)
+            X, _ = self.extract_labels(linearized, 0)
+            X = X.T.reshape(1, -1)
+            pred_proba = self.classifier.predict_proba(X)
+            self.preds[program_element] = pred_proba[0][1]
 
     @staticmethod
     def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
@@ -359,16 +373,20 @@ class ClassifierCombiningMethod(CombiningMethod):
         return l
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
-        scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.get_from_program_element(program_element)]
-        linearized = self.linearizer(program_element, scores, False)
-        X, _ = self.extract_labels(linearized, 0)
-        X = X.T.reshape(1, -1)
-        pred_proba = self.classifier.predict_proba(X)
-        print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
-        self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
-        print(self.result_stats[True]/self.result_stats[False])
+        if program_element in self.preds.keys():
+            p1_value = int(self.preds[program_element] in sorted(self.preds.values(), reverse=True)[:3])
+        else:
+            scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.get_from_program_element(program_element)]
+            linearized = self.linearizer(program_element, scores, False)
+            X, _ = self.extract_labels(linearized, 0)
+            X = X.T.reshape(1, -1)
+            pred_proba = self.classifier.predict_proba(X)
+            print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
+            self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
+            print(self.result_stats[True]/self.result_stats[False])
+            p1_value = pred_proba[0][1] if pred_proba[0][1] > self.threshold else 0.0
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
-        r_list = [pred_proba[0][1] if pred_proba[0][1] > self.threshold else 0.0] + self.lin_rec(fs_result, [])
+        r_list = [p1_value] + self.lin_rec(fs_result, [])
         return tuple(r_list)
 
 
