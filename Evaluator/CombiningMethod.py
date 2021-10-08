@@ -348,7 +348,7 @@ class ClassifierCombiningMethod(CombiningMethod):
         return training_data, labels
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
-        scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.events_by_program_element(program_element)]
+        scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.get_from_program_element(program_element)]
         linearized = self.linearizer(program_element, scores, False)
         X, _ = self.extract_labels(linearized, 0)
         X = X.T
