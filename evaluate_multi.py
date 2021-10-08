@@ -46,7 +46,7 @@ def get_files_recursive(dir, files: List[str]):
 def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
                                 save_destination="",
                                 print_results=False, num_threads=-1, save_full_rankings=False, meta_rankings=None):
-    evaluation = Evaluation(similarity_coefficient, copy.deepcopy(combining_method), save_full_rankings=save_full_rankings)
+    evaluation = Evaluation(similarity_coefficient, combining_method, save_full_rankings=save_full_rankings)
     files = list(set(get_files_recursive(result_dir, [])))
     if os.path.exists(TEMP_SYMLINK_DIR):
         rmtree(TEMP_SYMLINK_DIR)
