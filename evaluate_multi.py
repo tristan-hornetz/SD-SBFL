@@ -476,7 +476,7 @@ if __name__ == "__main__":
     RUN_CLASSIFIER_TEST = True  # Enable / Disable classifier test. !!! RUN TEST TASK FIRST !!!
     if RUN_CLASSIFIER_TEST:
         classifier_run = EvaluationRun("classifier_run", "results_evaluation")
-        for i in range(100):
+        for i in range(2, 100):
             pre_run_file = "results_evaluation/test_task.pickle.gz"
             training_ris, test_dir, test_ris = get_split_training_ris(pre_run_file, result_dir, random_state=i)
             X = get_linearized_method_data(training_ris)
@@ -489,6 +489,9 @@ if __name__ == "__main__":
                                                                             compound_c,
                                                                             f"results_evaluation/classifiers/classifier_ev_{i}.pickle.gz",
                                                                             num_threads=8, print_results=True)
+            classifier_c.classifier = None
+            classifier_c.preds = None
+            classifier_c.ris = None
             classifier_run.evaluations.append(classifier_evaluation)
             classifier_run.save()
 
