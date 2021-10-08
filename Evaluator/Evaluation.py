@@ -58,7 +58,9 @@ class Evaluation:
             return
         try:
             ranking = mr.rank(self.similarity_coefficient, self.combining_method)
-        except:
+        except Exception as e:
+            print(type(e))
+            traceback.print_tb(e.__traceback__)
             return
         metrics = dict()
         for k in self.ks:

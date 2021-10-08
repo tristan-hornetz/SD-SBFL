@@ -326,7 +326,6 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.classifier.fit(datasets_train, labels)
         self.first_stage = first_stage
         self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 67)
-        print("Init")
 
     @staticmethod
     def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
@@ -349,7 +348,6 @@ class ClassifierCombiningMethod(CombiningMethod):
         return training_data, labels
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
-        print("Hi")
         scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.events_by_program_element(program_element)]
         linearized = self.linearizer(program_element, scores, False)
         X, _ = self.extract_labels(linearized, 0)
