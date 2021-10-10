@@ -321,6 +321,13 @@ class TwoStageCombiningMethod(CombiningMethod):
             return ret
         return self.second_stage.combine(program_element, event_container, similarity_coefficient)
 
+    def __str__(self):
+        out = f"{type(self).__name__}\n"
+        for i, s in enumerate((self.first_stage, self.second_stage)):
+            out += f"{i}:  "
+            out += "\n    ".join(str(s).split("\n")) + "\n"
+        return out
+
 
 class ClassifierCombiningMethod(CombiningMethod):
     def __init__(self, datasets_train, labels, first_stage: CombiningMethod, test_ris, random_state=42):
@@ -331,6 +338,14 @@ class ClassifierCombiningMethod(CombiningMethod):
         self.result_stats = {False: 1, True: 1, "a": 0, "tp": 0, "fp": 0, "fn": 0, "sum": 0}
         self.ris = {str((ri.project_name, str(ri.bug_id))): ri for ri in test_ris}
         self.preds = dict()
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.classifier = None
+        self.ris = None
+        self.preds = None
 
     def update_top_10(self, top_10: List[DebuggerMethod], event_container, similarity_coefficient):
         self.preds = dict()
@@ -388,6 +403,12 @@ class ClassifierCombiningMethod(CombiningMethod):
         fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
         r_list = [p1_value] + self.lin_rec(fs_result, [])
         return tuple(r_list)
+
+    def __str__(self):
+        out = f"{type(self).__name__}\n"
+        out += f"    "
+        out += "\n    ".join(str(self.first_stage).split("\n")) + "\n"
+        return out
 
 
 

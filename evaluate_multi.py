@@ -476,23 +476,23 @@ if __name__ == "__main__":
     RUN_CLASSIFIER_TEST = True  # Enable / Disable classifier test. !!! RUN TEST TASK FIRST !!!
     if RUN_CLASSIFIER_TEST:
         classifier_run = EvaluationRun("classifier_run", "results_evaluation")
-        for i in range(2, 100):
+        for i in range(5, 100):
             pre_run_file = "results_evaluation/test_task.pickle.gz"
             training_ris, test_dir, test_ris = get_split_training_ris(pre_run_file, result_dir, random_state=i)
             X = get_linearized_method_data(training_ris)
             x_train, labels = extract_labels(X.T, 0)
             x_train = x_train.T
             pre_combiner = FilteredCombiningMethod([LineCoveredEvent], max, avg)
-            classifier_c = ClassifierCombiningMethod(x_train, labels, pre_combiner, test_ris, random_state=i)
-            compound_c = TwoStageCombiningMethod(pre_combiner, classifier_c)
-            classifier_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient,
-                                                                            compound_c,
-                                                                            f"results_evaluation/classifiers/classifier_ev_{i}.pickle.gz",
-                                                                            num_threads=8, print_results=True)
-            classifier_c.classifier = None
-            classifier_c.preds = None
-            classifier_c.ris = None
-            classifier_run.evaluations.append(classifier_evaluation)
+            with ClassifierCombiningMethod(x_train, labels, pre_combiner, test_ris, random_state=i) as classifier_c:
+                compound_c = TwoStageCombiningMethod(pre_combiner, classifier_c)
+                classifier_evaluation: Evaluation = create_evaluation_recursive(test_dir, OchiaiCoefficient,
+                                                                                compound_c,
+                                                                                f"results_evaluation/classifiers/classifier_ev_{i}.pickle.gz",
+                                                                                num_threads=8, print_results=True)
+                new_ev = Evaluation(OchiaiCoefficient, None)
+                new_ev.ranking_infos.extend(classifier_evaluation.ranking_infos)
+                new_ev.rankings.extend(classifier_evaluation.rankings)
+            classifier_run.evaluations.append(new_ev)
             classifier_run.save()
 
     TASKS = {  # "basic_combining_methods": task_basic_combining_methods,

@@ -157,7 +157,7 @@ class RankingInfo:
         self.info = ranking.info
         self.project_name = ranking.info.project_name
         self.bug_id = ranking.info.bug_id
-        self.combining_method = ranking.combining_method
+        self.combining_method = type(ranking.combining_method), str(ranking.combining_method)
         self.similarity_coefficient = ranking.similarity_coefficient
         self.buggy_methods = ranking.buggy_methods.copy()
         self.store_buggy_method_sus_values(ranking)
