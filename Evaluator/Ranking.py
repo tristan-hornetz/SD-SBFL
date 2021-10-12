@@ -159,11 +159,11 @@ class RankingInfo:
         self.bug_id = ranking.info.bug_id
         self.combining_method = type(ranking.combining_method), str(ranking.combining_method)
         self.similarity_coefficient = ranking.similarity_coefficient
-        self.buggy_methods = ranking.buggy_methods.copy()
-        self.store_buggy_method_sus_values(ranking)
+        #self.buggy_methods = ranking.buggy_methods.copy()
+        #self.store_buggy_method_sus_values(ranking)
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.store_generic_info(ranking)
-        self.code_statistics = ranking.code_statistics
+        #self.code_statistics = ranking.code_statistics
 
 
 class MetaRanking:
