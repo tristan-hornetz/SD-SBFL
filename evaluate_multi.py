@@ -468,12 +468,12 @@ if __name__ == "__main__":
 
     # EVENT TYPES SINGLE
     task_event_types_single = list(
-        (result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
+        (result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg, len)) for e in EVENT_TYPES)
 
     task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
 
     # CLASSIFIER
-    RUN_CLASSIFIER_TEST = True  # Enable / Disable classifier test. !!! RUN TEST TASK FIRST !!!
+    RUN_CLASSIFIER_TEST = False  # Enable / Disable classifier test. !!! RUN TEST TASK FIRST !!!
     if RUN_CLASSIFIER_TEST:
         classifier_run = EvaluationRun("classifier_run", "results_evaluation")
         for i in range(5, 100):
@@ -500,7 +500,7 @@ if __name__ == "__main__":
         # "event_type_orders": task_event_type_orders,
         # "similarity_coefficients2": task_similarity_coefficients2,
         # "aggregators": task_aggregators,#
-        "test_task": task_test,
+        # "test_task": task_test,
         # "aggregators2": task_aggregators2,
         # "similarity_coefficients3": task_similarity_coefficients3,
         # "similarity_coefficients4": task_similarity_coefficients4,
@@ -514,7 +514,7 @@ if __name__ == "__main__":
         # "aggregators_single": task_aggregators_single,
         # "aggregators_sp": task_aggregators_single,
         # "averaging_combiner": task_averaging_combiner,
-        # "event_types_single": task_event_types_single,
+        "event_types_single": task_event_types_single,
     }
 
     signal.signal(signal.SIGINT, interrupt_handler)
