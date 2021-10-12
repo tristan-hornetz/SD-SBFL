@@ -89,9 +89,6 @@ class RankingInfo:
             filter(lambda e: e[1] > 0 if isinstance(e[1], SupportsFloat) else tuple([0] * len(e[1])), ranking.ranking)))
         self.buggy_in_ranking = len(ranking.buggy_in_ranking)
         self.num_buggy_methods = len(ranking.buggy_methods)
-        self.top_10_suspiciousness_values = list(s for e, s in ranking.ranking[:10])
-        self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(
-            set(self.top_10_suspiciousness_values))
         self.num_events_by_type = {t: 0 for t in EVENT_TYPES}
         self.num_sus_events_by_type = {t: 0 for t in EVENT_TYPES}
         for t in self.num_events_by_type.keys():
@@ -162,6 +159,9 @@ class RankingInfo:
         self.store_buggy_method_sus_values(ranking)
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.len_events = len(ranking.events)
+        self.top_10_suspiciousness_values = list(s for e, s in ranking.ranking[:10])
+        self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(
+            set(self.top_10_suspiciousness_values))
         #self.store_generic_info(ranking)
         #self.code_statistics = ranking.code_statistics
 
