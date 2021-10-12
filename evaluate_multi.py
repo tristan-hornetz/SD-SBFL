@@ -333,6 +333,15 @@ if __name__ == "__main__":
         [SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
     ]
     task_selected_combinations = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod(es, max, avg)) for es in selected_combinations)
+    selected_event_type_orders = [
+        [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent],
+        [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent, SDReturnValueEvent],
+        [LineCoveredEvent, SDReturnValueEvent, AbsoluteScalarValueEvent],
+        [SDBranchEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
+        [SDBranchEvent, LineCoveredEvent, AbsoluteScalarValueEvent, LineCoveredEvent],
+        [AbsoluteReturnValueEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
+    ]
+    task_selected_event_type_orders = list((result_dir, OchiaiCoefficient, TypeOrderCombiningMethod(es, max)) for es in selected_event_type_orders)
     thesis_basic = [(result_dir, OchiaiCoefficient, GenericCombiningMethod(max, avg))]
     tasks_in_thesis = {
         "thesis_basic": thesis_basic,
@@ -340,6 +349,7 @@ if __name__ == "__main__":
         "thesis_similarity_coefficients": task_similarity_coefficients_single,
         "thesis_combining_methods": task_combining_methods_thesis,
         "thesis_combinations": task_selected_combinations,
+        "thesis_orders": task_selected_event_type_orders,
     }
 
     task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
