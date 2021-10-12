@@ -79,7 +79,6 @@ class Ranking(Iterable):
 
 class RankingInfo:
     def store_generic_info(self, ranking: Ranking):
-        self.len_events = len(ranking.events)
         events_sus = set(
             filter(lambda e: ranking.similarity_coefficient.compute(e) > 0, ranking.events.events.values()))
         self.len_events_sus = len(events_sus)
@@ -150,8 +149,8 @@ class RankingInfo:
         for m in self.buggy_methods:
             self.buggy_method_suspiciousness_values[m] = ranking.combining_method.combine(m, ranking.events, self.similarity_coefficient)
             self.buggy_method_ranking_index[m] = ranking.buggy_method_index[m]
-        self.all_sus_values = list(s for m, s in filter(lambda e: e[1] > tuple([0] * (len(e[1]) if hasattr(e[1], '__len__') else 1)), ranking.ranking))
-        self.top_20 = {r: [(ranking.similarity_coefficient.compute(e), type(e)) for e in ranking.events.get_from_program_element(r)] for r, *_ in ranking.ranking[:20]}
+        #self.all_sus_values = list(s for m, s in filter(lambda e: e[1] > tuple([0] * (len(e[1]) if hasattr(e[1], '__len__') else 1)), ranking.ranking))
+        #self.top_20 = {r: [(ranking.similarity_coefficient.compute(e), type(e)) for e in ranking.events.get_from_program_element(r)] for r, *_ in ranking.ranking[:20]}
 
     def __init__(self, ranking: Ranking):
         self.info = ranking.info
@@ -159,10 +158,11 @@ class RankingInfo:
         self.bug_id = ranking.info.bug_id
         self.combining_method = type(ranking.combining_method), str(ranking.combining_method)
         self.similarity_coefficient = ranking.similarity_coefficient
-        #self.buggy_methods = ranking.buggy_methods.copy()
-        #self.store_buggy_method_sus_values(ranking)
+        self.buggy_methods = ranking.buggy_methods.copy()
+        self.store_buggy_method_sus_values(ranking)
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
-        self.store_generic_info(ranking)
+        self.len_events = len(ranking.events)
+        #self.store_generic_info(ranking)
         #self.code_statistics = ranking.code_statistics
 
 
