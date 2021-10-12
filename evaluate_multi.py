@@ -319,10 +319,9 @@ if __name__ == "__main__":
     output_dir = os.path.realpath(args.output_dir)
 
     # EVENT TYPES SINGLE
-    task_event_types_single = list(
-        (result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
+    task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
     # SIMILARITY COEFFICIENTS SINGLE
-    task_similarity_coefficients_single = list((result_dir, s, GenericCombiningMethod(max, avg) for s in SIMILARITY_COEFFICIENTS))
+    task_similarity_coefficients_single = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
     # COMBINING METHODS
     task_combining_methods_thesis = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs)) for cs in [(max, ), (avg, ), (max, avg), (avg, max), (max, avg, make_tuple), (avg, max, make_tuple)])
     # SELECTED COMBINATIONS
