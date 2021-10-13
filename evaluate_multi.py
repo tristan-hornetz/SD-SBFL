@@ -336,10 +336,9 @@ if __name__ == "__main__":
     selected_event_type_orders = [
         [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent],
         [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent, SDReturnValueEvent],
-        [LineCoveredEvent, SDReturnValueEvent, AbsoluteScalarValueEvent],
-        [SDBranchEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
-        [SDBranchEvent, LineCoveredEvent, AbsoluteScalarValueEvent, LineCoveredEvent],
+        [SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
         [AbsoluteReturnValueEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
+        [SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
     ]
     task_selected_event_type_orders = list((result_dir, OchiaiCoefficient, TypeOrderCombiningMethod(es, max)) for es in selected_event_type_orders)
     thesis_basic = [(result_dir, OchiaiCoefficient, GenericCombiningMethod(max, avg))]
