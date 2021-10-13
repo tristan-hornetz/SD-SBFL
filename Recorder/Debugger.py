@@ -76,6 +76,13 @@ class BetterOchiaiDebugger(OchiaiDebugger):
 
 
 class ReportingDebugger(BetterOchiaiDebugger):
+
+    def add_collector(self, outcome: str, collector: Collector) -> Collector:
+        ret = super().add_collector(outcome, collector)
+        if outcome == self.FAIL:
+            self.teardown()
+        return ret
+
     @classmethod
     def tearDownClass(cls):
         debugger.teardown()
@@ -90,7 +97,7 @@ class ReportingDebugger(BetterOchiaiDebugger):
         else:
             dump_file = self.dump_file
         if os.path.isfile(dump_file):
-            if len(self.rank()) < 1:
+            if len(self.collectors[self.FAIL]) < 1:
                 return
             os.remove(dump_file)
         with gzip.open(dump_file, "xb") as f:

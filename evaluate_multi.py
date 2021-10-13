@@ -96,6 +96,7 @@ def run_process_list(processes, out_queue: Queue, task_name: str = "", num_threa
     while not out_queue.empty():
         ret.append(out_queue.get())
     assert (len(ret) <= num_processes)
+    assert (len(ret) > 0)
     assert (out_queue.empty())
     return ret
 
