@@ -206,7 +206,7 @@ class EvaluationRun(Collection):
             for ri in ev.ranking_infos:
                 len += 1
                 for k in _sum.keys():
-                    _sum[k] += (ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods
+                    _sum[k] += ((ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods) if ri.num_buggy_methods > 0 else 0
         avgs = {k: v / len for k, v in _sum.items()}
         out += f"\n\nRecall upper bound: {avgs}\n"
         return out
