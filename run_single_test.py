@@ -40,7 +40,7 @@ def get_test_ids():
             if not line:
                 break
             run_test_sh = line.strip(' \n')
-            if run_test_sh.startswith('python') or run_test_sh.startswith('pytest ') or run_test_sh.startswith('tox'):
+            if run_test_sh.startswith('python') or run_test_sh.startswith('pytest ') or run_test_sh.startswith('tox') or run_test_sh.startswith('py.test'):
                 ret.append(list(filter(lambda s: not s.startswith('-'), run_test_sh.split(' '))).pop())
     if str(os.path.realpath(info_dir + "/../..")).rstrip("/").endswith("/tqdm"):
         rc = ret.copy()
