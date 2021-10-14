@@ -320,7 +320,7 @@ if __name__ == "__main__":
     output_dir = os.path.realpath(args.output_dir)
 
     # EVENT TYPES SINGLE
-    task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in EVENT_TYPES)
+    task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent])
     # SIMILARITY COEFFICIENTS SINGLE
     task_similarity_coefficients_single = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
     # COMBINING METHODS
