@@ -359,5 +359,5 @@ if __name__ == "__main__":
     for task_name, task in tasks_in_thesis.items():
         run = EvaluationRun(task_name, output_dir)
         run.run_task(task)
-        print(run)
         run.save()
+        print(run)

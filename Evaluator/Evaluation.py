@@ -130,6 +130,6 @@ class Evaluation:
         out += f"Top-k accuracy: {' | '.join(f'{k}: {v}' for k, v in sorted(self.fraction_top_k_accurate.items()))}\n"
         out += f"Avg. recall@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_recall_at_k.items()))}\n"
         out += f"Avg. precision@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_precision_at_k.items()))}\n"
-        out += f"Avg. unique sus. scores in Top-10: {10.0 - (sum(r.top_10_suspiciousness_value_ties for r in self.ranking_infos)/len(self.ranking_infos))}"
+        out += f"Avg. unique sus. scores in Top-10: {10.0 - (sum(r.top_10_suspiciousness_value_ties for r in self.ranking_infos)/len(self.ranking_infos)) if len(self.ranking_infos) > 0 else 0}"
         return out
 
