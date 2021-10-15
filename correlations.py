@@ -42,7 +42,7 @@ def scatter_plot(datasets, x_metric: str, y_metric: str, x_title: str, y_title: 
     for i, name in enumerate(LOC_BY_APP.keys()):
         print(f"{name} - {category_colors[i]}")
     for i in range(len(datasets[x_metric])):
-        ax.scatter(datasets[x_metric][i], datasets[y_metric][i], s=30, alpha=.3, color=category_colors[datasets["App ID"][i]])
+        ax.scatter(datasets[x_metric][i], datasets[y_metric][i], s=30, alpha=.3)
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
     fig.set_size_inches(4, 3)
@@ -68,7 +68,7 @@ def get_correlation_matrix(datasets, plot=False, rank_based=False):
         plt.yticks(np.arange(len(datasets.items())), datasets.keys(), fontsize=8)
         for i in range(len(datasets)):
             for j in range(len(datasets)):
-                ax.text(j, i, '{:.2f}'.format(float(r[i, j])) if str(r[i, j]) != "--" and False else "", ha='center', va='center',
+                ax.text(j, i, '{:.2f}'.format(float(r[i, j])) if str(r[i, j]) != "--" else "", ha='center', va='center',
                         color='r', fontsize=12)
         cbar = ax.figure.colorbar(im, ax=ax, format='% .2f')
         plt.show()

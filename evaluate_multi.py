@@ -20,8 +20,7 @@ from correlations import extend_w_event_type_specific_results, extend_w_lc_best,
 
 TEMP_SYMLINK_DIR = "./.temp_evaluation"
 
-EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent,
-               AbsoluteScalarValueEvent]  # , SDScalarPairEvent]
+EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
 
 ALL_EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDScalarPairEvent, SDReturnValueEvent]
 
@@ -324,7 +323,8 @@ if __name__ == "__main__":
     # SIMILARITY COEFFICIENTS SINGLE
     task_similarity_coefficients_single = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
     # COMBINING METHODS
-    task_combining_methods_thesis = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs)) for cs in [(max, ), (avg, ), (max, avg), (avg, max), (max, avg, make_tuple), (avg, max, make_tuple)])
+    selected_combining_methods = [(max, ), (avg, ), (max, avg), (avg, max), (max, avg, make_tuple), (avg, max, make_tuple), (max, len), (max, sum)]
+    task_combining_methods_thesis = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs)) for cs in selected_combining_methods)
     # SELECTED COMBINATIONS
     selected_combinations = [
         [LineCoveredEvent, SDBranchEvent],
