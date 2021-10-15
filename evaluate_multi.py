@@ -17,6 +17,7 @@ from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import *
 from correlations import extend_w_event_type_specific_results, extend_w_lc_best, extract_labels
+from numpy import std
 
 TEMP_SYMLINK_DIR = "./.temp_evaluation"
 
@@ -323,7 +324,7 @@ if __name__ == "__main__":
     # SIMILARITY COEFFICIENTS SINGLE
     task_similarity_coefficients_single = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
     # COMBINING METHODS
-    selected_combining_methods = [(max, ), (avg, ), (max, avg), (avg, max), (max, avg, make_tuple), (avg, max, make_tuple), (max, len), (max, sum)]
+    selected_combining_methods = [(max, ), (avg, ), (max, avg), (avg, max), (max, avg, make_tuple), (avg, max, make_tuple), (max, std), (max, sum)]
     task_combining_methods_thesis = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs)) for cs in selected_combining_methods)
     # SELECTED COMBINATIONS
     selected_combinations = [
@@ -337,7 +338,7 @@ if __name__ == "__main__":
     selected_event_type_orders = [
         [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent],
         [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent, SDReturnValueEvent],
-        [SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
+        [SDBranchEvent, SDScalarPairEvent, AbsoluteReturnValueEvent],
         [AbsoluteReturnValueEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
         [AbsoluteScalarValueEvent, LineCoveredEvent, AbsoluteReturnValueEvent]
     ]
