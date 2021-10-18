@@ -1,3 +1,6 @@
+import gzip
+import pickle
+
 from os.path import dirname, exists, abspath
 
 from Evaluator.CodeInspection.utils import mkdirRecursive

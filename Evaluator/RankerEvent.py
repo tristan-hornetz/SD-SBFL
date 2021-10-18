@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from typing import Any, Tuple, Set, Iterable
-from .CodeInspection.Methods import DebuggerMethod
 
 
 class RankerEvent:
@@ -85,7 +84,7 @@ class AbsoluteReturnValueEvent(RankerEvent):
                  failed_with_event: Set[Any], total_passed: int, total_failed: int,
                  value: Any):
         super(AbsoluteReturnValueEvent, self).__init__(program_element, location, passed_with_event,
-                                                 failed_with_event, total_passed, total_failed)
+                                                       failed_with_event, total_passed, total_failed)
         self.value = value
 
     def __hash__(self):
@@ -100,7 +99,7 @@ class AbsoluteScalarValueEvent(RankerEvent):
                  failed_with_event: Set[Any], total_passed: int, total_failed: int,
                  name: str, value: Any):
         super(AbsoluteScalarValueEvent, self).__init__(program_element, location, passed_with_event,
-                                                 failed_with_event, total_passed, total_failed)
+                                                       failed_with_event, total_passed, total_failed)
         self.name = name
         self.value = value
 
@@ -142,4 +141,3 @@ class EventContainer(Iterable):
         if program_element not in self.events_by_program_element.keys():
             return set()
         return self.events_by_program_element[program_element]
-

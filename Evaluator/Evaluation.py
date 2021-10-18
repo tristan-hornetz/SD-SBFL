@@ -12,7 +12,6 @@ from tqdm import tqdm
 
 from .CombiningMethod import CombiningMethod
 from .Ranking import RankingInfo
-from copy import deepcopy
 
 
 class Evaluation:

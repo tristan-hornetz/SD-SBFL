@@ -1,7 +1,7 @@
 from typing import Dict
 
 from .CodeInspection.Branches import extractBranchesFromCode
-from .CodeInspection.Methods import DebuggerMethod, extractMethodsFromCode, BugInfo
+from .CodeInspection.Methods import extractMethodsFromCode, BugInfo
 from .RankerEvent import *
 
 
@@ -10,7 +10,7 @@ class EventTranslator:
     def match_method(filename, method_name, lineno, method_objects):
         if str(method_name).startswith("<") and method_name != "<module>":
             possible_methods = list(
-                                filter(lambda m: m[0] == filename and lineno == m[2] and "<" not in m[1], method_objects.keys()))
+                filter(lambda m: m[0] == filename and lineno == m[2] and "<" not in m[1], method_objects.keys()))
             if len(possible_methods) > 0:
                 method_name = possible_methods[0][1]
         return filename, method_name, lineno
@@ -225,12 +225,12 @@ class EventProcessor:
     def process(self, _results):
         event_container = EventContainer()
         info = BugInfo(_results)
-        #print("Extracting method objects")
+        # print("Extracting method objects")
         method_objects = extractMethodsFromCode(_results, info)
         if len(method_objects.items()) < 1:
             print(f"{_results.project_name}, {_results.bug_id} - No methods extracted")
             raise AssertionError()
         for t in self.translators:
-            #print(f"Translating for {t}")
+            # print(f"Translating for {t}")
             t.translate(_results, event_container, method_objects)
         return event_container, method_objects, info

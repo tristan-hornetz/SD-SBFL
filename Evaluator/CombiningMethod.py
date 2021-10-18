@@ -1,20 +1,19 @@
-import gzip
+import math
 import math
 import os
-import pickle
 import traceback
-from abc import abstractmethod
-from typing import Tuple, Any, Iterable, Callable, List, Dict, SupportsFloat
-from sklearn.neural_network import MLPClassifier
+from typing import Callable, List, SupportsFloat
+
 import numpy as np
 
 from .RankerEvent import *
-from correlations import EvaluationProfile
 
 SBFL_EVENTS = [LineCoveredEvent]
 SD_EVENTS = [SDScalarPairEvent, SDBranchEvent, SDReturnValueEvent]
 VALUE_EVENTS = [AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
-ALL_EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDScalarPairEvent, SDReturnValueEvent]
+ALL_EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent,
+                   SDScalarPairEvent, SDReturnValueEvent]
+
 
 class CombiningMethod:
     @abstractmethod
@@ -38,15 +37,15 @@ def median(cs):
 
 
 def geometric_mean(cs):
-    return np.prod(cs) ** (1.0/len(cs))
+    return np.prod(cs) ** (1.0 / len(cs))
 
 
 def harmonic_mean(cs):
-    return len(cs) / sum(1.0/(c if c > 0 else .01) for c in cs)
+    return len(cs) / sum(1.0 / (c if c > 0 else .01) for c in cs)
 
 
 def quadratic_mean(cs):
-    return math.sqrt((1/len(cs)) * sum(c**2 for c in cs))
+    return math.sqrt((1 / len(cs)) * sum(c ** 2 for c in cs))
 
 
 def stddev(cs):
@@ -55,7 +54,6 @@ def stddev(cs):
 
 def make_tuple(cs):
     return *sorted(cs, reverse=True),
-
 
 
 class GenericCombiningMethod(CombiningMethod):
@@ -69,7 +67,8 @@ class GenericCombiningMethod(CombiningMethod):
         for e in absolute_returns:
             locations[e.location] += 1
         duplicate_locations = list(p for p, _ in filter(lambda e: e[1] > 1, locations.items()))
-        return list(filter(lambda e: not isinstance(e, AbsoluteReturnValueEvent) or e.location in duplicate_locations, events))
+        return list(
+            filter(lambda e: not isinstance(e, AbsoluteReturnValueEvent) or e.location in duplicate_locations, events))
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         events = list(event_container.get_from_program_element(program_element))
@@ -104,7 +103,8 @@ class LinPredCombiningMethod(CombiningMethod):
             coefficients_sd.append(similarity_coefficient.compute(e))
         for e in filter(lambda c: type(c) in SBFL_EVENTS, events):
             coefficients_sbfl.append(similarity_coefficient.compute(e))
-        return *((m(coefficients_sbfl if len(coefficients_sbfl) > 0 else [0]) + m(coefficients_sd if len(coefficients_sd) > 0 else [0]) / 2.0) for m in self.methods),
+        return *((m(coefficients_sbfl if len(coefficients_sbfl) > 0 else [0]) + m(
+            coefficients_sd if len(coefficients_sd) > 0 else [0]) / 2.0) for m in self.methods),
 
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}"
@@ -142,7 +142,6 @@ class AveragingCombiningMethod(CombiningMethod):
         return out
 
 
-
 class WeightedCombiningMethod(CombiningMethod):
     def __init__(self, weights: Iterable[Tuple[Any, float]], *methods: Callable[[Iterable[float]], float]):
         self.methods = methods
@@ -170,7 +169,7 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
     def __init__(self, start_weights: Iterable[Tuple[Any, float]], *methods: Callable[[Iterable[float]], float]):
         self.methods = methods
         weight_max = max([e[1] for e in start_weights])
-        self.types = list(e[0]for e in start_weights)
+        self.types = list(e[0] for e in start_weights)
         self.weights = list(e[1] / weight_max for e in start_weights)
         self.old_weights = self.weights.copy()
         self.adjust_index = 0
@@ -205,7 +204,8 @@ class AdjustingWeightedCombiningMethod(CombiningMethod):
 
     def update_results(self, e, *args, **kwargs):
         old_quality = self.current_evaluation_quality
-        self.current_evaluation_quality = sum(e.fraction_top_k_accurate[k] + e.avg_recall_at_k[k] + e.avg_precision_at_k[k]for k in [1, 3, 5, 10])
+        self.current_evaluation_quality = sum(
+            e.fraction_top_k_accurate[k] + e.avg_recall_at_k[k] + e.avg_precision_at_k[k] for k in [1, 3, 5, 10])
         nw = self.weights[self.adjust_index % len(self.weights)] + self.adjust_by
         if old_quality < self.current_evaluation_quality:
             self.weights = self.old_weights.copy()
@@ -241,7 +241,8 @@ class TypeOrderCombiningMethod(GenericCombiningMethod):
 
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         coefficients = self.get_coefficients(program_element, event_container, similarity_coefficient)
-        return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)), ) for t, cs in coefficients.items()),
+        return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)),) for t, cs in
+                 coefficients.items()),
 
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(t.__name__ for t in self.types))}"
@@ -254,8 +255,8 @@ class CompensatingTypeOrderCombiningMethod(TypeOrderCombiningMethod):
         for t in self.types:
             if len(coefficients[t]) == 0:
                 coefficients[t] = coefficients[self.types[0]].copy()
-        return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)), ) for t, cs in coefficients.items()),
-
+        return *((*(m(cs) for m in self.methods),) if len(cs) > 0 else (*([0] * len(self.methods)),) for t, cs in
+                 coefficients.items()),
 
 
 class GroupedTypeOrderCombiningMethod(GenericCombiningMethod):
@@ -270,7 +271,7 @@ class GroupedTypeOrderCombiningMethod(GenericCombiningMethod):
             for e in filter(lambda c: type(c) in tg, events):
                 c = similarity_coefficient.compute(e)
                 coefficients[tg].append(c)
-        return *(tuple(m(cs) if len(cs)>0 else 0 for cs in coefficients.values()) for m in self.methods),
+        return *(tuple(m(cs) if len(cs) > 0 else 0 for cs in coefficients.values()) for m in self.methods),
 
     def __str__(self):
         out = f"{type(self).__name__}\nMethods: {str(tuple(self.methods))}\nEvent types:{str(tuple(self.type_groups))}"
@@ -307,7 +308,11 @@ class TwoStageCombiningMethod(CombiningMethod):
             return
         self.current_event_container = f"{event_container.project_name}{event_container.bug_id}"
         try:
-            self.current_ranking = list(p for p, _ in sorted(filter(lambda e: e[1][0] > 0 if isinstance(e[1][0], SupportsFloat) else e[1][0] > tuple([0] * len(e[1][0])), ((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in event_container.events_by_program_element.keys())), key=lambda e: e[1], reverse=True)[:self.first_stage_threshold])
+            self.current_ranking = list(p for p, _ in sorted(filter(
+                lambda e: e[1][0] > 0 if isinstance(e[1][0], SupportsFloat) else e[1][0] > tuple([0] * len(e[1][0])),
+                ((p, self.first_stage.combine(p, event_container, similarity_coefficient)) for p in
+                 event_container.events_by_program_element.keys())), key=lambda e: e[1], reverse=True)[
+                                                      :self.first_stage_threshold])
         except Exception as e:
             print(e)
             traceback.print_tb(e.__traceback__)
@@ -317,7 +322,7 @@ class TwoStageCombiningMethod(CombiningMethod):
     def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
         self.update_event_container(event_container, similarity_coefficient)
         if program_element not in self.current_ranking:
-            ret = (0, )
+            ret = (0,)
             return ret
         return self.second_stage.combine(program_element, event_container, similarity_coefficient)
 
@@ -327,92 +332,3 @@ class TwoStageCombiningMethod(CombiningMethod):
             out += f"{i}:  "
             out += "\n    ".join(str(s).split("\n")) + "\n"
         return out
-
-
-class ClassifierCombiningMethod(CombiningMethod):
-    def __init__(self, datasets_train, labels, first_stage: CombiningMethod, test_ris, random_state=42):
-        self.classifier = MLPClassifier(hidden_layer_sizes=32, random_state=random_state, max_iter=500)
-        self.classifier.fit(datasets_train, labels)
-        self.first_stage = first_stage
-        self.threshold = np.percentile(self.classifier.predict_proba(datasets_train).T[1], 85)
-        self.result_stats = {False: 1, True: 1, "a": 0, "tp": 0, "fp": 0, "fn": 0, "sum": 0}
-        self.ris = {str((ri.project_name, str(ri.bug_id))): ri for ri in test_ris}
-        self.preds = dict()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.classifier = None
-        self.ris = None
-        self.preds = None
-
-    def update_top_10(self, top_10: List[DebuggerMethod], event_container, similarity_coefficient):
-        self.preds = dict()
-        for program_element in top_10:
-            scores = [(similarity_coefficient.compute(e), type(e)) for e in
-                      event_container.get_from_program_element(program_element)]
-            linearized = self.linearizer(program_element, scores, False)
-            X, _ = self.extract_labels(linearized, 0)
-            X = X.T.reshape(1, -1)
-            pred_proba = self.classifier.predict_proba(X)
-            self.preds[program_element] = pred_proba[0][1]
-
-    @staticmethod
-    def linearizer(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
-        typed_scores = {t: [] for t in ALL_EVENT_TYPES}
-        for score, t in scores:
-            typed_scores[t].append(score)
-        all_scores = np.array([s for s, _ in scores])
-        ret = [buggy, len(method.linenos), np.max(all_scores), np.average(all_scores), np.std(all_scores)]
-        for t in ALL_EVENT_TYPES:
-            ret.append(max(typed_scores[t] + [0]))
-            ret.append(np.average(typed_scores[t]))
-        return np.nan_to_num(np.array(ret), nan=0, posinf=0)
-
-    @staticmethod
-    def extract_labels(X, label_dimension_index: int):
-        labels = X[label_dimension_index]
-        training_data_rows = list(range(X.shape[0]))
-        training_data_rows.remove(label_dimension_index)
-        training_data = X[np.array(training_data_rows)]
-        return training_data, labels
-
-    @staticmethod
-    def lin_rec(c: Iterable, l: List):
-        for e in c:
-            if isinstance(e, Iterable):
-                ClassifierCombiningMethod.lin_rec(e, l)
-            else:
-                l.append(e)
-        return l
-
-    def combine(self, program_element, event_container: EventContainer, similarity_coefficient):
-        if program_element in self.preds.keys():
-            p1_value = int(self.preds[program_element] in sorted(self.preds.values(), reverse=True)[:3])
-        else:
-            scores = [(similarity_coefficient.compute(e), type(e)) for e in event_container.get_from_program_element(program_element)]
-            linearized = self.linearizer(program_element, scores, False)
-            X, _ = self.extract_labels(linearized, 0)
-            X = X.T.reshape(1, -1)
-            pred_proba = self.classifier.predict_proba(X)
-            print(f"{pred_proba[0][1] > self.threshold}-{pred_proba[0][1]}")
-            self.result_stats[bool(pred_proba[0][1] > self.threshold)] += 1
-            print(self.result_stats[True]/self.result_stats[False])
-            p1_value = pred_proba[0][1] if pred_proba[0][1] > self.threshold else 0.0
-        fs_result = self.first_stage.combine(program_element, event_container, similarity_coefficient)
-        r_list = [p1_value] + self.lin_rec(fs_result, [])
-        return tuple(r_list)
-
-    def __str__(self):
-        out = f"{type(self).__name__}\n"
-        out += f"    "
-        out += "\n    ".join(str(self.first_stage).split("\n")) + "\n"
-        return out
-
-
-
-
-
-
-

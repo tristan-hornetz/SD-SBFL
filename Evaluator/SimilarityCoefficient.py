@@ -95,7 +95,7 @@ class OchiaiIICoefficient(SimilarityCoefficient):
             event)
         try:
             return (failed * not_in_passed) / math.sqrt(
-             total_failed * (failed + passed) * (not_in_failed + not_in_passed) * total_passed)
+                total_failed * (failed + passed) * (not_in_failed + not_in_passed) * total_passed)
         except ZeroDivisionError:
             return 0.0
         except ValueError:

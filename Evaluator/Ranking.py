@@ -142,10 +142,11 @@ class RankingInfo:
         self.buggy_method_suspiciousness_values = dict()
         self.buggy_method_ranking_index = dict()
         for m in self.buggy_methods:
-            self.buggy_method_suspiciousness_values[m] = ranking.combining_method.combine(m, ranking.events, self.similarity_coefficient)
+            self.buggy_method_suspiciousness_values[m] = ranking.combining_method.combine(m, ranking.events,
+                                                                                          self.similarity_coefficient)
             self.buggy_method_ranking_index[m] = ranking.buggy_method_index[m]
-        #self.all_sus_values = list(s for m, s in filter(lambda e: e[1] > tuple([0] * (len(e[1]) if hasattr(e[1], '__len__') else 1)), ranking.ranking))
-        #self.top_20 = {r: [(ranking.similarity_coefficient.compute(e), type(e)) for e in ranking.events.get_from_program_element(r)] for r, *_ in ranking.ranking[:20]}
+        # self.all_sus_values = list(s for m, s in filter(lambda e: e[1] > tuple([0] * (len(e[1]) if hasattr(e[1], '__len__') else 1)), ranking.ranking))
+        # self.top_20 = {r: [(ranking.similarity_coefficient.compute(e), type(e)) for e in ranking.events.get_from_program_element(r)] for r, *_ in ranking.ranking[:20]}
 
     def __init__(self, ranking: Ranking):
         self.info = ranking.info
@@ -158,11 +159,12 @@ class RankingInfo:
         self.evaluation_metrics = {k: ranking.get_evaluation_metrics(k) for k in [1, 3, 5, 10]}
         self.len_events = len(ranking.events)
         self.top_10_suspiciousness_values = list(s for e, s in ranking.ranking[:10])
-        self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(set(self.top_10_suspiciousness_values))
+        self.top_10_suspiciousness_value_ties = len(self.top_10_suspiciousness_values) - len(
+            set(self.top_10_suspiciousness_values))
         self.num_buggy_methods = len(ranking.buggy_methods)
         self.buggy_in_ranking = len(ranking.buggy_in_ranking)
-        #self.store_generic_info(ranking)
-        #self.code_statistics = ranking.code_statistics
+        # self.store_generic_info(ranking)
+        # self.code_statistics = ranking.code_statistics
 
 
 class MetaRanking:
