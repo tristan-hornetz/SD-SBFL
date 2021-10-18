@@ -275,6 +275,10 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
     result_dir = os.path.realpath(args.result_dir)
     output_dir = os.path.realpath(args.output_dir)
+
+    if not os.path.exists(output_dir):
+        mkdirRecursive(output_dir)
+
     thesis_basic = [(result_dir, OchiaiCoefficient, GenericCombiningMethod(max, avg))]
 
     if args.advanced:
