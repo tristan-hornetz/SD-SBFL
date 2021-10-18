@@ -270,45 +270,60 @@ if __name__ == "__main__":
                             help="The directory containing test results")
     arg_parser.add_argument("-o", "--output_dir", required=False, type=str, default=DEFAULT_OUTPUT_DIR,
                             help="The directory where output files should be stored")
+    arg_parser.add_argument("-a", "--advanced", help="Evaluate with multiple different combinations.", action='store_true')
+
     args = arg_parser.parse_args()
     result_dir = os.path.realpath(args.result_dir)
     output_dir = os.path.realpath(args.output_dir)
-
-    # EVENT TYPES SINGLE
-    task_event_types_single = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent])
-    # SIMILARITY COEFFICIENTS SINGLE
-    task_similarity_coefficients_single = list((result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
-    # COMBINING METHODS
-    selected_combining_methods = [(max, ), (avg, ), (max, avg), (avg, max), (max, avg, make_tuple), (avg, max, make_tuple), (max, std), (max, sum)]
-    task_combining_methods_thesis = list((result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs)) for cs in selected_combining_methods)
-    # SELECTED COMBINATIONS
-    selected_combinations = [
-        [LineCoveredEvent, SDBranchEvent],
-        [SDBranchEvent, SDScalarPairEvent, AbsoluteReturnValueEvent],
-        [SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent],
-        [AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
-        [SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
-    ]
-    task_selected_combinations = list((result_dir, OchiaiCoefficient, FilteredCombiningMethod(es, max, avg)) for es in selected_combinations)
-    selected_event_type_orders = [
-        [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent],
-        [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent, SDReturnValueEvent],
-        [SDBranchEvent, SDScalarPairEvent, AbsoluteReturnValueEvent],
-        [AbsoluteReturnValueEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
-        [AbsoluteScalarValueEvent, LineCoveredEvent, AbsoluteReturnValueEvent]
-    ]
-    task_selected_event_type_orders = list((result_dir, OchiaiCoefficient, TypeOrderCombiningMethod(es, max)) for es in selected_event_type_orders)
     thesis_basic = [(result_dir, OchiaiCoefficient, GenericCombiningMethod(max, avg))]
-    tasks_in_thesis = {
-        "thesis_basic": thesis_basic,
-        "thesis_event_types_single": task_event_types_single,
-        "thesis_similarity_coefficients": task_similarity_coefficients_single,
-        "thesis_combining_methods": task_combining_methods_thesis,
-        "thesis_combinations": task_selected_combinations,
-        "thesis_orders": task_selected_event_type_orders,
-    }
 
-    task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
+    if args.advanced:
+        # EVENT TYPES SINGLE
+        task_event_types_single = list(
+            (result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in
+            [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent,
+             AbsoluteScalarValueEvent])
+        # SIMILARITY COEFFICIENTS SINGLE
+        task_similarity_coefficients_single = list(
+            (result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
+        # COMBINING METHODS
+        selected_combining_methods = [(max,), (avg,), (max, avg), (avg, max), (max, avg, make_tuple),
+                                      (avg, max, make_tuple), (max, std), (max, sum)]
+        task_combining_methods_thesis = list(
+            (result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs)) for cs in selected_combining_methods)
+        # SELECTED COMBINATIONS
+        selected_combinations = [
+            [LineCoveredEvent, SDBranchEvent],
+            [SDBranchEvent, SDScalarPairEvent, AbsoluteReturnValueEvent],
+            [SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent],
+            [AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
+            [SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
+        ]
+        task_selected_combinations = list(
+            (result_dir, OchiaiCoefficient, FilteredCombiningMethod(es, max, avg)) for es in selected_combinations)
+        selected_event_type_orders = [
+            [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent],
+            [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent, SDReturnValueEvent],
+            [SDBranchEvent, SDScalarPairEvent, AbsoluteReturnValueEvent],
+            [AbsoluteReturnValueEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
+            [AbsoluteScalarValueEvent, LineCoveredEvent, AbsoluteReturnValueEvent]
+        ]
+        task_selected_event_type_orders = list(
+            (result_dir, OchiaiCoefficient, TypeOrderCombiningMethod(es, max)) for es in selected_event_type_orders)
+        tasks_in_thesis = {
+            "thesis_basic": thesis_basic,
+            "thesis_event_types_single": task_event_types_single,
+            "thesis_similarity_coefficients": task_similarity_coefficients_single,
+            "thesis_combining_methods": task_combining_methods_thesis,
+            "thesis_combinations": task_selected_combinations,
+            "thesis_orders": task_selected_event_type_orders,
+        }
+    else:
+        tasks_in_thesis = {
+            "thesis_basic": thesis_basic,
+        }
+
+    #task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
 
     signal.signal(signal.SIGINT, interrupt_handler)
 
