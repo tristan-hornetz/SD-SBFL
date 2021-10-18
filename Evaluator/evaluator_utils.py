@@ -1,14 +1,8 @@
-import argparse
-import gzip
-import os
-import pickle
 from os.path import dirname, exists, abspath
 
 from Evaluator.CodeInspection.utils import mkdirRecursive
 from Evaluator.CombiningMethod import *
 from Evaluator.Evaluation import Evaluation
-from Evaluator.RankerEvent import SDBranchEvent, LineCoveredEvent, SDReturnValueEvent
-from Evaluator.SimilarityCoefficient import OchiaiCoefficient
 
 THREADS = os.cpu_count()
 
@@ -34,18 +28,3 @@ def create_evaluation(result_dir, similarity_coefficient, combining_method: Comb
         print(evaluation.fraction_top_k_accurate)
         print(evaluation.avg_recall_at_k)
         print(evaluation.avg_precision_at_k)
-
-
-if __name__ == "__main__":
-    arg_parser = argparse.ArgumentParser(description='Evaluate fault localization results.')
-    arg_parser.add_argument("-r", "--result_dir", required=True, type=str,
-                            help="The directory containing test results")
-
-    args = arg_parser.parse_args()
-    combining_method = GenericCombiningMethod(max, avg)
-    similarity_coefficient = OchiaiCoefficient
-
-    result_dir = os.path.realpath(args.result_dir)
-
-    create_evaluation(result_dir, similarity_coefficient, combining_method, print_results=True)
-

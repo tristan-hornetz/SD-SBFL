@@ -1,22 +1,18 @@
-import copy
-import os
 import queue
 import signal
 import sys
-import itertools
 from multiprocessing import Queue, Process
 from typing import Collection, Iterator
 from sklearn.model_selection import StratifiedShuffleSplit
 from shutil import rmtree
 from Evaluator.Ranking import RankingInfo, MetaRanking
-from evaluate_single import THREADS
+from Evaluator.evaluator_utils import THREADS
 from tqdm import tqdm
 from Evaluator.CodeInspection.utils import mkdirRecursive
 from Evaluator.CombiningMethod import *
 from Evaluator.Evaluation import Evaluation
 from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import *
-from correlations import extend_w_event_type_specific_results, extend_w_lc_best, extract_labels
 from numpy import std
 
 TEMP_SYMLINK_DIR = "./.temp_evaluation"

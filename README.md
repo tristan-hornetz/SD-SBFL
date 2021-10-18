@@ -36,7 +36,7 @@ tested like this without manual intervention.
 If you want to evaluate the results test-run, you can use
 
 ```shell
-python evaluate_single.py [-r <output_file>] 
+python evaluator_utils.py [-r <output_file>] 
 ```
 
 ## Acknowledgements
