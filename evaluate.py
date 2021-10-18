@@ -95,7 +95,7 @@ def run_process_list(processes, out_queue: Queue, task_name: str = "", num_threa
     assert (len(ret) <= num_processes)
     assert (len(ret) > 0)
     assert (out_queue.empty())
-    return ret
+    return sorted(ret, key=lambda e: str(e))
 
 
 def make_tmp_folder(result_dir):
@@ -207,7 +207,7 @@ class EvaluationRun(Collection):
                     _sum[k] += ((ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods) if ri.num_buggy_methods > 0 else 0
         avgs = {k: v / len for k, v in _sum.items()}
         out += f"\n\nRecall upper bound: {avgs}\n"
-        return sorted(out, key=lambda e: str(e))
+        return out
 
 
 def build_temp_folder(temp_folder_name:str,  results_translated_folder: str, ris, test_index):
