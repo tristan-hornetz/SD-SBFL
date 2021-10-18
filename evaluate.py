@@ -1,6 +1,8 @@
 import queue
 import signal
 import sys
+import pickle
+import gzip
 from multiprocessing import Queue, Process
 from typing import Collection, Iterator
 from shutil import rmtree
