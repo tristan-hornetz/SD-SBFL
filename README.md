@@ -39,7 +39,7 @@ python test_complete_application.py -p <project_name>
 to test all bugs for a specific application at once.
 In this case, the results are dumped to ```/results/<project_name>/```.
 
-##Evaluation
+## Evaluation
 ### Translation step
 
 Before you can evaluate the recorded events,
