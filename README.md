@@ -18,7 +18,7 @@ and set up a Pyenv environment for running the debugger.
 
 _Note: Any actions performed by ```make``` can be reverted with ```make clean```._
 
-#Usage
+# Usage
 ## Recording Events
 
 Before running any of the scripts, activate the Pyenv environment with ```$(cat activate)```.
@@ -58,6 +58,7 @@ To evaluate the recorded events with a basic configuration, use
 python evaluate.py -r ./results_translated
 ```
 For an evaluation involving more complex configurations, you may append ```-a```.
+This will start an evaluation with every configuration presented in my thesis.
 Output files are written to ```/results_evaluation/```.
 
 
