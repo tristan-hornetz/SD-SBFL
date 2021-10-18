@@ -3,7 +3,6 @@ import signal
 import sys
 from multiprocessing import Queue, Process
 from typing import Collection, Iterator
-from sklearn.model_selection import StratifiedShuffleSplit
 from shutil import rmtree
 from Evaluator.Ranking import RankingInfo, MetaRanking
 from Evaluator.evaluator_utils import THREADS
@@ -220,48 +219,6 @@ def build_temp_folder(temp_folder_name:str,  results_translated_folder: str, ris
             mkdirRecursive(os.path.dirname(new_link))
         os.symlink(old_link, new_link)
     return temp_folder_name
-
-
-def get_split_training_ris(base_results_file: str, results_translated_folder: str, random_state=42) -> Tuple[
-    List[RankingInfo], str, List[RankingInfo]]:
-    # prepare data
-    base_run = EvaluationRun.load(base_results_file)
-    splitter = StratifiedShuffleSplit(n_splits=1, test_size=.2, random_state=random_state)
-    ris = np.array(base_run.evaluations[0].ranking_infos)
-    groups = np.array(list(ri.project_name for ri in ris))
-    train_index, test_index = next(splitter.split(ris, groups))
-    train_ris = ris[train_index]
-    test_ris = ris[test_index]
-    # build testing folder
-    temp_folder_name = "_results_test"
-
-    return train_ris, build_temp_folder(temp_folder_name, results_translated_folder, ris, test_index), list(test_ris)
-
-
-def get_training_data(base_results_file: str, results_translated_folder: str) -> Tuple[
-    EvaluationRun, str, List[RankingInfo]]:
-    # prepare data
-    base_run = EvaluationRun.load(base_results_file)
-    splitter = StratifiedShuffleSplit(n_splits=1, test_size=.2)
-    ris = np.array(base_run.evaluations[0].ranking_infos)
-    groups = np.array(list(ri.project_name for ri in ris))
-    train_index, test_index = next(splitter.split(ris, groups))
-
-    # build training evaluation run
-    train_ris = ris[train_index]
-    training_r_ids = set(f"{ri.project_name}-{ri.bug_id}" for ri in train_ris)
-    n_evs = [Evaluation(ev.similarity_coefficient, ev.combining_method) for ev in base_run.evaluations]
-    for n_ev, o_ev in zip(n_evs, base_run.evaluations):
-        # .rankings = list(sorted(filter(lambda r: f"{r.info.project_name}-{r.info.bug_id}" in training_r_ids, o_ev.rankings), key=lambda ri: f"{ri.project_name}-{ri.bug_id}"))
-        n_ev.ranking_infos = list(sorted(train_ris, key=lambda ri: f"{ri.project_name}-{ri.bug_id}"))
-        n_ev.update_averages()
-    training_run = EvaluationRun("training_run", "results_evaluation")
-    training_run.evaluations = n_evs
-    # build testing folder
-    temp_folder_name = "_results_test"
-    test_ris = ris[test_index]
-
-    return training_run, build_temp_folder(temp_folder_name, results_translated_folder, ris, test_index), list(test_ris)
 
 
 def get_methods_from_ris(ris: Iterable[RankingInfo]) -> Tuple[List[Tuple[DebuggerMethod, List[Tuple[float, type]]]],
