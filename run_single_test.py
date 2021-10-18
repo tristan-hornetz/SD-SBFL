@@ -1,19 +1,13 @@
 import os
-import signal
-import sys
-import multiprocessing
 import subprocess
+import sys
 from multiprocessing.connection import Connection
-import time
 
 if __name__ == '__main__' and (not os.path.islink(os.path.abspath(os.path.dirname(sys.argv[0])) + '/TestWrapper')):
     print('Symlinks not found. Did you run make?')
     exit(-1)
 dump_file = os.path.curdir + '/TestWrapper/results.pickle.gz'
 test_ids = []
-
-
-
 
 
 def get_info_directory(_results):
@@ -40,7 +34,8 @@ def get_test_ids():
             if not line:
                 break
             run_test_sh = line.strip(' \n')
-            if run_test_sh.startswith('python') or run_test_sh.startswith('pytest ') or run_test_sh.startswith('tox') or run_test_sh.startswith('py.test'):
+            if run_test_sh.startswith('python') or run_test_sh.startswith('pytest ') or run_test_sh.startswith(
+                    'tox') or run_test_sh.startswith('py.test'):
                 ret.append(list(filter(lambda s: not s.startswith('-'), run_test_sh.split(' '))).pop().split("[")[0])
     if str(os.path.realpath(info_dir + "/../..")).rstrip("/").endswith("/tqdm"):
         rc = ret.copy()
@@ -54,6 +49,7 @@ def test_execute(command: str, connection: Connection):
     class PFile:
         def write(self, s):
             connection.send(s)
+
     sys.stdout = PFile()
     sys.stderr = PFile()
     os.system(command)
@@ -103,7 +99,7 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, wo
 
     if os.path.isfile(info_dir + "/alltest.sh"):
         os.system(f"cp {binary_dir}/alltest_template.sh {work_dir}/alltest.sh")
-        os.system(f"cat {info_dir +'/alltest.sh'} >> {work_dir}/alltest.sh")
+        os.system(f"cat {info_dir + '/alltest.sh'} >> {work_dir}/alltest.sh")
         os.system(f"chmod +x {work_dir}/alltest.sh")
         os.system(f"echo '\n\npyenv deactivate' >> {work_dir}/alltest.sh")
         command = f"(cd \'{work_dir}\' && {work_dir}/alltest.sh)"
@@ -111,12 +107,17 @@ def run_test(root_dir: str, project: str, bug_id: int, output_file=dump_file, wo
         command = f'{binary_dir}/bugsinpy-test -a -w {work_dir}'
     os.system(command)
 
+
 if __name__ == '__main__':
     import argparse
+
     arg_parser = argparse.ArgumentParser(description='Run the debugger on a specific bug')
-    arg_parser.add_argument('-p', '--project_name', required=True, type=str, default='thefuck', help='The name of the target project')
-    arg_parser.add_argument('-i', '--bug_id', required=True, type=int, default=2, help='The numerical ID of the target bug')
-    arg_parser.add_argument('-o', '--output_file', required=False, type=str, default=dump_file, help='The file to dump the results to')
+    arg_parser.add_argument('-p', '--project_name', required=True, type=str, default='thefuck',
+                            help='The name of the target project')
+    arg_parser.add_argument('-i', '--bug_id', required=True, type=int, default=2,
+                            help='The numerical ID of the target bug')
+    arg_parser.add_argument('-o', '--output_file', required=False, type=str, default=dump_file,
+                            help='The file to dump the results to')
 
     args = arg_parser.parse_args()
     root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -130,6 +131,7 @@ else:
             with open("./output_file.info", "rt") as f:
                 dump_file = f.read()
         from TestWrapper.root.Debugger import debugger, SFL_Results
+
         debugger.dump_file = dump_file
         test_ids.extend(get_test_ids())
     except:

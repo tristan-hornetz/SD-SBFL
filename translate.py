@@ -5,7 +5,6 @@ import pickle
 import sys
 import time
 import traceback
-
 from multiprocessing import Process
 
 from Evaluator.CodeInspection.utils import mkdirRecursive

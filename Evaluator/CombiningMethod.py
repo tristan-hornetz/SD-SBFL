@@ -1,5 +1,4 @@
 import math
-import math
 import os
 import traceback
 from typing import Callable, List, SupportsFloat
@@ -7,6 +6,7 @@ from typing import Callable, List, SupportsFloat
 import numpy as np
 
 from .RankerEvent import *
+from Evaluator.CodeInspection.Methods import DebuggerMethod
 
 SBFL_EVENTS = [LineCoveredEvent]
 SD_EVENTS = [SDScalarPairEvent, SDBranchEvent, SDReturnValueEvent]
