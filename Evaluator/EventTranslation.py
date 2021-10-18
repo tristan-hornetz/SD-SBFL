@@ -1,7 +1,7 @@
 from typing import Dict
 
 from .CodeInspection.Branches import extractBranchesFromCode
-from .CodeInspection.Methods import extractMethodsFromCode, BugInfo
+from .CodeInspection.Methods import extractMethodsFromCode, BugInfo, DebuggerMethod
 from .RankerEvent import *
 
 
