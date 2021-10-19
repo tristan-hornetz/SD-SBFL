@@ -8,7 +8,7 @@ if __name__ == '__main__':
     import argparse
 
     root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    arg_parser = argparse.ArgumentParser(description='Run the debugger on a specific bug')
+    arg_parser = argparse.ArgumentParser(description='Run all tests for a specific application')
     arg_parser.add_argument('-p', '--project_name', required=True, type=str, default='thefuck',
                             help='The name of the target project')
     arg_parser.add_argument('-o', '--output_directory', required=False, type=str, default=root_dir + "/results",

@@ -7,13 +7,20 @@ import time
 import traceback
 
 from multiprocessing import Process
+from typing import List
 
 from Evaluator.CodeInspection.utils import mkdirRecursive
 from Evaluator.EventTranslation import EventProcessor, DEFAULT_TRANSLATORS
 from Evaluator.Ranking import MetaRanking
 
 
-def translate_file(path, event_processor, output_dir):
+def translate_file(path: str, event_processor: EventProcessor, output_dir: str):
+    """
+    Translate a single result file with the given event processor.
+    :param path: The result file's path
+    :param event_processor: The EventProcessor instance to translate the result file with
+    :param output_dir: The directory to put the translated results in
+    """
     assert os.path.exists(path)
     try:
         with gzip.open(path) as f:
@@ -34,7 +41,12 @@ def translate_file(path, event_processor, output_dir):
         print("Failed " + path)
 
 
-def translate_directory(path, event_processor, output_dir):
+def translate_directory(path: str, event_processor: EventProcessor, output_dir: str):
+    """
+    Translate every result file in the given directory
+    :param event_processor: The EventProcessor instance to translate the result file with
+    :param output_dir: The directory to put the translated results in
+    """
     assert os.path.isdir(path)
     for filename in sorted(os.listdir(path)):
         if os.path.isdir(f"{str(path)}/{filename}"):
@@ -43,7 +55,12 @@ def translate_directory(path, event_processor, output_dir):
     return
 
 
-def get_subdirs_recursive(start_path):
+def get_subdirs_recursive(start_path: str) -> List[str]:
+    """
+    Recursively search the given directory for subdirectories
+    :param start_path: The root directory of the search
+    :return: A list of subdirectories
+    """
     contents = os.listdir(start_path)
     dirs = []
     for f in contents:
@@ -53,7 +70,14 @@ def get_subdirs_recursive(start_path):
     return dirs
 
 
-def translate_directory_parallel(path, event_processor, output_dir, threads=-1):
+def translate_directory_parallel(path: str, event_processor: EventProcessor, output_dir: str, threads: int = -1):
+    """
+    Translate every result file recursively found in the given directory
+    :param path: The directory to recursively search for result files
+    :param event_processor: The EventProcessor instance to translate the result file with
+    :param output_dir: The directory to put the translated results in
+    :param threads: The number of parallel threads to create. Default is the number of available cores
+    """
     if threads < 1:
         threads = os.cpu_count()
     dirs = get_subdirs_recursive(path) + [path]

@@ -16,7 +16,7 @@ from Evaluator.RankerEvent import *
 from Evaluator.SimilarityCoefficient import *
 from numpy import std
 
-TEMP_SYMLINK_DIR = "./.temp_evaluation"
+TEMP_SYMLINK_DIR = os.path.realpath("./.temp_evaluation")
 
 EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
 
@@ -27,10 +27,15 @@ SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, Anderber
                            RusselRaoCoefficient, TarantulaCoefficient]
 
 AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median, len, sum]
-AGGREGATORS_ALTERNATE = []
 
 
-def get_files_recursive(dir, files: List[str]):
+def get_files_recursive(dir: str, files: List[str]) -> List[str]:
+    """
+    Recursively find files in subdirectories of dir
+    :param dir: The directory to search in
+    :param files: The list of detected files. Should be initialized as an empty list
+    :return: A list of files found
+    """
     for f in os.listdir(dir):
         p = f"{dir}/{f}"
         if os.path.isdir(p):
@@ -40,9 +45,18 @@ def get_files_recursive(dir, files: List[str]):
     return files
 
 
-def create_evaluation_recursive(result_dir, similarity_coefficient, combining_method: CombiningMethod,
+def create_evaluation_recursive(result_dir: str, similarity_coefficient, combining_method: CombiningMethod,
                                 save_destination="",
-                                print_results=False, num_threads=-1, save_full_rankings=False, meta_rankings=None):
+                                print_results=False, num_threads=-1, save_full_rankings=False) -> Evaluation:
+    """
+    Create an evaluation from the given configuration and the translated result files in result_dir
+    :param result_dir: The directory containing the translated result files, or subdirectories containing such
+    :param combining_method: The combining method to be used
+    :param similarity_coefficient: The similarity coefficient to be used. Can either be an instance or just the type.
+    :param save_destination: Optional. If given, the evaluation is saved at the specified location
+    :param num_threads: The number of parallel threads to create. Default is the number of available cores
+    :return: The evaluation created
+    """
     evaluation = Evaluation(similarity_coefficient, combining_method, save_full_rankings=save_full_rankings)
     files = list(set(get_files_recursive(result_dir, [])))
     if os.path.exists(TEMP_SYMLINK_DIR):
@@ -71,7 +85,15 @@ def create_evaluation_recursive(result_dir, similarity_coefficient, combining_me
     return evaluation
 
 
-def run_process_list(processes, out_queue: Queue, task_name: str = "", num_threads=-1):
+def run_process_list(processes: List[Process], out_queue: Queue, task_name: str = "", num_threads=-1) -> List[Any]:
+    """
+    Start the parallel execution of the processes in processes. Each process should put its output to out_queue upon termination.
+    :param processes: A list of pre-initialized process instances
+    :param out_queue: The queue to which the process output is added
+    :param task_name: An optional name given to the process list, displayed with the progress bar
+    :param num_threads: The number of parallel threads to create. Default is the number of available cores
+    :return: A list containing the output of every process
+    """
     num_threads = num_threads if num_threads > 0 else os.cpu_count()
     active_processes = list()
     num_processes = len(processes)
@@ -95,10 +117,15 @@ def run_process_list(processes, out_queue: Queue, task_name: str = "", num_threa
     assert (len(ret) <= num_processes)
     assert (len(ret) > 0)
     assert (out_queue.empty())
-    return sorted(ret, key=lambda e: str(e))
+    return list(sorted(ret, key=lambda e: str(e)))
 
 
-def make_tmp_folder(result_dir):
+def make_tmp_folder(result_dir: str) -> str:
+    """
+    Create a temporary folder containing symlinks to the recursively found files in result_dir
+    :param result_dir: The directory containing the translated result files, or subdirectories containing such
+    :return: The path to the temporary directory
+    """
     files = list(set(get_files_recursive(result_dir, [])))
     if os.path.exists(TEMP_SYMLINK_DIR):
         rmtree(TEMP_SYMLINK_DIR)
@@ -109,11 +136,20 @@ def make_tmp_folder(result_dir):
 
 
 def interrupt_handler(*args, **kwargs):
+    """
+    Can handle an interrupt signal to prevent termination
+    """
     raise EvaluationRun.SigIntException
 
 
 class EvaluationRun(Collection):
+    """
+    Represents a collection of multiple related evaluations
+    """
     class SigIntException(Exception):
+        """
+        Can be raised on an interrupt signal to prevent termination
+        """
         pass
 
     def __len__(self) -> int:
@@ -125,19 +161,37 @@ class EvaluationRun(Collection):
     def __contains__(self, __x: object) -> bool:
         return __x in self.evaluations
 
-    def __init__(self, name, destination="."):
+    def __init__(self, name: str, destination: str = "."):
+        """
+        Initializer for EvaluationRun
+        :param name: The unique name of the evaluation run
+        :param destination: The folder to save the run in
+        """
         self.evaluations = list()
         self.destination = os.path.realpath(destination)
         self.name = name
 
-    def create_evaluation(self, result_dir, similarity_coefficient, combining_method, meta_rankings=None):
+    def create_evaluation(self, result_dir: str, similarity_coefficient, combining_method: CombiningMethod):
+        """
+        Create and add an evaluation based on the given configuration from the translated result files in result_dir
+        :param result_dir: The directory containing the translated results
+        :param combining_method: The combining method to be used
+        :param similarity_coefficient: The similarity coefficient to be used. Can either be an instance or just the type.
+        """
         evaluation = create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
-                                                 print_results=True, meta_rankings=meta_rankings)
+                                                 print_results=True)
         combining_method.update_results(evaluation)
         self.evaluations.append(evaluation)
 
     @staticmethod
     def process_mr_file(path: str, evaluations: List[Evaluation], out_queue: Queue):
+        """
+        Process a single translated results file for multiple pre-initialized evaluations.
+        Intended for use with multiprocessing.
+        :param path: The translated result file's location
+        :param evaluations: A list of pre-initialized evaluations
+        :param out_queue: A Queue instance to append the resulting ranking infos to. Output type: Dict[str, Tuple[str, RankingInfo]]
+        """
         try:
             with gzip.open(path, "rb") as f:
                 mr: MetaRanking = pickle.load(f)
@@ -154,6 +208,10 @@ class EvaluationRun(Collection):
         out_queue.put(out)
 
     def run_task(self, task: List[Tuple[str, Any, CombiningMethod]]):
+        """
+        Run a task and add the resulting evaluations
+        :param task: A list of tuples containing configurations of the format (<result_dir>, <similarity_coefficient>, <combining_method>)
+        """
         evaluations = [Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task]
         ev_lookup = {ev.id: ev for ev in evaluations}
         tmp_dir = make_tmp_folder(task[0][0])
@@ -175,6 +233,9 @@ class EvaluationRun(Collection):
         rmtree(tmp_dir)
 
     def save(self):
+        """
+        Save the evaluation run on disk
+        """
         filename = self.destination + f"/{self.name}.pickle.gz"
         if os.path.exists(filename):
             os.remove(filename)
@@ -183,6 +244,9 @@ class EvaluationRun(Collection):
 
     @staticmethod
     def load(filename):
+        """
+        Load a saved EvaluationRun instance from disk
+        """
         with gzip.open(filename, "rb") as f:
             obj = pickle.load(f)
         ret = EvaluationRun(obj.name, obj.destination)
@@ -210,63 +274,13 @@ class EvaluationRun(Collection):
         return out
 
 
-def build_temp_folder(temp_folder_name:str,  results_translated_folder: str, ris, test_index):
-    test_ris = ris[test_index]
-    if os.path.exists(temp_folder_name):
-        rmtree(temp_folder_name)
-    for ri in test_ris:
-        new_link = f"{os.path.dirname(os.path.abspath(sys.argv[0]))}/{temp_folder_name}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
-        old_link = f"{os.path.dirname(os.path.realpath(sys.argv[0]))}/{os.path.basename(results_translated_folder)}/{ri.project_name}/translated_results_{ri.project_name}_{ri.bug_id}.pickle.gz"
-        if not os.path.exists(os.path.dirname(new_link)):
-            mkdirRecursive(os.path.dirname(new_link))
-        os.symlink(old_link, new_link)
-    return temp_folder_name
-
-
-def get_methods_from_ris(ris: Iterable[RankingInfo]) -> Tuple[List[Tuple[DebuggerMethod, List[Tuple[float, type]]]],
-                                                              List[Tuple[DebuggerMethod, List[Tuple[float, type]]]]]:
-    buggy_methods = list()
-    non_buggy_methods = list()
-    for ri in ris:
-        bm = ri.buggy_methods
-        for m, scores in list(ri.top_20.items())[:10]:
-            check = False
-            for b in bm:
-                if m.__eq__(b):
-                    check = True
-                    buggy_methods.append((m, scores))
-            if not check:
-                non_buggy_methods.append((m, scores))
-    return buggy_methods, non_buggy_methods
-
-
-def linearize_method(method: DebuggerMethod, scores: List[Tuple[float, type]], buggy: bool):
-    typed_scores = {t: [] for t in ALL_EVENT_TYPES}
-    for score, t in scores:
-        typed_scores[t].append(score)
-    all_scores = np.array([s for s, _ in scores])
-    ret = [buggy, len(method.linenos), np.max(all_scores), np.average(all_scores), np.std(all_scores)]
-    for t in ALL_EVENT_TYPES:
-        ret.append(max(typed_scores[t] + [0]))
-        ret.append(np.average(typed_scores[t]))
-    return np.nan_to_num(np.array(ret), nan=0, posinf=0)
-
-
-def get_linearized_method_data(ris: Iterable[RankingInfo]):
-    buggy_methods, non_buggy_methods = get_methods_from_ris(ris)
-    linearized = list()
-    linearized.extend(linearize_method(method, scores, True) for method, scores in buggy_methods)
-    linearized.extend(linearize_method(method, scores, False) for method, scores in non_buggy_methods)
-    return np.array(linearized)
-
-
 if __name__ == "__main__":
     import argparse
 
     DEFAULT_OUTPUT_DIR = os.path.dirname(os.path.realpath(sys.argv[0])) + "/results_evaluation"
 
     arg_parser = argparse.ArgumentParser(description='Evaluate fault localization results.')
-    arg_parser.add_argument("-r", "--result_dir", required=False, type=str,
+    arg_parser.add_argument("-r", "--result_dir", required=True, type=str,
                             help="The directory containing test results")
     arg_parser.add_argument("-o", "--output_dir", required=False, type=str, default=DEFAULT_OUTPUT_DIR,
                             help="The directory where output files should be stored")
