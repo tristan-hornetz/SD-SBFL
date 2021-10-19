@@ -1,12 +1,22 @@
 import math
 from abc import abstractmethod
+from typing import Tuple, SupportsFloat
 
 from .RankerEvent import RankerEvent
 
 
 class SimilarityCoefficient:
+    """
+    Base class for similarity coefficients
+    """
+
     @staticmethod
-    def get_values(event):
+    def get_values(event: RankerEvent) -> Tuple[int, int, int, int, int, int]:
+        """
+        Extract all required values from the given event
+        :param event: The event to extract the values from
+        :return: A tuple of required values
+        """
         failed = len(event.failed_with_event)
         passed = len(event.passed_with_event)
         total_failed = max(event.total_failed, failed)
@@ -17,13 +27,18 @@ class SimilarityCoefficient:
 
     @staticmethod
     @abstractmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
+        """
+        Compute the similarity coefficient of the given event
+        :param event: The event to compute the similarity coefficient for
+        :return: The event's similarity coefficient
+        """
         pass
 
 
 class OchiaiCoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -34,7 +49,7 @@ class OchiaiCoefficient(SimilarityCoefficient):
 
 class JaccardCoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -45,7 +60,7 @@ class JaccardCoefficient(SimilarityCoefficient):
 
 class SorensenDiceCoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -56,7 +71,7 @@ class SorensenDiceCoefficient(SimilarityCoefficient):
 
 class AnderbergCoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -68,7 +83,7 @@ class AnderbergCoefficient(SimilarityCoefficient):
 class SimpleMatchingCoefficient(SimilarityCoefficient):
     @staticmethod
     @abstractmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -79,7 +94,7 @@ class SimpleMatchingCoefficient(SimilarityCoefficient):
 
 class RogersTanimotoCoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -90,7 +105,7 @@ class RogersTanimotoCoefficient(SimilarityCoefficient):
 
 class OchiaiIICoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -104,7 +119,7 @@ class OchiaiIICoefficient(SimilarityCoefficient):
 
 class RusselRaoCoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:
@@ -115,7 +130,7 @@ class RusselRaoCoefficient(SimilarityCoefficient):
 
 class TarantulaCoefficient(SimilarityCoefficient):
     @staticmethod
-    def compute(event: RankerEvent):
+    def compute(event: RankerEvent) -> SupportsFloat:
         passed, failed, not_in_passed, not_in_failed, total_passed, total_failed = SimilarityCoefficient.get_values(
             event)
         try:

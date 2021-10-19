@@ -15,11 +15,18 @@ from .Ranking import RankingInfo
 
 
 class Evaluation:
-    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None, save_full_rankings=False):
+    """
+    Represents an Evaluation, made up of multiple single-bug rankings
+    """
+    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None):
+        """
+        :param combining_method: The combining method to be used
+        :param similarity_coefficient: The similarity coefficient to be used. Can either be an instance or just the type.
+        """
         if ks is None:
             ks = [1, 3, 5, 10]
         self.ks = ks
-        self.save_full_rankings = save_full_rankings
+        self.save_full_rankings = False
         self.rankings = list()
         self.ranking_infos: List[RankingInfo] = list()
         self.similarity_coefficient = similarity_coefficient
@@ -32,18 +39,32 @@ class Evaluation:
         self.avg_precision_at_k = {k: 0.0 for k in self.ks}
 
     def update_averages(self):
+        """
+        Update the sored values for average evaluation metrics
+        """
         self.fraction_top_k_accurate = {k: np.average(list(ri.evaluation_metrics[k][0] for ri in self.ranking_infos)) for k in self.ks}
         self.avg_recall_at_k = {k: np.average(list(ri.evaluation_metrics[k][1] for ri in self.ranking_infos)) for k in self.ks}
         self.avg_precision_at_k = {k: np.average(list(ri.evaluation_metrics[k][2] for ri in self.ranking_infos)) for k in self.ks}
 
     def merge(self, other):
+        """
+        Merge with another evaluation instance
+        :param other: The Evaluation instance to merge with
+        """
         assert set(self.rankings).isdisjoint(other.rankings)
         self.rankings.extend(other.rankings)
         self.ranking_infos.extend(other.ranking_infos)
         self.update_averages()
 
     @staticmethod
-    def add_meta_ranking(self, mr_path: str, rqueue: Queue, save_full_rankings=False):
+    def add_meta_ranking(self, mr_path: str, rqueue: Queue, save_full_rankings: bool = False):
+        """
+        Load, and rank a single meta ranking. Intended for use with multiprocessing.
+        :param self: The parent Evaluation instance
+        :param mr_path: The result file's location
+        :param rqueue: The queue to put the output into
+        :param save_full_rankings: Optional, set to True to store rankings instead of ranking infos (strongly discouraged).
+        """
         try:
             with gzip.open(mr_path, "rb") as f:
                 mr = pickle.load(f)
@@ -67,7 +88,12 @@ class Evaluation:
             metrics[k] = ranking.get_evaluation_metrics(k)
         rqueue.put((ranking if save_full_rankings else ranking_id, metrics, RankingInfo(ranking)))
 
-    def add_directory(self, dir_path, num_threads=-1):
+    def add_directory(self, dir_path: str, num_threads=-1):
+        """
+        Add all result files recursively found in dir_path
+        :param dir_path: The directory to recursively search for result files
+        :param num_threads: The number of parallel threads to create. Default is the number of available cores
+        """
         if num_threads < 1:
             num_threads = max(os.cpu_count() - 2, 1)
         rqueue = Queue(maxsize=num_threads)

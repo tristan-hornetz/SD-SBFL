@@ -47,7 +47,7 @@ def get_files_recursive(dir: str, files: List[str]) -> List[str]:
 
 def create_evaluation_recursive(result_dir: str, similarity_coefficient, combining_method: CombiningMethod,
                                 save_destination="",
-                                print_results=False, num_threads=-1, save_full_rankings=False) -> Evaluation:
+                                print_results=False, num_threads=-1) -> Evaluation:
     """
     Create an evaluation from the given configuration and the translated result files in result_dir
     :param result_dir: The directory containing the translated result files, or subdirectories containing such
@@ -57,7 +57,7 @@ def create_evaluation_recursive(result_dir: str, similarity_coefficient, combini
     :param num_threads: The number of parallel threads to create. Default is the number of available cores
     :return: The evaluation created
     """
-    evaluation = Evaluation(similarity_coefficient, combining_method, save_full_rankings=save_full_rankings)
+    evaluation = Evaluation(similarity_coefficient, combining_method)
     files = list(set(get_files_recursive(result_dir, [])))
     if os.path.exists(TEMP_SYMLINK_DIR):
         rmtree(TEMP_SYMLINK_DIR)
