@@ -220,7 +220,7 @@ class EvaluationRun(Collection):
                      for filename in filter(lambda p: not os.path.isdir(p),
                                             list(os.path.abspath(f"{tmp_dir}/{f}") for f in os.listdir(tmp_dir)))
                      ]
-        rankings = run_process_list(processes, out_queue, task_name="Processing Meta Rankings for task")
+        rankings = run_process_list(processes, out_queue, task_name="Processing results for task")
         for d in rankings:
             for ev_id, (id, ri) in d.items():
                 local_ev = ev_lookup[ev_id]
@@ -243,7 +243,7 @@ class EvaluationRun(Collection):
             pickle.dump(self, f)
 
     @staticmethod
-    def load(filename):
+    def load(filename: str):
         """
         Load a saved EvaluationRun instance from disk
         """

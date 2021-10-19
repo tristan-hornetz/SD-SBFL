@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from .CodeInspection.Branches import extractBranchesFromCode
 from .CodeInspection.Methods import extractMethodsFromCode, BugInfo, DebuggerMethod
@@ -6,6 +6,11 @@ from .RankerEvent import *
 
 
 class EventTranslator:
+    """
+    EventTranslators are utilized to translate events from their recorded from to the form utilized
+    by the Evaluation Framework
+    """
+
     @staticmethod
     def match_method(filename, method_name, lineno, method_objects):
         if str(method_name).startswith("<") and method_name != "<module>":
@@ -19,10 +24,20 @@ class EventTranslator:
     @abstractmethod
     def translate(_results, event_container: EventContainer,
                   method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+        """
+        Translate results from the Recording Framework to a form usable by the Evaluation Framework
+        :param _results: The output of the Recording Framework
+        :param event_container: The EventContainer instance to add the newly generated events to
+        :param method_objects: The program's methods as extracted from code
+        """
         pass
 
 
 class LineCoveredEventTranslator(EventTranslator):
+    """
+    Translates recorded events into LineCoveredEvents
+    """
+
     @staticmethod
     def translate(_results, event_container: EventContainer,
                   method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
@@ -44,6 +59,10 @@ class LineCoveredEventTranslator(EventTranslator):
 
 
 class SDBranchEventTranslator(EventTranslator):
+    """
+    Translates recorded events into SDBranchEvents
+    """
+
     @staticmethod
     def collectors_for_event(_results, event):
         collectors = dict()
@@ -97,6 +116,10 @@ class SDBranchEventTranslator(EventTranslator):
 
 
 class SDReturnValueEventTranslator(EventTranslator):
+    """
+    Translates recorded events into SDReturnValueEvents
+    """
+
     @staticmethod
     def translate(_results, event_container: EventContainer,
                   method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
@@ -129,6 +152,10 @@ class SDReturnValueEventTranslator(EventTranslator):
 
 
 class SDScalarPairEventTranslator(EventTranslator):
+    """
+    Translates recorded events into SDScalarPair
+    """
+
     @staticmethod
     def translate(_results, event_container: EventContainer,
                   method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
@@ -172,6 +199,10 @@ class SDScalarPairEventTranslator(EventTranslator):
 
 
 class AbsoluteReturnValueEventTranslator(EventTranslator):
+    """
+    Translates recorded events into AbsoluteReturnValueEvents
+    """
+
     @staticmethod
     def translate(_results, event_container: EventContainer,
                   method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
@@ -193,6 +224,10 @@ class AbsoluteReturnValueEventTranslator(EventTranslator):
 
 
 class AbsoluteScalarValueEventTranslator(EventTranslator):
+    """
+    Translates recorded events into AbsoluteScalarValueEvents
+    """
+
     @staticmethod
     def translate(_results, event_container: EventContainer,
                   method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
@@ -219,10 +254,21 @@ DEFAULT_TRANSLATORS = [LineCoveredEventTranslator, SDBranchEventTranslator, SDSc
 
 
 class EventProcessor:
-    def __init__(self, translators: Iterable):
+    """
+    Utilized to translate the recorded events using multiple EventTranslators
+    """
+
+    def __init__(self, translators: Iterable[Optional[EventTranslator, type]]):
+        """
+        :param translators: The event translators to utilize
+        """
         self.translators = translators
 
-    def process(self, _results):
+    def process(self, _results) -> Tuple[EventContainer, Dict[Tuple[str, str, int], DebuggerMethod], BugInfo]:
+        """
+        Translate the events in _results
+        :param _results: The output of the Recording Framework
+        """
         event_container = EventContainer()
         info = BugInfo(_results)
         # print("Extracting method objects")
