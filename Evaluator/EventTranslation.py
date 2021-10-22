@@ -268,6 +268,7 @@ class EventProcessor:
         """
         Translate the events in _results
         :param _results: The output of the Recording Framework
+        :return: The output of the translation, consisting of an EventContainer instance, the extracted methods and a BugInfo object
         """
         event_container = EventContainer()
         info = BugInfo(_results)
