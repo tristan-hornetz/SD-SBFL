@@ -3,9 +3,6 @@ import subprocess
 import sys
 from multiprocessing.connection import Connection
 
-if not os.path.islink(os.path.abspath(os.path.dirname(sys.argv[0])) + "/TestWrapper"):
-    print("Symlinks not found. Did you run make?")
-    exit(1)
 dump_file = os.path.curdir + "/TestWrapper/results.pickle.gz"
 test_ids = []
 
