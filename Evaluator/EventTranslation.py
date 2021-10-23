@@ -26,6 +26,7 @@ class EventTranslator:
                   method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
         """
         Translate results from the Recording Framework to a form usable by the Evaluation Framework
+
         :param _results: The output of the Recording Framework
         :param event_container: The EventContainer instance to add the newly generated events to
         :param method_objects: The program's methods as extracted from code
@@ -267,6 +268,7 @@ class EventProcessor:
     def process(self, _results) -> Tuple[EventContainer, Dict[Tuple[str, str, int], DebuggerMethod], BugInfo]:
         """
         Translate the events in _results
+
         :param _results: The output of the Recording Framework
         :return: The output of the translation, consisting of an EventContainer instance, the extracted methods and a BugInfo object
         """

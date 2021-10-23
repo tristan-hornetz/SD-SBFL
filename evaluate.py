@@ -32,6 +32,7 @@ AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median, 
 def get_files_recursive(dir: str, files: List[str]) -> List[str]:
     """
     Recursively find files in subdirectories of dir
+
     :param dir: The directory to search in
     :param files: The list of detected files. Should be initialized as an empty list
     :return: A list of files found
@@ -50,6 +51,7 @@ def create_evaluation_recursive(result_dir: str, similarity_coefficient, combini
                                 print_results=False, num_threads=-1) -> Evaluation:
     """
     Create an evaluation from the given configuration and the translated result files in result_dir
+
     :param result_dir: The directory containing the translated result files, or subdirectories containing such
     :param combining_method: The combining method to be used
     :param similarity_coefficient: The similarity coefficient to be used. Can either be an instance or just the type.
@@ -88,6 +90,7 @@ def create_evaluation_recursive(result_dir: str, similarity_coefficient, combini
 def run_process_list(processes: List[Process], out_queue: Queue, task_name: str = "", num_threads=-1) -> List[Any]:
     """
     Start the parallel execution of the processes in processes. Each process should put its output to out_queue upon termination.
+
     :param processes: A list of pre-initialized process instances
     :param out_queue: The queue to which the process output is added
     :param task_name: An optional name given to the process list, displayed with the progress bar
@@ -123,6 +126,7 @@ def run_process_list(processes: List[Process], out_queue: Queue, task_name: str 
 def make_tmp_folder(result_dir: str) -> str:
     """
     Create a temporary folder containing symlinks to the recursively found files in result_dir
+
     :param result_dir: The directory containing the translated result files, or subdirectories containing such
     :return: The path to the temporary directory
     """
@@ -163,7 +167,6 @@ class EvaluationRun(Collection):
 
     def __init__(self, name: str, destination: str = "."):
         """
-        Initializer for EvaluationRun
         :param name: The unique name of the evaluation run
         :param destination: The folder to save the run in
         """
@@ -174,6 +177,7 @@ class EvaluationRun(Collection):
     def create_evaluation(self, result_dir: str, similarity_coefficient, combining_method: CombiningMethod):
         """
         Create and add an evaluation based on the given configuration from the translated result files in result_dir
+
         :param result_dir: The directory containing the translated results
         :param combining_method: The combining method to be used
         :param similarity_coefficient: The similarity coefficient to be used. Can either be an instance or just the type.
@@ -188,6 +192,7 @@ class EvaluationRun(Collection):
         """
         Process a single translated results file for multiple pre-initialized evaluations.
         Intended for use with multiprocessing.
+
         :param path: The translated result file's location
         :param evaluations: A list of pre-initialized evaluations
         :param out_queue: A Queue instance to append the resulting ranking infos to. Output type: Dict[str, Tuple[str, RankingInfo]]
@@ -210,6 +215,7 @@ class EvaluationRun(Collection):
     def run_task(self, task: List[Tuple[str, Any, CombiningMethod]]):
         """
         Run a task and add the resulting evaluations
+
         :param task: A list of tuples containing configurations of the format (<result_dir>, <similarity_coefficient>, <combining_method>)
         """
         evaluations = [Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task]
@@ -246,6 +252,8 @@ class EvaluationRun(Collection):
     def load(filename: str):
         """
         Load a saved EvaluationRun instance from disk
+
+        :param filename: The file to load
         """
         with gzip.open(filename, "rb") as f:
             obj = pickle.load(f)

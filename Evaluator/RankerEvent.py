@@ -218,6 +218,7 @@ class EventContainer(Iterable):
     def add(self, event: RankerEvent):
         """
         Add an event to the container
+
         :param event: The event to be added
         """
         h = hash(event)
@@ -243,6 +244,7 @@ class EventContainer(Iterable):
     def get_from_program_element(self, program_element: Any) -> Set[RankerEvent]:
         """
         Retrieve the events related to the given program element
+
         :param program_element: The program element for which to retrieve events
         :return: A set of related events
         """

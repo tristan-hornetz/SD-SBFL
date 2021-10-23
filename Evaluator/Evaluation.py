@@ -49,6 +49,7 @@ class Evaluation:
     def merge(self, other):
         """
         Merge with another evaluation instance
+
         :param other: The Evaluation instance to merge with
         """
         assert set(self.rankings).isdisjoint(other.rankings)
@@ -60,6 +61,7 @@ class Evaluation:
     def add_meta_ranking(self, mr_path: str, rqueue: Queue, save_full_rankings: bool = False):
         """
         Load, and rank a single meta ranking. Intended for use with multiprocessing.
+
         :param self: The parent Evaluation instance
         :param mr_path: The result file's location
         :param rqueue: The queue to put the output into
@@ -91,6 +93,7 @@ class Evaluation:
     def add_directory(self, dir_path: str, num_threads=-1):
         """
         Add all result files recursively found in dir_path
+
         :param dir_path: The directory to recursively search for result files
         :param num_threads: The number of parallel threads to create. Default is the number of available cores
         """

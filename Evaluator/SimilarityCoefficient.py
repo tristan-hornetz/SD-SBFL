@@ -14,6 +14,7 @@ class SimilarityCoefficient:
     def get_values(event: RankerEvent) -> Tuple[int, int, int, int, int, int]:
         """
         Extract all required values from the given event
+
         :param event: The event to extract the values from
         :return: A tuple of required values
         """
@@ -30,6 +31,7 @@ class SimilarityCoefficient:
     def compute(event: RankerEvent) -> SupportsFloat:
         """
         Compute the similarity coefficient of the given event
+
         :param event: The event to compute the similarity coefficient for
         :return: The event's similarity coefficient
         """

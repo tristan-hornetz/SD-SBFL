@@ -17,6 +17,7 @@ from Evaluator.Ranking import MetaRanking
 def translate_file(path: str, event_processor: EventProcessor, output_dir: str):
     """
     Translate a single result file with the given event processor.
+
     :param path: The result file's path
     :param event_processor: The EventProcessor instance to translate the result file with
     :param output_dir: The directory to put the translated results in
@@ -44,6 +45,7 @@ def translate_file(path: str, event_processor: EventProcessor, output_dir: str):
 def translate_directory(path: str, event_processor: EventProcessor, output_dir: str):
     """
     Translate every result file in the given directory
+
     :param event_processor: The EventProcessor instance to translate the result file with
     :param output_dir: The directory to put the translated results in
     """
@@ -58,6 +60,7 @@ def translate_directory(path: str, event_processor: EventProcessor, output_dir: 
 def get_subdirs_recursive(start_path: str) -> List[str]:
     """
     Recursively search the given directory for subdirectories
+
     :param start_path: The root directory of the search
     :return: A list of subdirectories
     """
@@ -73,6 +76,7 @@ def get_subdirs_recursive(start_path: str) -> List[str]:
 def translate_directory_parallel(path: str, event_processor: EventProcessor, output_dir: str, threads: int = -1):
     """
     Translate every result file recursively found in the given directory
+
     :param path: The directory to recursively search for result files
     :param event_processor: The EventProcessor instance to translate the result file with
     :param output_dir: The directory to put the translated results in
