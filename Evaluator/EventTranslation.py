@@ -15,15 +15,22 @@ class EventTranslator:
     def match_method(filename, method_name, lineno, method_objects):
         if str(method_name).startswith("<") and method_name != "<module>":
             possible_methods = list(
-                filter(lambda m: m[0] == filename and lineno == m[2] and "<" not in m[1], method_objects.keys()))
+                filter(
+                    lambda m: m[0] == filename and lineno == m[2] and "<" not in m[1],
+                    method_objects.keys(),
+                )
+            )
             if len(possible_methods) > 0:
                 method_name = possible_methods[0][1]
         return filename, method_name, lineno
 
     @staticmethod
     @abstractmethod
-    def translate(_results, event_container: EventContainer,
-                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+    def translate(
+        _results,
+        event_container: EventContainer,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+    ):
         """
         Translate results from the Recording Framework to a form usable by the Evaluation Framework
 
@@ -40,21 +47,31 @@ class LineCoveredEventTranslator(EventTranslator):
     """
 
     @staticmethod
-    def translate(_results, event_container: EventContainer,
-                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+    def translate(
+        _results,
+        event_container: EventContainer,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+    ):
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
         for event in filter(lambda e: e[3] == "Covered", _results.results):
             filename, method_name, lineno, *other = event
-            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
+            filename, method_name, lineno = EventTranslator.match_method(
+                filename, method_name, lineno, method_objects
+            )
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
             failed_collectors = _results.collectors_with_event[_results.FAIL][event]
 
-            event_object = LineCoveredEvent(method_objects[filename, method_name, lineno],
-                                            (filename, method_name, lineno), passed_collectors, failed_collectors,
-                                            total_passed, total_failed)
+            event_object = LineCoveredEvent(
+                method_objects[filename, method_name, lineno],
+                (filename, method_name, lineno),
+                passed_collectors,
+                failed_collectors,
+                total_passed,
+                total_failed,
+            )
 
             event_container.add(event_object)
 
@@ -79,31 +96,67 @@ class SDBranchEventTranslator(EventTranslator):
             return
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
-        event_container.add(SDBranchEvent(branch.method_object,
-                                          branch.location,
-                                          collectors_for[outcome].intersection(_results.collectors[_results.PASS]),
-                                          collectors_for[outcome].intersection(_results.collectors[_results.FAIL]),
-                                          total_passed, total_failed, outcome))
+        event_container.add(
+            SDBranchEvent(
+                branch.method_object,
+                branch.location,
+                collectors_for[outcome].intersection(
+                    _results.collectors[_results.PASS]
+                ),
+                collectors_for[outcome].intersection(
+                    _results.collectors[_results.FAIL]
+                ),
+                total_passed,
+                total_failed,
+                outcome,
+            )
+        )
 
     @staticmethod
-    def translate(_results, event_container: EventContainer,
-                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+    def translate(
+        _results,
+        event_container: EventContainer,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+    ):
         info = BugInfo(_results)
         branches = extractBranchesFromCode(_results, info, method_objects)
         covered_locations = {
-            (filename.replace(info.work_dir + "/", ""), method_name, lineno): (filename, method_name, lineno, *o) for
-            filename, method_name, lineno, *o in filter(lambda e: e[3] == "Covered", _results.results)}
+            (filename.replace(info.work_dir + "/", ""), method_name, lineno): (
+                filename,
+                method_name,
+                lineno,
+                *o,
+            )
+            for filename, method_name, lineno, *o in filter(
+                lambda e: e[3] == "Covered", _results.results
+            )
+        }
         for branch in branches:
             if branch.location not in covered_locations.keys():
                 continue
             head_event = covered_locations[branch.location]
-            head_in_collectors = SDBranchEventTranslator.collectors_for_event(_results, head_event)
+            head_in_collectors = SDBranchEventTranslator.collectors_for_event(
+                _results, head_event
+            )
             body_in_collectors = dict()
-            if (branch.location[0], branch.location[1], branch.first_body_lineno) in covered_locations.keys():
-                body_event = covered_locations[(branch.location[0], branch.location[1], branch.first_body_lineno)]
-                body_in_collectors = SDBranchEventTranslator.collectors_for_event(_results, body_event)
-            combined_dict = {c: (head_in_collectors[c], body_in_collectors[c] if c in body_in_collectors.keys() else 0)
-                             for c in head_in_collectors.keys()}
+            if (
+                branch.location[0],
+                branch.location[1],
+                branch.first_body_lineno,
+            ) in covered_locations.keys():
+                body_event = covered_locations[
+                    (branch.location[0], branch.location[1], branch.first_body_lineno)
+                ]
+                body_in_collectors = SDBranchEventTranslator.collectors_for_event(
+                    _results, body_event
+                )
+            combined_dict = {
+                c: (
+                    head_in_collectors[c],
+                    body_in_collectors[c] if c in body_in_collectors.keys() else 0,
+                )
+                for c in head_in_collectors.keys()
+            }
             collectors_for = {True: set(), False: set()}
 
             for collector, (head, body) in combined_dict.items():
@@ -112,8 +165,12 @@ class SDBranchEventTranslator(EventTranslator):
                 if body < head:
                     collectors_for[False].add(collector)
 
-            SDBranchEventTranslator.create_event(_results, event_container, branch, collectors_for, True)
-            SDBranchEventTranslator.create_event(_results, event_container, branch, collectors_for, False)
+            SDBranchEventTranslator.create_event(
+                _results, event_container, branch, collectors_for, True
+            )
+            SDBranchEventTranslator.create_event(
+                _results, event_container, branch, collectors_for, False
+            )
 
 
 class SDReturnValueEventTranslator(EventTranslator):
@@ -122,8 +179,11 @@ class SDReturnValueEventTranslator(EventTranslator):
     """
 
     @staticmethod
-    def translate(_results, event_container: EventContainer,
-                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+    def translate(
+        _results,
+        event_container: EventContainer,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+    ):
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
         comparable_types = set(str(t) for t in [int, str, float, bool])
@@ -140,15 +200,21 @@ class SDReturnValueEventTranslator(EventTranslator):
                     ("<", value < 0),
                     ("<=", value <= 0),
                     (">", value > 0),
-                    (">=", value >= 0)
+                    (">=", value >= 0),
                 ]
                 passed_collectors = _results.collectors_with_event[_results.PASS][event]
                 failed_collectors = _results.collectors_with_event[_results.FAIL][event]
                 for op, result in comparisons:
-                    event_object = SDReturnValueEvent(method_objects[filename, method_name, lineno],
-                                                      (filename, method_name, lineno), passed_collectors,
-                                                      failed_collectors,
-                                                      total_passed, total_failed, op, result)
+                    event_object = SDReturnValueEvent(
+                        method_objects[filename, method_name, lineno],
+                        (filename, method_name, lineno),
+                        passed_collectors,
+                        failed_collectors,
+                        total_passed,
+                        total_failed,
+                        op,
+                        result,
+                    )
                     event_container.add(event_object)
 
 
@@ -158,13 +224,20 @@ class SDScalarPairEventTranslator(EventTranslator):
     """
 
     @staticmethod
-    def translate(_results, event_container: EventContainer,
-                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+    def translate(
+        _results,
+        event_container: EventContainer,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+    ):
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
-        for event in filter(lambda e: e[3] == "Scalar" or e[3] == "Pair", _results.results):
+        for event in filter(
+            lambda e: e[3] == "Scalar" or e[3] == "Pair", _results.results
+        ):
             filename, method_name, lineno, e_type, *other = event
-            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
+            filename, method_name, lineno = EventTranslator.match_method(
+                filename, method_name, lineno, method_objects
+            )
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
@@ -178,7 +251,7 @@ class SDScalarPairEventTranslator(EventTranslator):
                     ("<", value < 0),
                     ("<=", value <= 0),
                     (">", value > 0),
-                    (">=", value >= 0)
+                    (">=", value >= 0),
                 ]
             else:
                 (name, o_name), (equal, smaller) = other
@@ -188,14 +261,21 @@ class SDScalarPairEventTranslator(EventTranslator):
                     ("<", smaller),
                     ("<=", smaller or equal),
                     (">", not smaller and not equal),
-                    (">=", not smaller)
+                    (">=", not smaller),
                 ]
 
             for op, result in comparisons:
-                event_object = SDScalarPairEvent(method_objects[filename, method_name, lineno],
-                                                 (filename, method_name, lineno), passed_collectors,
-                                                 failed_collectors, total_passed, total_failed, op, result,
-                                                 (name, o_name))
+                event_object = SDScalarPairEvent(
+                    method_objects[filename, method_name, lineno],
+                    (filename, method_name, lineno),
+                    passed_collectors,
+                    failed_collectors,
+                    total_passed,
+                    total_failed,
+                    op,
+                    result,
+                    (name, o_name),
+                )
                 event_container.add(event_object)
 
 
@@ -205,21 +285,32 @@ class AbsoluteReturnValueEventTranslator(EventTranslator):
     """
 
     @staticmethod
-    def translate(_results, event_container: EventContainer,
-                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+    def translate(
+        _results,
+        event_container: EventContainer,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+    ):
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
         for event in filter(lambda e: e[3] == "Return", _results.results):
             filename, method_name, lineno, _, value, type_str = event
-            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
+            filename, method_name, lineno = EventTranslator.match_method(
+                filename, method_name, lineno, method_objects
+            )
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
             failed_collectors = _results.collectors_with_event[_results.FAIL][event]
 
-            event_object = AbsoluteReturnValueEvent(method_objects[filename, method_name, lineno],
-                                                    (filename, method_name, lineno), passed_collectors,
-                                                    failed_collectors, total_passed, total_failed, value)
+            event_object = AbsoluteReturnValueEvent(
+                method_objects[filename, method_name, lineno],
+                (filename, method_name, lineno),
+                passed_collectors,
+                failed_collectors,
+                total_passed,
+                total_failed,
+                value,
+            )
 
             event_container.add(event_object)
 
@@ -230,28 +321,45 @@ class AbsoluteScalarValueEventTranslator(EventTranslator):
     """
 
     @staticmethod
-    def translate(_results, event_container: EventContainer,
-                  method_objects: Dict[Tuple[str, str, int], DebuggerMethod]):
+    def translate(
+        _results,
+        event_container: EventContainer,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+    ):
         total_passed = len(_results.collectors[_results.PASS])
         total_failed = len(_results.collectors[_results.FAIL])
         for event in filter(lambda e: e[3] == "Scalar", _results.results):
             filename, method_name, lineno, _, (var_name, value) = event
-            filename, method_name, lineno = EventTranslator.match_method(filename, method_name, lineno, method_objects)
+            filename, method_name, lineno = EventTranslator.match_method(
+                filename, method_name, lineno, method_objects
+            )
             if (filename, method_name, lineno) not in method_objects.keys():
                 continue
             passed_collectors = _results.collectors_with_event[_results.PASS][event]
             failed_collectors = _results.collectors_with_event[_results.FAIL][event]
 
-            event_object = AbsoluteScalarValueEvent(method_objects[filename, method_name, lineno],
-                                                    (filename, method_name, lineno), passed_collectors,
-                                                    failed_collectors, total_passed, total_failed, var_name, value)
+            event_object = AbsoluteScalarValueEvent(
+                method_objects[filename, method_name, lineno],
+                (filename, method_name, lineno),
+                passed_collectors,
+                failed_collectors,
+                total_passed,
+                total_failed,
+                var_name,
+                value,
+            )
 
             event_container.add(event_object)
 
 
-DEFAULT_TRANSLATORS = [LineCoveredEventTranslator, SDBranchEventTranslator, SDScalarPairEventTranslator,
-                       SDReturnValueEventTranslator, AbsoluteReturnValueEventTranslator,
-                       AbsoluteScalarValueEventTranslator]
+DEFAULT_TRANSLATORS = [
+    LineCoveredEventTranslator,
+    SDBranchEventTranslator,
+    SDScalarPairEventTranslator,
+    SDReturnValueEventTranslator,
+    AbsoluteReturnValueEventTranslator,
+    AbsoluteScalarValueEventTranslator,
+]
 
 
 class EventProcessor:
@@ -265,7 +373,9 @@ class EventProcessor:
         """
         self.translators = translators
 
-    def process(self, _results) -> Tuple[EventContainer, Dict[Tuple[str, str, int], DebuggerMethod], BugInfo]:
+    def process(
+        self, _results
+    ) -> Tuple[EventContainer, Dict[Tuple[str, str, int], DebuggerMethod], BugInfo]:
         """
         Translate the events in _results
 

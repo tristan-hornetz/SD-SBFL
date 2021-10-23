@@ -15,7 +15,9 @@ def get_info_directory(_results):
     :return: The absolute path of the BugsInPy directory containing information on the bug tested in _results
     """
     base = os.path.dirname(os.path.realpath(sys.argv[0]))
-    return os.path.abspath(f"{base}/_BugsInPy/projects/{_results.project_name}/bugs/{_results.bug_id}")
+    return os.path.abspath(
+        f"{base}/_BugsInPy/projects/{_results.project_name}/bugs/{_results.bug_id}"
+    )
 
 
 class BugInfo:
@@ -30,8 +32,8 @@ class BugInfo:
                 if not line:
                     break
                 if "=" in line:
-                    attr = attr_prefix + line.split("=", 1)[0].strip("\" \n")
-                    val = line.split("=", 1)[1].strip("\" \n")
+                    attr = attr_prefix + line.split("=", 1)[0].strip('" \n')
+                    val = line.split("=", 1)[1].strip('" \n')
                     setattr(self, attr, val)
                     self.attrs.append(attr)
 
@@ -51,7 +53,7 @@ class BugInfo:
     def __str__(self):
         ret = ""
         for a in self.attrs:
-            ret += f"{a}=\"{getattr(self, a)}\"\n"
+            ret += f'{a}="{getattr(self, a)}"\n'
         return ret
 
 
@@ -65,7 +67,7 @@ class LineNumberExtractor(ast.NodeVisitor):
         self.linenos = set()
 
     def visit(self, node: ast.AST):
-        if hasattr(node, 'lineno'):
+        if hasattr(node, "lineno"):
             self.linenos.add(node.lineno)
         return super().visit(node)
 
@@ -94,14 +96,15 @@ def getCleanRepo(_results, info: BugInfo, directory):
         mkdirRecursive(directory)
     try:
         repo = Repo(directory)
-        repo.git.add('--all')
+        repo.git.add("--all")
         repo.git.stash()
         repo.git.checkout(info.buggy_commit_id)
     except:
-        os.system(f"rm -rf \"{directory}\"")
+        os.system(f'rm -rf "{directory}"')
         repo = Repo.clone_from(info.project_github_url, directory)
         repo.git.checkout(info.buggy_commit_id)
     return repo
+
 
 def extra_instrumentation(_results, info: BugInfo, directory):
     """
@@ -111,10 +114,14 @@ def extra_instrumentation(_results, info: BugInfo, directory):
     :param directory: The directory to create the repo in
     """
     if _results.project_name == "sanic":
-        os.system(f"ln -s $(readlink -f {directory})/sanic $(readlink -f {directory})/tests/sanic")
+        os.system(
+            f"ln -s $(readlink -f {directory})/sanic $(readlink -f {directory})/tests/sanic"
+        )
 
 
-def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instrument=False):
+def getValidProjectDir(
+    _results, info: BugInfo, fixed=False, directory="", instrument=False
+):
     """
     Create a valid Git Repo for a specific bug and return the path to it
     :param _results: The SFL_Results of the test run
@@ -124,21 +131,31 @@ def getValidProjectDir(_results, info: BugInfo, fixed=False, directory="", instr
     :return: The path to a valid git repo for the bug in info
     """
     if directory == "":
-        directory = os.path.dirname(inspect.getfile(getCleanRepo)) + "/../.temp/" + _results.project_name
+        directory = (
+            os.path.dirname(inspect.getfile(getCleanRepo))
+            + "/../.temp/"
+            + _results.project_name
+        )
 
     repo = getCleanRepo(_results, info, directory)
     if fixed:
         repo.git.checkout(info.fixed_commit_id)
 
     root_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    binary_dir = root_dir + '/_BugsInPy/framework/bin'
+    binary_dir = root_dir + "/_BugsInPy/framework/bin"
     if instrument:
         for file in os.scandir(info.info_dir):
             if os.path.isfile(str(file.path)):
-                copy(str(file.path), directory + "/bugsinpy_" + str(file.path).replace(info.info_dir + "/", ""))
-        debugger_module = os.path.abspath(root_dir + '/run_single_test.py')
+                copy(
+                    str(file.path),
+                    directory
+                    + "/bugsinpy_"
+                    + str(file.path).replace(info.info_dir + "/", ""),
+                )
+        debugger_module = os.path.abspath(root_dir + "/run_single_test.py")
         os.system(
-            f'{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory} > /dev/null 2>&1')
+            f"{binary_dir}/bugsinpy-instrument -f -c {debugger_module} -w {directory} > /dev/null 2>&1"
+        )
         extra_instrumentation(_results, info, directory)
 
     return directory

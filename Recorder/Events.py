@@ -31,7 +31,10 @@ class SharedEventContainer(Iterable):
         return self.length
 
     def __iter__(self) -> Iterator:
-        return filter(lambda k: int(self.collector) in self.shared_coverage[k].keys(), self.shared_coverage.keys())
+        return filter(
+            lambda k: int(self.collector) in self.shared_coverage[k].keys(),
+            self.shared_coverage.keys(),
+        )
 
 
 class DebuggerEvent:
@@ -41,12 +44,16 @@ class DebuggerEvent:
         # Exclude events from file paths with these substrings:
 
     @abstractmethod
-    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
+    def collect(
+        self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str
+    ) -> None:
         pass
 
 
 class LineCoveredEvent(DebuggerEvent):
-    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
+    def collect(
+        self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str
+    ) -> None:
         """
         Collect information about the line that is currently being covered.
         """
@@ -60,14 +67,16 @@ class ReturnValueEvent(DebuggerEvent):
         super(ReturnValueEvent, self).__init__(*args, **kwargs)
         self.types = {int, str, float, bool}
 
-    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
+    def collect(
+        self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str
+    ) -> None:
         """
         Collect a return value
         If possible, the hash of the returned object is stored to keep the object itself out of memory
         Otherwise, store None
         """
 
-        if event != 'return':
+        if event != "return":
             return
 
         try:
@@ -88,12 +97,16 @@ class ScalarEvent(DebuggerEvent):
         self.previous_items = set()
         self.types = {int, float, bool}
 
-    def collect(self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str) -> None:
+    def collect(
+        self, frame: FrameType, event: str, arg: Any, filename: str, func_name: str
+    ) -> None:
         """
         Collect scalars that were altered in this frame
         """
 
-        localvars = set(filter(lambda i: type(i[1]) in self.types, frame.f_locals.items()))
+        localvars = set(
+            filter(lambda i: type(i[1]) in self.types, frame.f_locals.items())
+        )
         # localvars.update(frame.f_globals)
 
         changed_values = localvars.difference(self.previous_items)
@@ -104,6 +117,15 @@ class ScalarEvent(DebuggerEvent):
             for o_k, o_v in localvars:
                 if o_k == k:
                     continue
-                self.container.add((filename, func_name, frame.f_lineno, "Pair", (k, o_k), (v == o_v, v < o_v)))
+                self.container.add(
+                    (
+                        filename,
+                        func_name,
+                        frame.f_lineno,
+                        "Pair",
+                        (k, o_k),
+                        (v == o_v, v < o_v),
+                    )
+                )
 
         self.previous_items = localvars

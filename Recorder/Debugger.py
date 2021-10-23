@@ -13,6 +13,7 @@ class NoFailuresError(Exception):
     """
     Raised when all tests that were supposed to fail actually passed
     """
+
     pass
 
 
@@ -49,17 +50,27 @@ class BetterOchiaiDebugger(OchiaiDebugger):
             passed = set(self.collectors[self.PASS])
             for event in collector_type.shared_coverage.keys():
                 collectors_with_event = collector_type.shared_coverage[event]
-                failed_collectors = set(filter(lambda c: c[0] in failed, collectors_with_event.items()))
-                passed_collectors = set(filter(lambda c: c[0] in passed, collectors_with_event.items()))
+                failed_collectors = set(
+                    filter(lambda c: c[0] in failed, collectors_with_event.items())
+                )
+                passed_collectors = set(
+                    filter(lambda c: c[0] in passed, collectors_with_event.items())
+                )
                 self.collectors_with_result[self.FAIL][event] = failed_collectors
                 self.collectors_with_result[self.PASS][event] = passed_collectors
 
     def suspiciousness(self, event: Any) -> Optional[float]:
-        failed = len(self.collectors_with_result[self.FAIL][event]) if event in self.collectors_with_result[
-            self.FAIL].keys() else 0
+        failed = (
+            len(self.collectors_with_result[self.FAIL][event])
+            if event in self.collectors_with_result[self.FAIL].keys()
+            else 0
+        )
         not_in_failed = len(self.collectors[self.FAIL]) - failed
-        passed = len(self.collectors_with_result[self.PASS][event]) if event in self.collectors_with_result[
-            self.PASS].keys() else 0
+        passed = (
+            len(self.collectors_with_result[self.PASS][event])
+            if event in self.collectors_with_result[self.PASS].keys()
+            else 0
+        )
 
         try:
             return failed / math.sqrt((failed + not_in_failed) * (failed + passed))
@@ -76,7 +87,6 @@ class BetterOchiaiDebugger(OchiaiDebugger):
 
 
 class ReportingDebugger(BetterOchiaiDebugger):
-
     def add_collector(self, outcome: str, collector: Collector) -> Collector:
         ret = super().add_collector(outcome, collector)
         if outcome == self.FAIL:
@@ -113,16 +123,27 @@ class SFL_Results:
     @staticmethod
     def get_workdir(work_dir):
         if work_dir == "":
-            split_dir = "/TestWrapper/" if "/TestWrapper/" in inspect.getfile(SFL_Results.get_workdir) else "/_root"
-            work_dir_info_file = inspect.getfile(SFL_Results.get_workdir).split(split_dir)[
-                                     0] + "/TestWrapper/work_dir.info"
+            split_dir = (
+                "/TestWrapper/"
+                if "/TestWrapper/" in inspect.getfile(SFL_Results.get_workdir)
+                else "/_root"
+            )
+            work_dir_info_file = (
+                inspect.getfile(SFL_Results.get_workdir).split(split_dir)[0]
+                + "/TestWrapper/work_dir.info"
+            )
             if os.path.exists(work_dir_info_file):
                 with open(work_dir_info_file, "rt") as f:
                     work_dir_base = f.readline().replace("\n", "")
             else:
                 work_dir_base = os.curdir.rsplit("/", 1)[0]
-            return work_dir_base + "/" + \
-                   os.path.abspath(os.path.curdir).replace(work_dir_base + "/", "").split("/")[0]
+            return (
+                work_dir_base
+                + "/"
+                + os.path.abspath(os.path.curdir)
+                .replace(work_dir_base + "/", "")
+                .split("/")[0]
+            )
         return work_dir
 
     def __init__(self, debugger: ReportingDebugger, work_dir=""):
@@ -131,22 +152,35 @@ class SFL_Results:
         :param debugger: The debugger instance
         :param work_dir: The BugsInPy working directory (only required if non-default)
         """
-        if len(debugger.collectors[debugger.FAIL]) > 0 and len(debugger.collectors[debugger.PASS]) > 0:
+        if (
+            len(debugger.collectors[debugger.FAIL]) > 0
+            and len(debugger.collectors[debugger.PASS]) > 0
+        ):
             self.results = debugger.rank()
         else:
             self.results = []
-        self.collectors = {debugger.PASS: debugger.collectors[debugger.PASS],
-                           debugger.FAIL: debugger.collectors[debugger.FAIL]}
+        self.collectors = {
+            debugger.PASS: debugger.collectors[debugger.PASS],
+            debugger.FAIL: debugger.collectors[debugger.FAIL],
+        }
         self.collectors_with_event = debugger.collectors_with_result
         self.collectors_with_result = dict()
-        self.extracted_test_ids = debugger.extracted_test_ids if hasattr(debugger, "extracted_test_ids") else None
-        self.covered_test_ids = debugger.covered_test_ids if hasattr(debugger, "covered_test_ids") else []
+        self.extracted_test_ids = (
+            debugger.extracted_test_ids
+            if hasattr(debugger, "extracted_test_ids")
+            else None
+        )
+        self.covered_test_ids = (
+            debugger.covered_test_ids if hasattr(debugger, "covered_test_ids") else []
+        )
         self.FAIL = debugger.FAIL
         self.PASS = debugger.PASS
         for o in self.collectors_with_event.keys():
             self.collectors_with_result[o] = dict()
             for k in self.collectors_with_event[o].keys():
-                self.collectors_with_result[o][k] = set(e[0] for e in self.collectors_with_event[o][k])
+                self.collectors_with_result[o][k] = set(
+                    e[0] for e in self.collectors_with_event[o][k]
+                )
 
         self.work_dir = SFL_Results.get_workdir(work_dir)
 
@@ -156,7 +190,11 @@ class SFL_Results:
                 if not line:
                     break
                 if "=" in line:
-                    setattr(self, line.split("=", 1)[0].lower(), line.split("=", 1)[1].replace("\n", ""))
+                    setattr(
+                        self,
+                        line.split("=", 1)[0].lower(),
+                        line.split("=", 1)[1].replace("\n", ""),
+                    )
 
 
 debugger = ReportingDebugger(collector_class=collector_type)

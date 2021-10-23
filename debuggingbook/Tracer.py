@@ -27,7 +27,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-r'''
+r"""
 The Debugging Book - Tracing Executions
 
 This file can be _executed_ as a script, running all experiments:
@@ -65,9 +65,9 @@ Calling remove_html_markup(s = 'foobar', function = 'remove_html_markup', line =
 For more details, source, and documentation, see
 "The Debugging Book - Tracing Executions"
 at https://www.debuggingbook.org/html/Tracer.html
-'''
+"""
 
-'''
+"""
 # Allow to use 'from . import <module>' when run as script (cf. PEP 366)
 if __name__ == '__main__' and __package__ is None:
     __package__ = 'debuggingbook'
@@ -177,13 +177,14 @@ if __name__ == '__main__':
 if __name__ == '__main__':
     print('\n## A Tracer Class')
 
-'''
+"""
 
 import sys
 from types import FrameType, TracebackType
 from typing import Any, Optional, Callable, Dict, List, Type, TextIO, cast
 
 from .StackInspector import StackInspector
+
 
 class Tracer(StackInspector):
     """A class for tracing a piece of code. Use as `with Tracer(): block()`"""
@@ -206,9 +207,9 @@ class Tracer(StackInspector):
             self.traceit(frame, event, arg)
         return self._traceit
 
-    def log(self, *objects: Any, 
-            sep: str = ' ', end: str = '\n', 
-            flush: bool = True) -> None:
+    def log(
+        self, *objects: Any, sep: str = " ", end: str = "\n", flush: bool = True
+    ) -> None:
         """
         Like `print()`, but always sending to `file` given at initialization,
         and flushing by default.
@@ -224,8 +225,9 @@ class Tracer(StackInspector):
         # inspect.currentframe().f_back.f_trace = self._traceit
         return self
 
-    def __exit__(self, exc_tp: Type, exc_value: BaseException, 
-                 exc_traceback: TracebackType) -> Optional[bool]:
+    def __exit__(
+        self, exc_tp: Type, exc_value: BaseException, exc_traceback: TracebackType
+    ) -> Optional[bool]:
         """
         Called at end of `with` block. Turn tracing off.
         Return `None` if ok, not `None` if internal error.
@@ -239,73 +241,74 @@ class Tracer(StackInspector):
         else:
             return None  # all ok
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with Tracer():
         remove_html_markup("abc")
 
 ## Accessing Source Code
 ## ---------------------
 
-if __name__ == '__main__':
-    print('\n## Accessing Source Code')
-
+if __name__ == "__main__":
+    print("\n## Accessing Source Code")
 
 
 import inspect
+
 
 class Tracer(Tracer):
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """Tracing function; called at every line. To be overloaded in subclasses."""
 
-        if event == 'line':
+        if event == "line":
             module = inspect.getmodule(frame.f_code)
             if module is None:
                 source = inspect.getsource(frame.f_code)
             else:
                 source = inspect.getsource(module)
-            current_line = source.split('\n')[frame.f_lineno - 1]
+            current_line = source.split("\n")[frame.f_lineno - 1]
             self.log(frame.f_lineno, current_line)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with Tracer():
         remove_html_markup("abc")
 
 ## Tracing Calls and Returns
 ## -------------------------
 
-if __name__ == '__main__':
-    print('\n## Tracing Calls and Returns')
-
+if __name__ == "__main__":
+    print("\n## Tracing Calls and Returns")
 
 
 class Tracer(Tracer):
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """Tracing function. To be overridden in subclasses."""
 
-        if event == 'call':
+        if event == "call":
             self.log(f"Calling {frame.f_code.co_name}()")
 
-        if event == 'line':
+        if event == "line":
             module = inspect.getmodule(frame.f_code)
             if module:
                 source = inspect.getsource(module)
             if source:
-                current_line = source.split('\n')[frame.f_lineno - 1]
+                current_line = source.split("\n")[frame.f_lineno - 1]
                 self.log(frame.f_lineno, current_line)
 
-        if event == 'return':
+        if event == "return":
             self.log(f"{frame.f_code.co_name}() returns {repr(arg)}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with Tracer():
         remove_html_markup("abc")
 
 ## Tracing Variable Changes
 ## ------------------------
 
-if __name__ == '__main__':
-    print('\n## Tracing Variable Changes')
-
+if __name__ == "__main__":
+    print("\n## Tracing Variable Changes")
 
 
 class Tracer(Tracer):
@@ -322,88 +325,91 @@ class Tracer(Tracer):
         """Track changed variables, based on `new_vars` observed."""
         changed = {}
         for var_name, var_value in new_vars.items():
-            if (var_name not in self.last_vars or
-                    self.last_vars[var_name] != var_value):
+            if var_name not in self.last_vars or self.last_vars[var_name] != var_value:
                 changed[var_name] = var_value
         self.last_vars = new_vars.copy()
         return changed
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     tracer = Tracer()
 
-if __name__ == '__main__':
-    tracer.changed_vars({'a': 10})
+if __name__ == "__main__":
+    tracer.changed_vars({"a": 10})
 
-if __name__ == '__main__':
-    tracer.changed_vars({'a': 10, 'b': 25})
+if __name__ == "__main__":
+    tracer.changed_vars({"a": 10, "b": 25})
 
-if __name__ == '__main__':
-    tracer.changed_vars({'a': 10, 'b': 25})
+if __name__ == "__main__":
+    tracer.changed_vars({"a": 10, "b": 25})
 
-if __name__ == '__main__':
-    changes = tracer.changed_vars({'c': 10, 'd': 25})
+if __name__ == "__main__":
+    changes = tracer.changed_vars({"c": 10, "d": 25})
     changes
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ", ".join([var + " = " + repr(changes[var]) for var in changes])
+
 
 class Tracer(Tracer):
     def print_debugger_status(self, frame: FrameType, event: str, arg: Any) -> None:
         """Show current source line and changed vars"""
         changes = self.changed_vars(frame.f_locals)
-        changes_s = ", ".join([var + " = " + repr(changes[var])
-                               for var in changes])
+        changes_s = ", ".join([var + " = " + repr(changes[var]) for var in changes])
 
-        if event == 'call':
-            self.log("Calling " + frame.f_code.co_name + '(' + changes_s + ')')
+        if event == "call":
+            self.log("Calling " + frame.f_code.co_name + "(" + changes_s + ")")
         elif changes:
-            self.log(' ' * 40, '#', changes_s)
+            self.log(" " * 40, "#", changes_s)
 
-        if event == 'line':
+        if event == "line":
             try:
                 module = inspect.getmodule(frame.f_code)
                 if module is None:
                     source = inspect.getsource(frame.f_code)
                 else:
                     source = inspect.getsource(module)
-                current_line = source.split('\n')[frame.f_lineno - 1]
+                current_line = source.split("\n")[frame.f_lineno - 1]
 
             except OSError as err:
                 self.log(f"{err.__class__.__name__}: {err}")
                 current_line = ""
 
-            self.log(repr(frame.f_lineno) + ' ' + current_line)
+            self.log(repr(frame.f_lineno) + " " + current_line)
 
-        if event == 'return':
-            self.log(frame.f_code.co_name + '()' + " returns " + repr(arg))
+        if event == "return":
+            self.log(frame.f_code.co_name + "()" + " returns " + repr(arg))
             self.last_vars = {}  # Delete 'last' variables
 
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
         """Tracing function; called at every line. To be overloaded in subclasses."""
         self.print_debugger_status(frame, event, arg)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with Tracer():
-        remove_html_markup('<b>x</b>')
+        remove_html_markup("<b>x</b>")
 
 ## Conditional Tracing
 ## -------------------
 
-if __name__ == '__main__':
-    print('\n## Conditional Tracing')
-
+if __name__ == "__main__":
+    print("\n## Conditional Tracing")
 
 
 class ConditionalTracer(Tracer):
-    def __init__(self, *, condition: Optional[str] = None, file: TextIO = sys.stdout) -> None:
+    def __init__(
+        self, *, condition: Optional[str] = None, file: TextIO = sys.stdout
+    ) -> None:
         """Constructor. Trace all events for which `condition` (a Python expr) holds."""
 
         if condition is None:
-            condition = 'False'
+            condition = "False"
 
         self.condition: str = condition
         self.last_report: Optional[bool] = None
         super().__init__(file=file)
+
 
 class ConditionalTracer(ConditionalTracer):
     def eval_in_context(self, expr: str, frame: FrameType) -> Optional[bool]:
@@ -413,9 +419,11 @@ class ConditionalTracer(ConditionalTracer):
             cond = None
         return cond
 
+
 class ConditionalTracer(ConditionalTracer):
     def do_report(self, frame: FrameType, event: str, arg: Any) -> Optional[bool]:
         return self.eval_in_context(self.condition, frame)
+
 
 class ConditionalTracer(ConditionalTracer):
     def traceit(self, frame: FrameType, event: str, arg: Any) -> None:
@@ -428,66 +436,79 @@ class ConditionalTracer(ConditionalTracer):
         if report:
             self.print_debugger_status(frame, event, arg)
 
-if __name__ == '__main__':
-    with ConditionalTracer(condition='quote'):
+
+if __name__ == "__main__":
+    with ConditionalTracer(condition="quote"):
         remove_html_markup('<b title="bar">"foo"</b>')
 
-if __name__ == '__main__':
-    quiz("What happens if the condition contains a syntax error?",
-         [
-             "The tracer stops, raising an exception",
-             "The tracer continues as if the condition were `True`",
-             "The tracer continues as if the condition were `False`",
-         ], '393 % 7')
+if __name__ == "__main__":
+    quiz(
+        "What happens if the condition contains a syntax error?",
+        [
+            "The tracer stops, raising an exception",
+            "The tracer continues as if the condition were `True`",
+            "The tracer continues as if the condition were `False`",
+        ],
+        "393 % 7",
+    )
 
 from .ExpectError import ExpectError
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectError(SyntaxError):
-        with ConditionalTracer(condition='2 +'):
+        with ConditionalTracer(condition="2 +"):
             remove_html_markup('<b title="bar">"foo"</b>')
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectError():
-        with ConditionalTracer(condition='undefined_variable'):
+        with ConditionalTracer(condition="undefined_variable"):
             remove_html_markup('<b title="bar">"foo"</b>')
+
 
 class ConditionalTracer(ConditionalTracer):
     def eval_in_context(self, expr: str, frame: FrameType) -> Any:
-        frame.f_locals['function'] = frame.f_code.co_name
-        frame.f_locals['line'] = frame.f_lineno
+        frame.f_locals["function"] = frame.f_code.co_name
+        frame.f_locals["line"] = frame.f_lineno
 
         return super().eval_in_context(expr, frame)
 
-if __name__ == '__main__':
-    with ConditionalTracer(condition="function == 'remove_html_markup' and line >= 237"):
-        remove_html_markup('xyz')
 
-if __name__ == '__main__':
-    quiz("If the program under test contains a variable named `line`, "
-         "which `line` does the condition refer to?",
-         [
-            "`line` as in the debugger",
-            "`line` as in the program"
-         ], '(326 * 27 == 8888) + 1')
+if __name__ == "__main__":
+    with ConditionalTracer(
+        condition="function == 'remove_html_markup' and line >= 237"
+    ):
+        remove_html_markup("xyz")
+
+if __name__ == "__main__":
+    quiz(
+        "If the program under test contains a variable named `line`, "
+        "which `line` does the condition refer to?",
+        ["`line` as in the debugger", "`line` as in the program"],
+        "(326 * 27 == 8888) + 1",
+    )
 
 ## Watching Events
 ## ---------------
 
-if __name__ == '__main__':
-    print('\n## Watching Events')
-
+if __name__ == "__main__":
+    print("\n## Watching Events")
 
 
 class EventTracer(ConditionalTracer):
     """Log when a given event expression changes its value"""
 
-    def __init__(self, *, condition: Optional[str] = None,
-                 events: List[str] = [], file: TextIO = sys.stdout) -> None:
+    def __init__(
+        self,
+        *,
+        condition: Optional[str] = None,
+        events: List[str] = [],
+        file: TextIO = sys.stdout,
+    ) -> None:
         """Constructor. `events` is a list of expressions to watch."""
         self.events = events
         self.last_event_values: Dict[str, Any] = {}
         super().__init__(file=file, condition=condition)
+
 
 class EventTracer(EventTracer):
     def events_changed(self, events: List[str], frame: FrameType) -> bool:
@@ -496,44 +517,48 @@ class EventTracer(EventTracer):
         for event in events:
             value = self.eval_in_context(event, frame)
 
-            if (event not in self.last_event_values or
-                    value != self.last_event_values[event]):
+            if (
+                event not in self.last_event_values
+                or value != self.last_event_values[event]
+            ):
                 self.last_event_values[event] = value
                 change = True
 
         return change
 
+
 class EventTracer(EventTracer):
     def do_report(self, frame: FrameType, event: str, arg: Any) -> bool:
         """Return True if a line should be shown"""
-        return (self.eval_in_context(self.condition, frame) or
-                self.events_changed(self.events, frame))
+        return self.eval_in_context(self.condition, frame) or self.events_changed(
+            self.events, frame
+        )
 
-if __name__ == '__main__':
-    with EventTracer(events=['quote', 'tag']):
+
+if __name__ == "__main__":
+    with EventTracer(events=["quote", "tag"]):
         remove_html_markup('<b title="bar">"foo"</b>')
 
 ## Efficient Tracing
 ## -----------------
 
-if __name__ == '__main__':
-    print('\n## Efficient Tracing')
+if __name__ == "__main__":
+    print("\n## Efficient Tracing")
 
 
+# from .Timer import Timer
 
-#from .Timer import Timer
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     runs = 1000
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with Timer() as t:
         for i in range(runs):
             remove_html_markup('<b title="bar">"foo"</b>')
     untraced_execution_time = t.elapsed_time()
     untraced_execution_time
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with Timer() as t:
         for i in range(runs):
             with EventTracer():
@@ -541,17 +566,17 @@ if __name__ == '__main__':
     traced_execution_time = t.elapsed_time()
     traced_execution_time
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     traced_execution_time / untraced_execution_time
 
-TRACER_CODE = \
-    "TRACER.print_debugger_status(inspect.currentframe(), 'line', None); "
+TRACER_CODE = "TRACER.print_debugger_status(inspect.currentframe(), 'line', None); "
 
 TRACER = Tracer()
 
+
 def insert_tracer(function: Callable, breakpoints: List[int] = []) -> Callable:
     """Return a variant of `function` with tracing code `TRACER_CODE` inserted
-       at each line given by `breakpoints`."""
+    at each line given by `breakpoints`."""
 
     source_lines, starting_line_number = inspect.getsourcelines(function)
 
@@ -561,7 +586,9 @@ def insert_tracer(function: Callable, breakpoints: List[int] = []) -> Callable:
         relative_line = given_line - starting_line_number + 1
         inject_line = source_lines[relative_line - 1]
         indent = len(inject_line) - len(inject_line.lstrip())
-        source_lines[relative_line - 1] = ' ' * indent + TRACER_CODE + inject_line.lstrip()
+        source_lines[relative_line - 1] = (
+            " " * indent + TRACER_CODE + inject_line.lstrip()
+        )
 
     # Rename function
     new_function_name = function.__name__ + "_traced"
@@ -569,175 +596,182 @@ def insert_tracer(function: Callable, breakpoints: List[int] = []) -> Callable:
     new_def = "".join(source_lines)
 
     # For debugging
-    print_content(new_def, '.py', start_line_number=starting_line_number)
+    print_content(new_def, ".py", start_line_number=starting_line_number)
 
     # We keep original source and filename to ease debugging
-    prefix = '\n' * starting_line_number    # Get line number right
-    new_function_code = compile(prefix + new_def, function.__code__.co_filename, 'exec')
+    prefix = "\n" * starting_line_number  # Get line number right
+    new_function_code = compile(prefix + new_def, function.__code__.co_filename, "exec")
     exec(new_function_code)
     new_function = eval(new_function_name)
     return new_function
 
-if __name__ == '__main__':
-    _, remove_html_markup_starting_line_number = inspect.getsourcelines(remove_html_markup)
-    breakpoints = [(remove_html_markup_starting_line_number - 1) + 7, 
-                   (remove_html_markup_starting_line_number - 1) + 18]
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    _, remove_html_markup_starting_line_number = inspect.getsourcelines(
+        remove_html_markup
+    )
+    breakpoints = [
+        (remove_html_markup_starting_line_number - 1) + 7,
+        (remove_html_markup_starting_line_number - 1) + 18,
+    ]
+
+if __name__ == "__main__":
     remove_html_markup_traced = insert_tracer(remove_html_markup, breakpoints)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with Timer() as t:
         remove_html_markup_traced('<b title="bar">"foo"</b>')
     static_tracer_execution_time = t.elapsed_time()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     static_tracer_execution_time
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     line7 = (remove_html_markup_starting_line_number - 1) + 7
     line18 = (remove_html_markup_starting_line_number - 1) + 18
 
     with Timer() as t:
-        with EventTracer(condition=f'line == {line7} or line == {line18}'):
+        with EventTracer(condition=f"line == {line7} or line == {line18}"):
             remove_html_markup('<b title="bar">"foo"</b>')
 
     dynamic_tracer_execution_time = t.elapsed_time()
     dynamic_tracer_execution_time
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dynamic_tracer_execution_time / static_tracer_execution_time
+
 
 def some_extreme_function(s: str) -> None:
     ...  # Long-running function
     remove_html_markup(s)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with EventTracer(condition=f"function=='remove_html_markup' and line == {line18}"):
         some_extreme_function("foo")
 
-if __name__ == '__main__':
-    quiz("In the above example, "
-         "where is the `EventTracer.traceit()` function called?",
-         [
-             "When `some_extreme_function()` returns",
-             "For each line of `some_extreme_function()`",
-             "When `remove_html_markup()` returns",
-             "For each line of `remove_html_markup()`"
-         ], "[ord(c) - 100 for c in 'efgh']")
+if __name__ == "__main__":
+    quiz(
+        "In the above example, "
+        "where is the `EventTracer.traceit()` function called?",
+        [
+            "When `some_extreme_function()` returns",
+            "For each line of `some_extreme_function()`",
+            "When `remove_html_markup()` returns",
+            "For each line of `remove_html_markup()`",
+        ],
+        "[ord(c) - 100 for c in 'efgh']",
+    )
 
 ## Tracing Binary Executables
 ## --------------------------
 
-if __name__ == '__main__':
-    print('\n## Tracing Binary Executables')
-
+if __name__ == "__main__":
+    print("\n## Tracing Binary Executables")
 
 
 ## Synopsis
 ## --------
 
-if __name__ == '__main__':
-    print('\n## Synopsis')
+if __name__ == "__main__":
+    print("\n## Synopsis")
 
 
+if __name__ == "__main__":
+    with EventTracer(condition="line == 223 or len(out) >= 6"):
+        remove_html_markup("<b>foo</b>bar")
 
-if __name__ == '__main__':
-    with EventTracer(condition='line == 223 or len(out) >= 6'):
-        remove_html_markup('<b>foo</b>bar')
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     with EventTracer(events=["c == '/'"]):
-        remove_html_markup('<b>foo</b>bar')
+        remove_html_markup("<b>foo</b>bar")
 
-#from .ClassDiagram import display_class_hierarchy
+# from .ClassDiagram import display_class_hierarchy
 
-if __name__ == '__main__':
-    display_class_hierarchy(EventTracer,
-                            public_methods=[
-                                Tracer.__init__,
-                                Tracer.__enter__,
-                                Tracer.__exit__,
-                                Tracer.changed_vars,
-                                Tracer.print_debugger_status,
-                                ConditionalTracer.__init__,
-                                EventTracer.__init__,
-                            ],
-                            project='debuggingbook')
+if __name__ == "__main__":
+    display_class_hierarchy(
+        EventTracer,
+        public_methods=[
+            Tracer.__init__,
+            Tracer.__enter__,
+            Tracer.__exit__,
+            Tracer.changed_vars,
+            Tracer.print_debugger_status,
+            ConditionalTracer.__init__,
+            EventTracer.__init__,
+        ],
+        project="debuggingbook",
+    )
 
 ## Lessons Learned
 ## ---------------
 
-if __name__ == '__main__':
-    print('\n## Lessons Learned')
-
+if __name__ == "__main__":
+    print("\n## Lessons Learned")
 
 
 ## Next Steps
 ## ----------
 
-if __name__ == '__main__':
-    print('\n## Next Steps')
-
+if __name__ == "__main__":
+    print("\n## Next Steps")
 
 
 ## Background
 ## ----------
 
-if __name__ == '__main__':
-    print('\n## Background')
-
+if __name__ == "__main__":
+    print("\n## Background")
 
 
 ### Low-Level Debugging Interfaces
 
-if __name__ == '__main__':
-    print('\n### Low-Level Debugging Interfaces')
-
+if __name__ == "__main__":
+    print("\n### Low-Level Debugging Interfaces")
 
 
 ### High-Level Debugging Interfaces
 
-if __name__ == '__main__':
-    print('\n### High-Level Debugging Interfaces')
-
+if __name__ == "__main__":
+    print("\n### High-Level Debugging Interfaces")
 
 
 ## Exercises
 ## ---------
 
-if __name__ == '__main__':
-    print('\n## Exercises')
-
+if __name__ == "__main__":
+    print("\n## Exercises")
 
 
 ### Exercise 1: Exception Handling
 
-if __name__ == '__main__':
-    print('\n### Exercise 1: Exception Handling')
-
+if __name__ == "__main__":
+    print("\n### Exercise 1: Exception Handling")
 
 
 def fail() -> float:
     return 2 / 0
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with Tracer():
         try:
             fail()
         except Exception:
             pass
 
+
 class Tracer(Tracer):
     def print_debugger_status(self, frame: FrameType, event: str, arg: Any) -> None:
-        if event == 'exception':
+        if event == "exception":
             exception, value, tb = arg
-            self.log(f"{frame.f_code.co_name}() "
-                     f"raises {exception.__name__}: {value}")
+            self.log(
+                f"{frame.f_code.co_name}() " f"raises {exception.__name__}: {value}"
+            )
         else:
             super().print_debugger_status(frame, event, arg)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with Tracer():
         try:
             fail()
@@ -746,40 +780,42 @@ if __name__ == '__main__':
 
 ### Exercise 2: Syntax-Based Instrumentation
 
-if __name__ == '__main__':
-    print('\n### Exercise 2: Syntax-Based Instrumentation')
-
+if __name__ == "__main__":
+    print("\n### Exercise 2: Syntax-Based Instrumentation")
 
 
 def foo():  # type: ignore
     ret = 2 * 2
     return ret
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     source = inspect.getsource(foo)
-    print_content(source, '.py')
+    print_content(source, ".py")
 
 import ast
-#import astor
 
-#from .bookutils import show_ast
+# import astor
 
-if __name__ == '__main__':
+# from .bookutils import show_ast
+
+if __name__ == "__main__":
     tree = ast.parse(source)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     show_ast(tree)
 
 from ast import NodeTransformer, FunctionDef, fix_missing_locations, AST, Module
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     subtree_to_be_injected: AST = ast.parse("print('entering function')")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     show_ast(subtree_to_be_injected)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     subtree_to_be_injected = cast(Module, subtree_to_be_injected).body[0]
+
 
 class InjectPass(NodeTransformer):
     def visit_FunctionDef(self, node: FunctionDef) -> AST:
@@ -788,21 +824,22 @@ class InjectPass(NodeTransformer):
             args=node.args,
             body=[subtree_to_be_injected] + node.body,
             decorator_list=node.decorator_list,
-            returns=node.returns
+            returns=node.returns,
         )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     new_tree = fix_missing_locations(InjectPass().visit(tree))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     show_ast(new_tree)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     new_source = astor.to_source(new_tree)
-    print_content(new_source, '.py')
+    print_content(new_source, ".py")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exec(new_source)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     foo()

@@ -27,7 +27,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-r'''
+r"""
 The Debugging Book - Error Handling
 
 This file can be _executed_ as a script, running all experiments:
@@ -84,41 +84,39 @@ use these keyword options:
 For more details, source, and documentation, see
 "The Debugging Book - Error Handling"
 at https://www.debuggingbook.org/html/ExpectError.html
-'''
+"""
 
 
 # Allow to use 'from . import <module>' when run as script (cf. PEP 366)
-if __name__ == '__main__' and __package__ is None:
-    __package__ = 'debuggingbook'
+if __name__ == "__main__" and __package__ is None:
+    __package__ = "debuggingbook"
 
 
 # Error Handling
 # ==============
 
-if __name__ == '__main__':
-    print('# Error Handling')
-
+if __name__ == "__main__":
+    print("# Error Handling")
 
 
 ## Synopsis
 ## --------
 
-if __name__ == '__main__':
-    print('\n## Synopsis')
-
+if __name__ == "__main__":
+    print("\n## Synopsis")
 
 
 ## Catching Errors
 ## ---------------
 
-if __name__ == '__main__':
-    print('\n## Catching Errors')
+if __name__ == "__main__":
+    print("\n## Catching Errors")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # We use the same fixed seed as the notebook to ensure consistency
     import random
+
     random.seed(2001)
 
 import traceback
@@ -128,11 +126,16 @@ from types import FrameType, TracebackType
 
 from typing import Union, Optional, Callable, Any
 
+
 class ExpectError:
     """Execute a code block expecting (and catching) an error."""
 
-    def __init__(self, exc_type: Optional[type] = None, 
-                 print_traceback: bool = True, mute: bool = False):
+    def __init__(
+        self,
+        exc_type: Optional[type] = None,
+        print_traceback: bool = True,
+        mute: bool = False,
+    ):
         """
         Constructor. Expect an exception of type `exc_type` (`None`: any exception).
         If `print_traceback` is set (default), print a traceback to stderr.
@@ -146,49 +149,46 @@ class ExpectError:
         """Begin of `with` block"""
         return self
 
-    def __exit__(self, exc_type: type, 
-                 exc_value: BaseException, tb: TracebackType) -> Optional[bool]:
+    def __exit__(
+        self, exc_type: type, exc_value: BaseException, tb: TracebackType
+    ) -> Optional[bool]:
         """End of `with` block"""
         if exc_type is None:
             # No exception
             return
 
-        if (self.expected_exc_type is not None
-            and exc_type != self.expected_exc_type):
+        if self.expected_exc_type is not None and exc_type != self.expected_exc_type:
             raise  # Unexpected exception
 
         # An exception occurred
         if self.print_traceback:
-            lines = ''.join(
-                traceback.format_exception(
-                    exc_type,
-                    exc_value,
-                    tb)).strip()
+            lines = "".join(traceback.format_exception(exc_type, exc_value, tb)).strip()
         else:
-            lines = traceback.format_exception_only(
-                exc_type, exc_value)[-1].strip()
+            lines = traceback.format_exception_only(exc_type, exc_value)[-1].strip()
 
         if not self.mute:
             print(lines, "(expected)", file=sys.stderr)
         return True  # Ignore it
 
+
 def fail_test() -> None:
     # Trigger an exception
     x = 1 / 0
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with ExpectError():
         fail_test()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectError(print_traceback=False):
         fail_test()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectError(ZeroDivisionError):
         fail_test()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectError():
         with ExpectError(ZeroDivisionError):
             some_nonexisting_function()  # type: ignore
@@ -196,19 +196,23 @@ if __name__ == '__main__':
 ## Catching Timeouts
 ## -----------------
 
-if __name__ == '__main__':
-    print('\n## Catching Timeouts')
-
+if __name__ == "__main__":
+    print("\n## Catching Timeouts")
 
 
 import sys
 import time
 
+
 class ExpectTimeout:
     """Execute a code block expecting (and catching) a timeout."""
 
-    def __init__(self, seconds: Union[int, float], 
-                 print_traceback: bool = True, mute: bool = False):
+    def __init__(
+        self,
+        seconds: Union[int, float],
+        print_traceback: bool = True,
+        mute: bool = False,
+    ):
         """
         Constructor. Interrupe execution after `seconds` seconds.
         If `print_traceback` is set (default), print a traceback to stderr.
@@ -242,8 +246,9 @@ class ExpectTimeout:
         sys.settrace(self.check_time)
         return self
 
-    def __exit__(self, exc_type: type, 
-                 exc_value: BaseException, tb: TracebackType) -> Optional[bool]:
+    def __exit__(
+        self, exc_type: type, exc_value: BaseException, tb: TracebackType
+    ) -> Optional[bool]:
         """End of `with` block"""
 
         self.cancel()
@@ -253,14 +258,9 @@ class ExpectTimeout:
 
         # An exception occurred
         if self.print_traceback:
-            lines = ''.join(
-                traceback.format_exception(
-                    exc_type,
-                    exc_value,
-                    tb)).strip()
+            lines = "".join(traceback.format_exception(exc_type, exc_value, tb)).strip()
         else:
-            lines = traceback.format_exception_only(
-                exc_type, exc_value)[-1].strip()
+            lines = traceback.format_exception_only(exc_type, exc_value)[-1].strip()
 
         if not self.mute:
             print(lines, "(expected)", file=sys.stderr)
@@ -269,6 +269,7 @@ class ExpectTimeout:
     def cancel(self) -> None:
         sys.settrace(self.original_trace_function)
 
+
 def long_running_test() -> None:
     print("Start")
     for i in range(10):
@@ -276,11 +277,12 @@ def long_running_test() -> None:
         print(i, "seconds have passed")
     print("End")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with ExpectTimeout(5, print_traceback=False):
         long_running_test()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectTimeout(5):
         with ExpectTimeout(3):
             long_running_test()
@@ -289,23 +291,20 @@ if __name__ == '__main__':
 ## Synopsis
 ## --------
 
-if __name__ == '__main__':
-    print('\n## Synopsis')
+if __name__ == "__main__":
+    print("\n## Synopsis")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectError():
         x = 1 / 0
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with ExpectTimeout(5):
         long_running_test()
 
 ## Lessons Learned
 ## ---------------
 
-if __name__ == '__main__':
-    print('\n## Lessons Learned')
-
-
+if __name__ == "__main__":
+    print("\n## Lessons Learned")

@@ -13,7 +13,9 @@ class DebuggerMethod:
     Represents a Method, as extracted from code
     """
 
-    def __init__(self, name: str, file: str, ast_node: ast.FunctionDef = None, linenos=None):
+    def __init__(
+        self, name: str, file: str, ast_node: ast.FunctionDef = None, linenos=None
+    ):
         if linenos is None:
             linenos = set()
         self.name = name
@@ -29,7 +31,13 @@ class DebuggerMethod:
         self.linenos.add(lineno)
 
     def __hash__(self):
-        return hash(self.file + "\\" + self.name + "\\" + ';'.join(str(n) for n in sorted(self.linenos)))
+        return hash(
+            self.file
+            + "\\"
+            + self.name
+            + "\\"
+            + ";".join(str(n) for n in sorted(self.linenos))
+        )
 
     def __str__(self):
         if len(self.suspiciousness) == 0:
@@ -44,7 +52,9 @@ class DebuggerMethod:
         return len(self.linenos.intersection(other.linenos)) > 0
 
 
-def getNodeParents(node: ast.AST, parent_dict: dict, parents: list, line_nodes: list, lineno: int):
+def getNodeParents(
+    node: ast.AST, parent_dict: dict, parents: list, line_nodes: list, lineno: int
+):
     """
     Recursive function walking the subnodes of node to produce a list of nodes with a certain lineno. Also
     returns a dictionary containing the parent nodes for each node
@@ -56,7 +66,7 @@ def getNodeParents(node: ast.AST, parent_dict: dict, parents: list, line_nodes: 
     :return: parent_dict, line_nodes
     """
     parent_dict[node] = parents
-    if (node.lineno if hasattr(node, 'lineno') else -1) == lineno:
+    if (node.lineno if hasattr(node, "lineno") else -1) == lineno:
         line_nodes.append(node)
     new_parents = parents.copy() + [node]
     for child in ast.iter_child_nodes(node):
@@ -75,9 +85,11 @@ def getParentFunctionFromLineNo(source: ast.AST, lineno: int):
     if len(line_nodes) == 0:
         return None
 
-    parent_elements = filter(lambda node: isinstance(node, ast.FunctionDef)
-                                          or isinstance(node, ast.AsyncFunctionDef),
-                             parent_dict[line_nodes[0]])
+    parent_elements = filter(
+        lambda node: isinstance(node, ast.FunctionDef)
+        or isinstance(node, ast.AsyncFunctionDef),
+        parent_dict[line_nodes[0]],
+    )
 
     parents = list(parent_elements)
     if len(parents) == 0:
@@ -87,7 +99,9 @@ def getParentFunctionFromLineNo(source: ast.AST, lineno: int):
     return next(reversed(parents)).name, tuple(sorted(extractor.linenos))
 
 
-def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int]]) -> List[Tuple[str, Set[int], ast.FunctionDef]]:
+def extractMethodsFromFile(
+    directory: str, file: str, methods: Dict[str, Set[int]]
+) -> List[Tuple[str, Set[int], ast.FunctionDef]]:
     """
     Extract the lines of methods from a specified file
     :param file: The name of the file
@@ -102,7 +116,12 @@ def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int
                 print(f"Syntax Error in {directory + '/' + file}")
                 return list()
         function_defs = set(
-            filter(lambda n: isinstance(n, ast.FunctionDef) or isinstance(n, ast.AsyncFunctionDef), ast.walk(node)))
+            filter(
+                lambda n: isinstance(n, ast.FunctionDef)
+                or isinstance(n, ast.AsyncFunctionDef),
+                ast.walk(node),
+            )
+        )
         lines_per_method = list()
         for d in filter(lambda n: n.name in methods.keys(), function_defs):
             extractor = LineNumberExtractor()
@@ -114,7 +133,9 @@ def extractMethodsFromFile(directory: str, file: str, methods: Dict[str, Set[int
     return list()
 
 
-def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file: bool) -> List[Tuple[str, Set[int], ast.FunctionDef]]:
+def getBuggyMethodsFromFile(
+    project_root: str, file: PatchedFile, is_target_file: bool
+) -> List[Tuple[str, Set[int], ast.FunctionDef]]:
     """
     Get a set of modified methods from a unidiff PatchedFile object
     :param project_root: The root directory of a Git repository containing the modified file
@@ -125,14 +146,25 @@ def getBuggyMethodsFromFile(project_root: str, file: PatchedFile, is_target_file
     linenos = set()
     for hunk in file:
         start = hunk.source_start if not is_target_file else hunk.target_start
-        _r = list(range(start, start + (hunk.source_length if not is_target_file else hunk.target_length)))
+        _r = list(
+            range(
+                start,
+                start
+                + (hunk.source_length if not is_target_file else hunk.target_length),
+            )
+        )
         linenos.update(_r)
 
     abs_file = project_root + "/" + file.path
     with open(abs_file, "rt") as f:
         source = ast.parse(f.read(), filename=abs_file)
 
-    names = set(filter(lambda o: o is not None, (getParentFunctionFromLineNo(source, lineno) for lineno in linenos)))
+    names = set(
+        filter(
+            lambda o: o is not None,
+            (getParentFunctionFromLineNo(source, lineno) for lineno in linenos),
+        )
+    )
     extracted_methods = dict()
     for name, _linenos in names:
         if name in extracted_methods.keys():
@@ -161,25 +193,40 @@ def getBuggyMethods(_results, info: BugInfo):
 
     for file in patch_set.modified_files:
         fixed_state_methods.update(
-            (file.path, method, tuple(linenos), node) for method, linenos, node in getBuggyMethodsFromFile(repo_dir, file, True))
+            (file.path, method, tuple(linenos), node)
+            for method, linenos, node in getBuggyMethodsFromFile(repo_dir, file, True)
+        )
 
     repo_dir = getValidProjectDir(_results, info, False, instrument=True)
     fixed_state_files = {m[0] for m in fixed_state_methods}
     buggy_state_methods = set()
     for f in fixed_state_files:
         methods = filter(lambda m: m[0] == f, fixed_state_methods)
-        buggy_state_methods.update((f, method, tuple(linenos), node) for method, linenos, node in
-                                   extractMethodsFromFile(repo_dir, f, {m[1]: set(m[2]) for m in methods}))
+        buggy_state_methods.update(
+            (f, method, tuple(linenos), node)
+            for method, linenos, node in extractMethodsFromFile(
+                repo_dir, f, {m[1]: set(m[2]) for m in methods}
+            )
+        )
 
     for file in patch_set.modified_files:
         buggy_state_methods.update(
-            (file.path, method, tuple(linenos), node) for method, linenos, node in getBuggyMethodsFromFile(repo_dir, file, False))
-    ret = list(set(DebuggerMethod(name, path, linenos=set(linenos), ast_node=node) for path, name, linenos, node in buggy_state_methods))
-    assert(len(set(str(m) for m in ret)) == len(ret))
+            (file.path, method, tuple(linenos), node)
+            for method, linenos, node in getBuggyMethodsFromFile(repo_dir, file, False)
+        )
+    ret = list(
+        set(
+            DebuggerMethod(name, path, linenos=set(linenos), ast_node=node)
+            for path, name, linenos, node in buggy_state_methods
+        )
+    )
+    assert len(set(str(m) for m in ret)) == len(ret)
     return ret
 
 
-def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int], DebuggerMethod]:
+def extractMethodsFromCode(
+    _results, info: BugInfo
+) -> Dict[Tuple[str, str, int], DebuggerMethod]:
     """
     Extract information about methods encountered during a test run
     The extracted info can be used for verification purposes
@@ -201,10 +248,14 @@ def extractMethodsFromCode(_results, info: BugInfo) -> Dict[Tuple[str, str, int]
             methods_per_file[filename] = {method_name: {lineno}}
     method_objects = dict()
     for file in methods_per_file.keys():
-        lines_per_method = extractMethodsFromFile(directory, file, methods_per_file[file])
+        lines_per_method = extractMethodsFromFile(
+            directory, file, methods_per_file[file]
+        )
         for method, linenos, node in lines_per_method:
             method_object = DebuggerMethod(method, file, node, linenos)
             for lineno in linenos:
-                method_objects[info.work_dir + "/" + file, method, lineno] = method_object
-    assert (len(set(str(m) for m in method_objects)) == len(method_objects))
+                method_objects[
+                    info.work_dir + "/" + file, method, lineno
+                ] = method_object
+    assert len(set(str(m) for m in method_objects)) == len(method_objects)
     return method_objects

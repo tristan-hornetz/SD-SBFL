@@ -10,8 +10,14 @@ from Evaluator.Evaluation import Evaluation
 THREADS = os.cpu_count()
 
 
-def create_evaluation(result_dir, similarity_coefficient, combining_method: CombiningMethod, save_destination="",
-                      print_results=False, num_threads=-1):
+def create_evaluation(
+    result_dir,
+    similarity_coefficient,
+    combining_method: CombiningMethod,
+    save_destination="",
+    print_results=False,
+    num_threads=-1,
+):
 
     evaluation = Evaluation(similarity_coefficient, combining_method)
     evaluation.add_directory(result_dir, THREADS if num_threads < 1 else num_threads)

@@ -18,7 +18,10 @@ class Evaluation:
     """
     Represents an Evaluation, made up of multiple single-bug rankings
     """
-    def __init__(self, similarity_coefficient, combining_method: CombiningMethod, ks=None):
+
+    def __init__(
+        self, similarity_coefficient, combining_method: CombiningMethod, ks=None
+    ):
         """
         :param combining_method: The combining method to be used
         :param similarity_coefficient: The similarity coefficient to be used. Can either be an instance or just the type.
@@ -31,10 +34,11 @@ class Evaluation:
         self.ranking_infos: List[RankingInfo] = list()
         self.similarity_coefficient = similarity_coefficient
         self.combining_method = combining_method
-        self.id = hash(str(self.combining_method) + self.similarity_coefficient.__name__)
+        self.id = hash(
+            str(self.combining_method) + self.similarity_coefficient.__name__
+        )
 
-        self.fraction_top_k_accurate = {k: 0.0 for k in
-                                        self.ks}
+        self.fraction_top_k_accurate = {k: 0.0 for k in self.ks}
         self.avg_recall_at_k = {k: 0.0 for k in self.ks}
         self.avg_precision_at_k = {k: 0.0 for k in self.ks}
 
@@ -42,9 +46,24 @@ class Evaluation:
         """
         Update the sored values for average evaluation metrics
         """
-        self.fraction_top_k_accurate = {k: np.average(list(ri.evaluation_metrics[k][0] for ri in self.ranking_infos)) for k in self.ks}
-        self.avg_recall_at_k = {k: np.average(list(ri.evaluation_metrics[k][1] for ri in self.ranking_infos)) for k in self.ks}
-        self.avg_precision_at_k = {k: np.average(list(ri.evaluation_metrics[k][2] for ri in self.ranking_infos)) for k in self.ks}
+        self.fraction_top_k_accurate = {
+            k: np.average(
+                list(ri.evaluation_metrics[k][0] for ri in self.ranking_infos)
+            )
+            for k in self.ks
+        }
+        self.avg_recall_at_k = {
+            k: np.average(
+                list(ri.evaluation_metrics[k][1] for ri in self.ranking_infos)
+            )
+            for k in self.ks
+        }
+        self.avg_precision_at_k = {
+            k: np.average(
+                list(ri.evaluation_metrics[k][2] for ri in self.ranking_infos)
+            )
+            for k in self.ks
+        }
 
     def merge(self, other):
         """
@@ -58,7 +77,9 @@ class Evaluation:
         self.update_averages()
 
     @staticmethod
-    def add_meta_ranking(self, mr_path: str, rqueue: Queue, save_full_rankings: bool = False):
+    def add_meta_ranking(
+        self, mr_path: str, rqueue: Queue, save_full_rankings: bool = False
+    ):
         """
         Load, and rank a single meta ranking. Intended for use with multiprocessing.
 
@@ -88,7 +109,13 @@ class Evaluation:
         metrics = dict()
         for k in self.ks:
             metrics[k] = ranking.get_evaluation_metrics(k)
-        rqueue.put((ranking if save_full_rankings else ranking_id, metrics, RankingInfo(ranking)))
+        rqueue.put(
+            (
+                ranking if save_full_rankings else ranking_id,
+                metrics,
+                RankingInfo(ranking),
+            )
+        )
 
     def add_directory(self, dir_path: str, num_threads=-1):
         """
@@ -100,9 +127,17 @@ class Evaluation:
         if num_threads < 1:
             num_threads = max(os.cpu_count() - 2, 1)
         rqueue = Queue(maxsize=num_threads)
-        processes = [Process(target=Evaluation.add_meta_ranking, name=file_path, args=(self, file_path, rqueue, self.save_full_rankings))
-                     for file_path in filter(lambda p: not os.path.isdir(p),
-                                             list(os.path.abspath(f"{dir_path}/{f}") for f in os.listdir(dir_path)))]
+        processes = [
+            Process(
+                target=Evaluation.add_meta_ranking,
+                name=file_path,
+                args=(self, file_path, rqueue, self.save_full_rankings),
+            )
+            for file_path in filter(
+                lambda p: not os.path.isdir(p),
+                list(os.path.abspath(f"{dir_path}/{f}") for f in os.listdir(dir_path)),
+            )
+        ]
         active_processes = []
         metrics = dict()
         progress_bar = tqdm(total=len(processes))
@@ -133,11 +168,11 @@ class Evaluation:
         while not rqueue.empty():
             res = rqueue.get()
             metrics[res[0]] = (res[1], res[2])
-            time.sleep(.01)
+            time.sleep(0.01)
 
-        assert (rqueue.empty())
-        assert (len(active_processes) == 0)
-        assert (len(processes) == 0)
+        assert rqueue.empty()
+        assert len(active_processes) == 0
+        assert len(processes) == 0
 
         for m in metrics.items():
             self.rankings.append(m[0])
@@ -149,7 +184,9 @@ class Evaluation:
         if len(metrics.values()) == len(os.listdir(dir_path)):
             print(f"All objects in {dir_path} were added.")
         else:
-            print(f"{len(metrics.values())} of {len(os.listdir(dir_path))} objects in {dir_path} were added.")
+            print(
+                f"{len(metrics.values())} of {len(os.listdir(dir_path))} objects in {dir_path} were added."
+            )
 
     def __str__(self):
         self.update_averages()
@@ -160,4 +197,3 @@ class Evaluation:
         out += f"Avg. precision@k: {' | '.join(f'{k}: {v}' for k, v in sorted(self.avg_precision_at_k.items()))}\n"
         out += f"Avg. unique sus. scores in Top-10: {10.0 - (sum(r.top_10_suspiciousness_value_ties for r in self.ranking_infos)/len(self.ranking_infos)) if len(self.ranking_infos) > 0 else 0}"
         return out
-

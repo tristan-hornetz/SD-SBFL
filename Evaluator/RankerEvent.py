@@ -7,8 +7,15 @@ class RankerEvent:
     Represents an event as utilized by the Evaluation Framework
     """
 
-    def __init__(self, program_element: Any, location: Tuple[str, str, int], passed_with_event: Set[Any],
-                 failed_with_event: Set[Any], total_passed: int, total_failed: int):
+    def __init__(
+        self,
+        program_element: Any,
+        location: Tuple[str, str, int],
+        passed_with_event: Set[Any],
+        failed_with_event: Set[Any],
+        total_passed: int,
+        total_failed: int,
+    ):
         """
         :param program_element: The program element for which the event occurred
         :param location: The program element's location, consisting of the filename, method name and a line number
@@ -35,8 +42,15 @@ class LineCoveredEvent(RankerEvent):
     Represents a line-covered event
     """
 
-    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
-                 failed_with_event: Set[Any], total_passed: int, total_failed: int):
+    def __init__(
+        self,
+        program_element: Any,
+        location: Any,
+        passed_with_event: Set[Any],
+        failed_with_event: Set[Any],
+        total_passed: int,
+        total_failed: int,
+    ):
         """
         :param program_element: The program element for which the event occurred
         :param location: The program element's location, consisting of the filename, method name and a line number
@@ -45,8 +59,14 @@ class LineCoveredEvent(RankerEvent):
         :param total_passed: The total amount of passing collectors
         :param total_passed: The total amount of failing collectors
         """
-        super(LineCoveredEvent, self).__init__(program_element, location, passed_with_event,
-                                               failed_with_event, total_passed, total_failed)
+        super(LineCoveredEvent, self).__init__(
+            program_element,
+            location,
+            passed_with_event,
+            failed_with_event,
+            total_passed,
+            total_failed,
+        )
 
     def __hash__(self):
         return hash((self.event_type, self.location))
@@ -60,9 +80,16 @@ class SDBranchEvent(RankerEvent):
     Represents an SD-like branch event
     """
 
-    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
-                 failed_with_event: Set[Any], total_passed: int, total_failed: int,
-                 outcome: bool):
+    def __init__(
+        self,
+        program_element: Any,
+        location: Any,
+        passed_with_event: Set[Any],
+        failed_with_event: Set[Any],
+        total_passed: int,
+        total_failed: int,
+        outcome: bool,
+    ):
         """
         :param program_element: The program element for which the event occurred
         :param location: The program element's location, consisting of the filename, method name and a line number
@@ -72,8 +99,14 @@ class SDBranchEvent(RankerEvent):
         :param total_passed: The total amount of failing collectors
         :param outcome: The outcome of the branch condition
         """
-        super(SDBranchEvent, self).__init__(program_element, location, passed_with_event,
-                                            failed_with_event, total_passed, total_failed)
+        super(SDBranchEvent, self).__init__(
+            program_element,
+            location,
+            passed_with_event,
+            failed_with_event,
+            total_passed,
+            total_failed,
+        )
         self.outcome = outcome
 
     def __hash__(self):
@@ -88,9 +121,17 @@ class SDReturnValueEvent(RankerEvent):
     Represents an SD-like return value event
     """
 
-    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
-                 failed_with_event: Set[Any], total_passed: int, total_failed: int,
-                 operator: Any, outcome: bool):
+    def __init__(
+        self,
+        program_element: Any,
+        location: Any,
+        passed_with_event: Set[Any],
+        failed_with_event: Set[Any],
+        total_passed: int,
+        total_failed: int,
+        operator: Any,
+        outcome: bool,
+    ):
         """
         :param program_element: The program element for which the event occurred
         :param location: The program element's location, consisting of the filename, method name and a line number
@@ -101,8 +142,14 @@ class SDReturnValueEvent(RankerEvent):
         :param operator: The operator utilized for comparing the return value to 0
         :param outcome: The outcome of the comparison
         """
-        super(SDReturnValueEvent, self).__init__(program_element, location, passed_with_event,
-                                                 failed_with_event, total_passed, total_failed)
+        super(SDReturnValueEvent, self).__init__(
+            program_element,
+            location,
+            passed_with_event,
+            failed_with_event,
+            total_passed,
+            total_failed,
+        )
         self.operator = operator
         self.outcome = outcome
 
@@ -118,9 +165,18 @@ class SDScalarPairEvent(RankerEvent):
     Represents an SD-like scalar pair event
     """
 
-    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
-                 failed_with_event: Set[Any], total_passed: int, total_failed: int,
-                 operator: Any, outcome: bool, operands: Tuple[str, str]):
+    def __init__(
+        self,
+        program_element: Any,
+        location: Any,
+        passed_with_event: Set[Any],
+        failed_with_event: Set[Any],
+        total_passed: int,
+        total_failed: int,
+        operator: Any,
+        outcome: bool,
+        operands: Tuple[str, str],
+    ):
         """
         :param program_element: The program element for which the event occurred
         :param location: The program element's location, consisting of the filename, method name and a line number
@@ -132,14 +188,22 @@ class SDScalarPairEvent(RankerEvent):
         :param outcome: The outcome of the comparison
         :param operands: The operands being compared
         """
-        super(SDScalarPairEvent, self).__init__(program_element, location, passed_with_event,
-                                                failed_with_event, total_passed, total_failed)
+        super(SDScalarPairEvent, self).__init__(
+            program_element,
+            location,
+            passed_with_event,
+            failed_with_event,
+            total_passed,
+            total_failed,
+        )
         self.operator = operator
         self.outcome = outcome
         self.operands = operands
 
     def __hash__(self):
-        return hash((self.event_type, self.location, self.operands, self.operator, self.outcome))
+        return hash(
+            (self.event_type, self.location, self.operands, self.operator, self.outcome)
+        )
 
     def __str__(self):
         return f"Pair {self.operands[0]} {self.operator} {self.operands[1]} - {self.outcome} @ {self.location}"
@@ -150,9 +214,16 @@ class AbsoluteReturnValueEvent(RankerEvent):
     Represents a return value event utilizing absolute values
     """
 
-    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
-                 failed_with_event: Set[Any], total_passed: int, total_failed: int,
-                 value: Any):
+    def __init__(
+        self,
+        program_element: Any,
+        location: Any,
+        passed_with_event: Set[Any],
+        failed_with_event: Set[Any],
+        total_passed: int,
+        total_failed: int,
+        value: Any,
+    ):
         """
         :param program_element: The program element for which the event occurred
         :param location: The program element's location, consisting of the filename, method name and a line number
@@ -162,8 +233,14 @@ class AbsoluteReturnValueEvent(RankerEvent):
         :param total_passed: The total amount of failing collectors
         :param value: The return value
         """
-        super(AbsoluteReturnValueEvent, self).__init__(program_element, location, passed_with_event,
-                                                       failed_with_event, total_passed, total_failed)
+        super(AbsoluteReturnValueEvent, self).__init__(
+            program_element,
+            location,
+            passed_with_event,
+            failed_with_event,
+            total_passed,
+            total_failed,
+        )
         self.value = value
 
     def __hash__(self):
@@ -178,9 +255,17 @@ class AbsoluteScalarValueEvent(RankerEvent):
     Represents a scalar value event utilizing absolute values
     """
 
-    def __init__(self, program_element: Any, location: Any, passed_with_event: Set[Any],
-                 failed_with_event: Set[Any], total_passed: int, total_failed: int,
-                 name: str, value: Any):
+    def __init__(
+        self,
+        program_element: Any,
+        location: Any,
+        passed_with_event: Set[Any],
+        failed_with_event: Set[Any],
+        total_passed: int,
+        total_failed: int,
+        name: str,
+        value: Any,
+    ):
         """
         :param program_element: The program element for which the event occurred
         :param location: The program element's location, consisting of the filename, method name and a line number
@@ -190,8 +275,14 @@ class AbsoluteScalarValueEvent(RankerEvent):
         :param total_passed: The total amount of failing collectors
         :param value: The scalar value
         """
-        super(AbsoluteScalarValueEvent, self).__init__(program_element, location, passed_with_event,
-                                                       failed_with_event, total_passed, total_failed)
+        super(AbsoluteScalarValueEvent, self).__init__(
+            program_element,
+            location,
+            passed_with_event,
+            failed_with_event,
+            total_passed,
+            total_failed,
+        )
         self.name = name
         self.value = value
 

@@ -27,7 +27,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-r'''
+r"""
 The Debugging Book - Inspecting Call Stacks
 
 This file can be _executed_ as a script, running all experiments:
@@ -75,41 +75,39 @@ Here are all methods defined in this chapter:
 For more details, source, and documentation, see
 "The Debugging Book - Inspecting Call Stacks"
 at https://www.debuggingbook.org/html/StackInspector.html
-'''
+"""
 
 
 # Allow to use 'from . import <module>' when run as script (cf. PEP 366)
-if __name__ == '__main__' and __package__ is None:
-    __package__ = 'debuggingbook'
+if __name__ == "__main__" and __package__ is None:
+    __package__ = "debuggingbook"
 
 
 # Inspecting Call Stacks
 # ======================
 
-if __name__ == '__main__':
-    print('# Inspecting Call Stacks')
-
+if __name__ == "__main__":
+    print("# Inspecting Call Stacks")
 
 
 ## Synopsis
 ## --------
 
-if __name__ == '__main__':
-    print('\n## Synopsis')
-
+if __name__ == "__main__":
+    print("\n## Synopsis")
 
 
 ## Inspecting Call Stacks
 ## ----------------------
 
-if __name__ == '__main__':
-    print('\n## Inspecting Call Stacks')
+if __name__ == "__main__":
+    print("\n## Inspecting Call Stacks")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # We use the same fixed seed as the notebook to ensure consistency
     import random
+
     random.seed(2001)
 
 import inspect
@@ -118,6 +116,7 @@ import warnings
 from types import FunctionType, FrameType, TracebackType
 
 from typing import cast, Dict, Any, Tuple, Callable, Optional, Type
+
 
 class StackInspector:
     """Provide functions to inspect the stack"""
@@ -135,7 +134,8 @@ class StackInspector:
 
     def our_frame(self, frame: FrameType) -> bool:
         """Return true if `frame` is in the current (inspecting) class."""
-        return isinstance(frame.f_locals.get('self'), self.__class__)
+        return isinstance(frame.f_locals.get("self"), self.__class__)
+
 
 class StackInspector(StackInspector):
     def caller_globals(self) -> Dict[str, Any]:
@@ -146,18 +146,22 @@ class StackInspector(StackInspector):
         """Return the locals() environment of the caller."""
         return self.caller_frame().f_locals
 
+
 Location = Tuple[Callable, int]
+
 
 class StackInspector(StackInspector):
     def caller_location(self) -> Location:
         """Return the location (func, lineno) of the caller."""
         return self.caller_function(), self.caller_frame().f_lineno
 
+
 class StackInspector(StackInspector):
-    def search_frame(self, name: str, frame: Optional[FrameType] = None) -> \
-        Tuple[Optional[FrameType], Optional[Callable]]:
+    def search_frame(
+        self, name: str, frame: Optional[FrameType] = None
+    ) -> Tuple[Optional[FrameType], Optional[Callable]]:
         """
-        Return a pair (`frame`, `item`) 
+        Return a pair (`frame`, `item`)
         in which the function `name` is defined as `item`.
         """
         if frame is None:
@@ -179,11 +183,13 @@ class StackInspector(StackInspector):
 
         return None, None
 
-    def search_func(self, name: str, frame: Optional[FrameType] = None) -> \
-        Optional[Callable]:
+    def search_func(
+        self, name: str, frame: Optional[FrameType] = None
+    ) -> Optional[Callable]:
         """Search in callers for a definition of the function `name`"""
         frame, func = self.search_frame(name, frame)
         return func
+
 
 class StackInspector(StackInspector):
     # Avoid generating functions more than once
@@ -198,10 +204,9 @@ class StackInspector(StackInspector):
 
         try:
             # Create new function from given code
-            generated_function = cast(Callable,
-                                      FunctionType(frame.f_code,
-                                                   globals=frame.f_globals,
-                                                   name=name))
+            generated_function = cast(
+                Callable, FunctionType(frame.f_code, globals=frame.f_globals, name=name)
+            )
         except TypeError:
             # Unsuitable code for creating a function
             # Last resort: Return some function
@@ -209,12 +214,15 @@ class StackInspector(StackInspector):
 
         except Exception as exc:
             # Any other exception
-            warnings.warn(f"Couldn't create function for {name} "
-                          f" ({type(exc).__name__}: {exc})")
+            warnings.warn(
+                f"Couldn't create function for {name} "
+                f" ({type(exc).__name__}: {exc})"
+            )
             generated_function = self.unknown
 
         self._generated_function_cache[cache_key] = generated_function
         return generated_function
+
 
 class StackInspector(StackInspector):
     def caller_function(self) -> Callable:
@@ -225,7 +233,7 @@ class StackInspector(StackInspector):
         if func:
             return func
 
-        if not name.startswith('<'):
+        if not name.startswith("<"):
             warnings.warn(f"Couldn't find {name} in caller")
 
         return self.create_function(frame)
@@ -233,12 +241,14 @@ class StackInspector(StackInspector):
     def unknown(self) -> None:  # Placeholder for unknown functions
         pass
 
+
 import traceback
 
+
 class StackInspector(StackInspector):
-    def is_internal_error(self, exc_tp: Type, 
-                          exc_value: BaseException, 
-                          exc_traceback: TracebackType) -> bool:
+    def is_internal_error(
+        self, exc_tp: Type, exc_value: BaseException, exc_traceback: TracebackType
+    ) -> bool:
         """Return True if exception was raised from `StackInspector` or a subclass."""
         if not exc_tp:
             return False
@@ -249,31 +259,33 @@ class StackInspector(StackInspector):
 
         return False
 
+
 ## Synopsis
 ## --------
 
-if __name__ == '__main__':
-    print('\n## Synopsis')
-
+if __name__ == "__main__":
+    print("\n## Synopsis")
 
 
 class StackInspectorDemo(StackInspector):
     def callee(self) -> None:
         func = self.caller_function()
-        assert func.__name__ == 'test'
+        assert func.__name__ == "test"
         print(func)
 
     def caller(self) -> None:
         self.callee()
 
+
 def test() -> None:
     demo = StackInspectorDemo()
     demo.caller()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test()
 
-'''
+"""
 from .ClassDiagram import display_class_hierarchy, class_tree
 
 if __name__ == '__main__':
@@ -299,5 +311,4 @@ if __name__ == '__main__':
 
 if __name__ == '__main__':
     print('\n## Lessons Learned')
-'''
-
+"""

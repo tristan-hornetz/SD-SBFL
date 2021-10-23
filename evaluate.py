@@ -18,15 +18,45 @@ from numpy import std
 
 TEMP_SYMLINK_DIR = os.path.realpath("./.temp_evaluation")
 
-EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent]
+EVENT_TYPES = [
+    LineCoveredEvent,
+    SDBranchEvent,
+    SDReturnValueEvent,
+    AbsoluteReturnValueEvent,
+    AbsoluteScalarValueEvent,
+]
 
-ALL_EVENT_TYPES = [LineCoveredEvent, SDBranchEvent, AbsoluteReturnValueEvent, AbsoluteScalarValueEvent, SDScalarPairEvent, SDReturnValueEvent]
+ALL_EVENT_TYPES = [
+    LineCoveredEvent,
+    SDBranchEvent,
+    AbsoluteReturnValueEvent,
+    AbsoluteScalarValueEvent,
+    SDScalarPairEvent,
+    SDReturnValueEvent,
+]
 
-SIMILARITY_COEFFICIENTS = [JaccardCoefficient, SorensenDiceCoefficient, AnderbergCoefficient, OchiaiCoefficient,
-                           SimpleMatchingCoefficient, RogersTanimotoCoefficient, OchiaiIICoefficient,
-                           RusselRaoCoefficient, TarantulaCoefficient]
+SIMILARITY_COEFFICIENTS = [
+    JaccardCoefficient,
+    SorensenDiceCoefficient,
+    AnderbergCoefficient,
+    OchiaiCoefficient,
+    SimpleMatchingCoefficient,
+    RogersTanimotoCoefficient,
+    OchiaiIICoefficient,
+    RusselRaoCoefficient,
+    TarantulaCoefficient,
+]
 
-AGGREGATORS = [max, avg, geometric_mean, harmonic_mean, quadratic_mean, median, len, sum]
+AGGREGATORS = [
+    max,
+    avg,
+    geometric_mean,
+    harmonic_mean,
+    quadratic_mean,
+    median,
+    len,
+    sum,
+]
 
 
 def get_files_recursive(dir: str, files: List[str]) -> List[str]:
@@ -46,9 +76,14 @@ def get_files_recursive(dir: str, files: List[str]) -> List[str]:
     return files
 
 
-def create_evaluation_recursive(result_dir: str, similarity_coefficient, combining_method: CombiningMethod,
-                                save_destination="",
-                                print_results=False, num_threads=-1) -> Evaluation:
+def create_evaluation_recursive(
+    result_dir: str,
+    similarity_coefficient,
+    combining_method: CombiningMethod,
+    save_destination="",
+    print_results=False,
+    num_threads=-1,
+) -> Evaluation:
     """
     Create an evaluation from the given configuration and the translated result files in result_dir
 
@@ -66,7 +101,9 @@ def create_evaluation_recursive(result_dir: str, similarity_coefficient, combini
     mkdirRecursive(TEMP_SYMLINK_DIR)
     for f in files:
         os.symlink(os.path.realpath(f), f"{TEMP_SYMLINK_DIR}/{os.path.basename(f)}")
-    evaluation.add_directory(TEMP_SYMLINK_DIR, THREADS if num_threads < 1 else num_threads)
+    evaluation.add_directory(
+        TEMP_SYMLINK_DIR, THREADS if num_threads < 1 else num_threads
+    )
     rmtree(TEMP_SYMLINK_DIR)
     if save_destination != "":
         if not os.path.exists(os.path.dirname(save_destination)):
@@ -87,7 +124,9 @@ def create_evaluation_recursive(result_dir: str, similarity_coefficient, combini
     return evaluation
 
 
-def run_process_list(processes: List[Process], out_queue: Queue, task_name: str = "", num_threads=-1) -> List[Any]:
+def run_process_list(
+    processes: List[Process], out_queue: Queue, task_name: str = "", num_threads=-1
+) -> List[Any]:
     """
     Start the parallel execution of the processes in processes. Each process should put its output to out_queue upon termination.
 
@@ -117,9 +156,9 @@ def run_process_list(processes: List[Process], out_queue: Queue, task_name: str 
                 progress_bar.update(1)
     while not out_queue.empty():
         ret.append(out_queue.get())
-    assert (len(ret) <= num_processes)
-    assert (len(ret) > 0)
-    assert (out_queue.empty())
+    assert len(ret) <= num_processes
+    assert len(ret) > 0
+    assert out_queue.empty()
     return list(sorted(ret, key=lambda e: str(e)))
 
 
@@ -150,10 +189,12 @@ class EvaluationRun(Collection):
     """
     Represents a collection of multiple related evaluations
     """
+
     class SigIntException(Exception):
         """
         Can be raised on an interrupt signal to prevent termination
         """
+
         pass
 
     def __len__(self) -> int:
@@ -174,7 +215,9 @@ class EvaluationRun(Collection):
         self.destination = os.path.realpath(destination)
         self.name = name
 
-    def create_evaluation(self, result_dir: str, similarity_coefficient, combining_method: CombiningMethod):
+    def create_evaluation(
+        self, result_dir: str, similarity_coefficient, combining_method: CombiningMethod
+    ):
         """
         Create and add an evaluation based on the given configuration from the translated result files in result_dir
 
@@ -182,8 +225,9 @@ class EvaluationRun(Collection):
         :param combining_method: The combining method to be used
         :param similarity_coefficient: The similarity coefficient to be used. Can either be an instance or just the type.
         """
-        evaluation = create_evaluation_recursive(result_dir, similarity_coefficient, combining_method,
-                                                 print_results=True)
+        evaluation = create_evaluation_recursive(
+            result_dir, similarity_coefficient, combining_method, print_results=True
+        )
         combining_method.update_results(evaluation)
         self.evaluations.append(evaluation)
 
@@ -218,15 +262,26 @@ class EvaluationRun(Collection):
 
         :param task: A list of tuples containing configurations of the format (<result_dir>, <similarity_coefficient>, <combining_method>)
         """
-        evaluations = [Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task]
+        evaluations = [
+            Evaluation(similarity_coefficient=s, combining_method=c) for _, s, c in task
+        ]
         ev_lookup = {ev.id: ev for ev in evaluations}
         tmp_dir = make_tmp_folder(task[0][0])
         out_queue = Queue()
-        processes = [Process(target=self.process_mr_file, name=filename, args=(filename, evaluations, out_queue))
-                     for filename in filter(lambda p: not os.path.isdir(p),
-                                            list(os.path.abspath(f"{tmp_dir}/{f}") for f in os.listdir(tmp_dir)))
-                     ]
-        rankings = run_process_list(processes, out_queue, task_name="Processing results for task")
+        processes = [
+            Process(
+                target=self.process_mr_file,
+                name=filename,
+                args=(filename, evaluations, out_queue),
+            )
+            for filename in filter(
+                lambda p: not os.path.isdir(p),
+                list(os.path.abspath(f"{tmp_dir}/{f}") for f in os.listdir(tmp_dir)),
+            )
+        ]
+        rankings = run_process_list(
+            processes, out_queue, task_name="Processing results for task"
+        )
         for d in rankings:
             for ev_id, (id, ri) in d.items():
                 local_ev = ev_lookup[ev_id]
@@ -263,20 +318,33 @@ class EvaluationRun(Collection):
 
     def __str__(self):
         out = f"EVALUATION RUN - {self.name}\n\n"
-        out += "\n--------------------------\n".join(str(e) for e in sorted(self.evaluations,
-                                                                            key=lambda e: sum(
-                                                                                e.fraction_top_k_accurate[k] +
-                                                                                e.avg_recall_at_k[k] +
-                                                                                e.avg_precision_at_k[k] for k in
-                                                                                [1, 3, 5, 10]),
-                                                                            reverse=True))
+        out += "\n--------------------------\n".join(
+            str(e)
+            for e in sorted(
+                self.evaluations,
+                key=lambda e: sum(
+                    e.fraction_top_k_accurate[k]
+                    + e.avg_recall_at_k[k]
+                    + e.avg_precision_at_k[k]
+                    for k in [1, 3, 5, 10]
+                ),
+                reverse=True,
+            )
+        )
         len = 0
         _sum = {k: 0 for k in [1, 3, 5, 10]}
         for ev in self.evaluations:
             for ri in ev.ranking_infos:
                 len += 1
                 for k in _sum.keys():
-                    _sum[k] += ((ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k) / ri.num_buggy_methods) if ri.num_buggy_methods > 0 else 0
+                    _sum[k] += (
+                        (
+                            (ri.buggy_in_ranking if ri.buggy_in_ranking <= k else k)
+                            / ri.num_buggy_methods
+                        )
+                        if ri.num_buggy_methods > 0
+                        else 0
+                    )
         avgs = {k: v / len for k, v in _sum.items()}
         out += f"\n\nRecall upper bound: {avgs}\n"
         return out
@@ -285,14 +353,34 @@ class EvaluationRun(Collection):
 if __name__ == "__main__":
     import argparse
 
-    DEFAULT_OUTPUT_DIR = os.path.dirname(os.path.realpath(sys.argv[0])) + "/results_evaluation"
+    DEFAULT_OUTPUT_DIR = (
+        os.path.dirname(os.path.realpath(sys.argv[0])) + "/results_evaluation"
+    )
 
-    arg_parser = argparse.ArgumentParser(description='Evaluate fault localization results.')
-    arg_parser.add_argument("-r", "--result_dir", required=True, type=str,
-                            help="The directory containing test results")
-    arg_parser.add_argument("-o", "--output_dir", required=False, type=str, default=DEFAULT_OUTPUT_DIR,
-                            help="The directory where output files should be stored")
-    arg_parser.add_argument("-a", "--advanced", help="Evaluate with multiple different combinations.", action='store_true')
+    arg_parser = argparse.ArgumentParser(
+        description="Evaluate fault localization results."
+    )
+    arg_parser.add_argument(
+        "-r",
+        "--result_dir",
+        required=True,
+        type=str,
+        help="The directory containing test results",
+    )
+    arg_parser.add_argument(
+        "-o",
+        "--output_dir",
+        required=False,
+        type=str,
+        default=DEFAULT_OUTPUT_DIR,
+        help="The directory where output files should be stored",
+    )
+    arg_parser.add_argument(
+        "-a",
+        "--advanced",
+        help="Evaluate with multiple different combinations.",
+        action="store_true",
+    )
 
     args = arg_parser.parse_args()
     result_dir = os.path.realpath(args.result_dir)
@@ -306,36 +394,81 @@ if __name__ == "__main__":
     if args.advanced:
         # EVENT TYPES SINGLE
         task_event_types_single = list(
-            (result_dir, OchiaiCoefficient, FilteredCombiningMethod([e, ], max, avg)) for e in
-            [LineCoveredEvent, SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteReturnValueEvent,
-             AbsoluteScalarValueEvent])
+            (
+                result_dir,
+                OchiaiCoefficient,
+                FilteredCombiningMethod(
+                    [
+                        e,
+                    ],
+                    max,
+                    avg,
+                ),
+            )
+            for e in [
+                LineCoveredEvent,
+                SDBranchEvent,
+                SDReturnValueEvent,
+                SDScalarPairEvent,
+                AbsoluteReturnValueEvent,
+                AbsoluteScalarValueEvent,
+            ]
+        )
         # SIMILARITY COEFFICIENTS SINGLE
         task_similarity_coefficients_single = list(
-            (result_dir, s, GenericCombiningMethod(max, avg)) for s in SIMILARITY_COEFFICIENTS)
+            (result_dir, s, GenericCombiningMethod(max, avg))
+            for s in SIMILARITY_COEFFICIENTS
+        )
         # COMBINING METHODS
-        selected_combining_methods = [(max,), (avg,), (max, avg), (avg, max), (max, avg, make_tuple),
-                                      (avg, max, make_tuple), (max, std), (max, sum)]
+        selected_combining_methods = [
+            (max,),
+            (avg,),
+            (max, avg),
+            (avg, max),
+            (max, avg, make_tuple),
+            (avg, max, make_tuple),
+            (max, std),
+            (max, sum),
+        ]
         task_combining_methods_thesis = list(
-            (result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs)) for cs in selected_combining_methods)
+            (result_dir, OchiaiCoefficient, GenericCombiningMethod(*cs))
+            for cs in selected_combining_methods
+        )
         # SELECTED COMBINATIONS
         selected_combinations = [
             [LineCoveredEvent, SDBranchEvent],
             [SDBranchEvent, SDScalarPairEvent, AbsoluteReturnValueEvent],
             [SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent],
             [AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
-            [SDBranchEvent, SDReturnValueEvent, SDScalarPairEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent],
+            [
+                SDBranchEvent,
+                SDReturnValueEvent,
+                SDScalarPairEvent,
+                AbsoluteScalarValueEvent,
+                AbsoluteReturnValueEvent,
+            ],
         ]
         task_selected_combinations = list(
-            (result_dir, OchiaiCoefficient, FilteredCombiningMethod(es, max, avg)) for es in selected_combinations)
+            (result_dir, OchiaiCoefficient, FilteredCombiningMethod(es, max, avg))
+            for es in selected_combinations
+        )
         selected_event_type_orders = [
             [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent],
-            [LineCoveredEvent, SDBranchEvent, AbsoluteScalarValueEvent, AbsoluteReturnValueEvent, SDReturnValueEvent],
+            [
+                LineCoveredEvent,
+                SDBranchEvent,
+                AbsoluteScalarValueEvent,
+                AbsoluteReturnValueEvent,
+                SDReturnValueEvent,
+            ],
             [SDBranchEvent, SDScalarPairEvent, AbsoluteReturnValueEvent],
             [AbsoluteReturnValueEvent, LineCoveredEvent, AbsoluteScalarValueEvent],
-            [AbsoluteScalarValueEvent, LineCoveredEvent, AbsoluteReturnValueEvent]
+            [AbsoluteScalarValueEvent, LineCoveredEvent, AbsoluteReturnValueEvent],
         ]
         task_selected_event_type_orders = list(
-            (result_dir, OchiaiCoefficient, TypeOrderCombiningMethod(es, max)) for es in selected_event_type_orders)
+            (result_dir, OchiaiCoefficient, TypeOrderCombiningMethod(es, max))
+            for es in selected_event_type_orders
+        )
         tasks_in_thesis = {
             "thesis_basic": thesis_basic,
             "thesis_event_types_single": task_event_types_single,
@@ -349,7 +482,7 @@ if __name__ == "__main__":
             "thesis_basic": thesis_basic,
         }
 
-    #task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
+    # task_test = [(result_dir, OchiaiCoefficient, FilteredCombiningMethod([LineCoveredEvent, SDBranchEvent], max, avg))]
 
     signal.signal(signal.SIGINT, interrupt_handler)
 

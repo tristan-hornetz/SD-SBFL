@@ -26,7 +26,9 @@ def translate_file(path: str, event_processor: EventProcessor, output_dir: str):
     try:
         with gzip.open(path) as f:
             _results = pickle.load(f)
-        print(f"Translating results from {_results.project_name}, bug {_results.bug_id}")
+        print(
+            f"Translating results from {_results.project_name}, bug {_results.bug_id}"
+        )
         mr = MetaRanking(*event_processor.process(_results), _results)
         output_file = f"{output_dir}/{_results.project_name}/translated_results_{_results.project_name}_{_results.bug_id}.pickle.gz"
         if not os.path.exists(os.path.dirname(os.path.abspath(output_file))):
@@ -73,7 +75,9 @@ def get_subdirs_recursive(start_path: str) -> List[str]:
     return dirs
 
 
-def translate_directory_parallel(path: str, event_processor: EventProcessor, output_dir: str, threads: int = -1):
+def translate_directory_parallel(
+    path: str, event_processor: EventProcessor, output_dir: str, threads: int = -1
+):
     """
     Translate every result file recursively found in the given directory
 
@@ -85,7 +89,12 @@ def translate_directory_parallel(path: str, event_processor: EventProcessor, out
     if threads < 1:
         threads = os.cpu_count()
     dirs = get_subdirs_recursive(path) + [path]
-    processes = [Process(target=translate_directory, args=(d, event_processor, output_dir), name=d) for d in dirs]
+    processes = [
+        Process(
+            target=translate_directory, args=(d, event_processor, output_dir), name=d
+        )
+        for d in dirs
+    ]
     active_processes = []
     while len(processes) > 0:
         while len(active_processes) < threads and len(processes) > 0:
@@ -95,25 +104,42 @@ def translate_directory_parallel(path: str, event_processor: EventProcessor, out
         for p in active_processes.copy():
             if not p.is_alive():
                 active_processes.remove(p)
-        time.sleep(.1)
+        time.sleep(0.1)
 
 
 if __name__ == "__main__":
     DEFAULT_OUTPUT = ""
 
-    arg_parser = argparse.ArgumentParser(description='Translate raw, recorded events to Evaluation Framework events.')
-    arg_parser.add_argument("-d", "--directory", required=True, type=str, default="",
-                            help="The file containing the recorded events")
-    arg_parser.add_argument("-r", "--recursive", help="Search for files recursively", action='store_true')
-    arg_parser.add_argument("-o", "--output_dir", required=False, type=str, default=DEFAULT_OUTPUT,
-                            help="The output diretory")
+    arg_parser = argparse.ArgumentParser(
+        description="Translate raw, recorded events to Evaluation Framework events."
+    )
+    arg_parser.add_argument(
+        "-d",
+        "--directory",
+        required=True,
+        type=str,
+        default="",
+        help="The file containing the recorded events",
+    )
+    arg_parser.add_argument(
+        "-r", "--recursive", help="Search for files recursively", action="store_true"
+    )
+    arg_parser.add_argument(
+        "-o",
+        "--output_dir",
+        required=False,
+        type=str,
+        default=DEFAULT_OUTPUT,
+        help="The output diretory",
+    )
 
     args = arg_parser.parse_args()
     event_processor = EventProcessor(DEFAULT_TRANSLATORS)
     output_dir = args.output_dir
     if output_dir == "":
-        output_dir = os.path.dirname(
-            os.path.abspath(sys.argv[0])) + f"/results_translated"
+        output_dir = (
+            os.path.dirname(os.path.abspath(sys.argv[0])) + f"/results_translated"
+        )
     if args.recursive:
         translate_directory_parallel(args.directory, event_processor, output_dir)
     else:

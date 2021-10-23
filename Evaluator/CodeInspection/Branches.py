@@ -7,7 +7,14 @@ from .utils import getValidProjectDir
 
 
 class BranchInstruction:
-    def __init__(self, method_object: DebuggerMethod, location: Tuple[str, str, int], first_body_lineno: int, while_loop: bool = False, breaks: List[Tuple[str, str, int]] = None):
+    def __init__(
+        self,
+        method_object: DebuggerMethod,
+        location: Tuple[str, str, int],
+        first_body_lineno: int,
+        while_loop: bool = False,
+        breaks: List[Tuple[str, str, int]] = None,
+    ):
         self.method_object = method_object
         self.location = location
         self.first_body_lineno = first_body_lineno
@@ -19,26 +26,67 @@ class BranchInstruction:
 
 
 class BranchExtractor(NodeVisitor):
-    def __init__(self, filename: str, method_objects: Dict[Tuple[str, str, int], DebuggerMethod], *args, **kwargs):
+    def __init__(
+        self,
+        filename: str,
+        method_objects: Dict[Tuple[str, str, int], DebuggerMethod],
+        *args,
+        **kwargs,
+    ):
         super(BranchExtractor, self).__init__(*args, **kwargs)
         self.filename = filename
-        _method_objects = filter(lambda e: e[1].file == filename, method_objects.items())
-        self.method_objects_by_lineno = {lineno: method for (fn, mn, lineno), method in _method_objects}
+        _method_objects = filter(
+            lambda e: e[1].file == filename, method_objects.items()
+        )
+        self.method_objects_by_lineno = {
+            lineno: method for (fn, mn, lineno), method in _method_objects
+        }
         self.branches = list()
 
     def visit_If(self, node: If) -> Any:
         if node.lineno in self.method_objects_by_lineno.keys():
-            location = (self.filename, self.method_objects_by_lineno[node.lineno].name, node.lineno)
-            self.branches.append(BranchInstruction(self.method_objects_by_lineno[node.lineno], location, node.body[0].lineno))
+            location = (
+                self.filename,
+                self.method_objects_by_lineno[node.lineno].name,
+                node.lineno,
+            )
+            self.branches.append(
+                BranchInstruction(
+                    self.method_objects_by_lineno[node.lineno],
+                    location,
+                    node.body[0].lineno,
+                )
+            )
 
     def visit_While(self, node: While) -> Any:
         if node.lineno in self.method_objects_by_lineno.keys():
-            location = (self.filename, self.method_objects_by_lineno[node.lineno].name, node.lineno)
+            location = (
+                self.filename,
+                self.method_objects_by_lineno[node.lineno].name,
+                node.lineno,
+            )
             breaks = list()
             for n in ast.walk(node):
-                if isinstance(n, ast.Break) and n.lineno in self.method_objects_by_lineno.keys():
-                    breaks.append((self.filename, self.method_objects_by_lineno[n.lineno].name, n.lineno))
-            self.branches.append(BranchInstruction(self.method_objects_by_lineno[node.lineno], location, node.body[0].lineno, True, breaks))
+                if (
+                    isinstance(n, ast.Break)
+                    and n.lineno in self.method_objects_by_lineno.keys()
+                ):
+                    breaks.append(
+                        (
+                            self.filename,
+                            self.method_objects_by_lineno[n.lineno].name,
+                            n.lineno,
+                        )
+                    )
+            self.branches.append(
+                BranchInstruction(
+                    self.method_objects_by_lineno[node.lineno],
+                    location,
+                    node.body[0].lineno,
+                    True,
+                    breaks,
+                )
+            )
 
 
 def extractBranchesFromCode(_results, info, method_objects):
