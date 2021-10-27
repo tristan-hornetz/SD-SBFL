@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 from .CodeInspection.Branches import extractBranchesFromCode
 from .CodeInspection.Methods import extractMethodsFromCode, BugInfo, DebuggerMethod
@@ -367,7 +367,7 @@ class EventProcessor:
     Utilized to translate the recorded events using multiple EventTranslators
     """
 
-    def __init__(self, translators: Iterable[Optional[EventTranslator, type]]):
+    def __init__(self, translators: Iterable):
         """
         :param translators: The event translators to utilize
         """
